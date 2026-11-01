@@ -132,12 +132,12 @@ This comes with story 003 (`docs/backlog/003-stay-signed-in.md`).
 
 Open Claude Code in this folder and use:
 
-| Command                | What happens                                                 |
-| ---------------------- | ------------------------------------------------------------ |
-| `/story <idea>`        | Product owner writes a story with acceptance criteria        |
-| `/feature <idea>`      | Full pipeline: story → design → build → test → review → docs |
-| `/bug <description>`   | Reproduce with a failing test → fix → verify → review        |
-| `/rebuild [up-to NNN]` | Regenerate the app from the backlog on a fresh branch        |
+| Command                | What happens                                                    |
+| ---------------------- | --------------------------------------------------------------- |
+| `/story <idea>`        | Product owner writes a story with acceptance criteria           |
+| `/feature <idea>`      | Full pipeline: story → design → build → test → review → docs    |
+| `/bug <description>`   | Reproduce with a failing test → fix → verify → review           |
+| `/rebuild [up-to NNN]` | Regenerate the domain code from the backlog, starting at `base` |
 
 You approve at two gates: after the story is written (the story is then committed), and
 before the code is committed, where you also decide which retro proposals to apply.
@@ -147,8 +147,12 @@ You can also call any role directly, e.g. "ask the architect how we should handl
 
 Every feature is a story file in `docs/backlog/` holding your original request, the
 acceptance criteria, a log of your decisions, the designs, the test report and the
-review. The index is `docs/backlog/README.md`. `/rebuild` replays all done stories in
-order on a new branch and checks the result against the original end-to-end tests.
+review. The index is `docs/backlog/README.md`.
+
+The git tag `base` marks the baseline: factory, toolchain and the technical login
+(Google and guest sign-in), without domain code. `/rebuild` starts from `base`, replays
+all stories done after it in order on a new branch, and checks the result against the
+original end-to-end tests. `/rebuild from: <tag|commit>` starts somewhere else.
 
 ### How the agents learn
 

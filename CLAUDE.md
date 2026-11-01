@@ -43,7 +43,16 @@ Workflow entry points (skills in `.claude/skills/`):
 - `/feature <idea>` — full pipeline for a new feature
 - `/story <idea>` — only refine an idea into a story (no implementation)
 - `/bug <description>` — reproduce with a failing test, fix, verify, review
-- `/rebuild [up-to NNN]` — regenerate the app from the backlog on a fresh branch
+- `/rebuild [up-to NNN]` — regenerate the domain code from the backlog on a fresh branch,
+  starting from the `base` tag
+
+## Baseline
+
+The git tag **`base`** marks the infrastructure baseline: the factory, the toolchain
+(tests, CI, dist check) and the technical login (stories 001 Google sign-in and 004
+guest sign-in) — no domain code. Everything after `base` is domain functionality.
+`/rebuild` keeps the baseline and replays only the stories done after it. Move the tag
+only on hak's explicit decision.
 
 ## Traceability
 
@@ -52,8 +61,8 @@ The backlog must be enough to rebuild the app without any chat history:
 - **Original request** — hak's words, verbatim, in every story.
 - **Decision log** — every answer and correction from hak, appended, never edited.
 - **Links** — `supersedes:` / `superseded-by:` when a story replaces another,
-  `changes: [NNN/ACx]` when it modifies parts of one. Rebuilds replay `done` stories in
-  id order and skip `superseded` ones.
+  `changes: [NNN/ACx]` when it modifies parts of one. Rebuilds replay the stories done
+  after `base` in id order and skip `superseded` ones.
 - **Commit early** — the approved story is committed on `main` at gate 1, before any code.
 - **Tests as oracle** — e2e tests named after ACs verify that a rebuild behaves the same.
 

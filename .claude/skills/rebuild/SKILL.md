@@ -1,7 +1,7 @@
 ---
 name: rebuild
-description: Regenerate the app from the backlog - replay all done stories in order on a fresh branch, starting from the scaffold, and check the result against the original end-to-end tests.
-argument-hint: '[up-to NNN] [stack: <changes>]'
+description: Regenerate the app's domain code from the backlog - start from the `base` tag (infrastructure baseline), replay all stories done after it in order on a fresh branch, and check the result against the original end-to-end tests.
+argument-hint: '[up-to NNN] [from: <tag|commit>] [stack: <changes>]'
 disable-model-invocation: true
 ---
 
@@ -13,12 +13,21 @@ You are the **orchestrator**. The story files in `docs/backlog/` are the specifi
 the app is regenerated from them. The result won't be identical code — the goal is the
 **same behaviour**, proven by the original end-to-end tests.
 
+**Starting point:** the git tag `base` marks the baseline — factory, toolchain and the
+technical login (stories 001 and 004), no domain code. A rebuild keeps everything up to
+`base` and regenerates only what came after it. `from: <tag|commit>` overrides the
+starting point (e.g. the first commit, to rebuild everything including the login).
+
 ## 1. Plan and confirm
 
-1. Require a clean working tree on `main`; otherwise stop and tell hak.
-2. Build the replay list: all stories with `status: done`, sorted by id, skipping those
-   with `status: superseded`. Stop at `up-to NNN` if given. Stories with `changes:`
-   stay in order — they modify what earlier stories built.
+1. Require a clean working tree on `main`; otherwise stop and tell hak. Check that the
+   starting point exists (`git rev-parse --verify base^{commit}`).
+2. Build the replay list: all stories with `status: done` on `main` that were **not**
+   already `done` at the starting point (check with `git show base:docs/backlog/<file>`
+   — a story missing there or not `done` there is replayed), sorted by id, skipping
+   those with `status: superseded`. Stop at `up-to NNN` if given. Stories with
+   `changes:` stay in order — they modify what earlier stories built. If the list is
+   empty, tell hak there's nothing to rebuild and stop.
 3. Show hak the list, the estimated effort (one design/build/test/review cycle per
    story) and ask:
    - go / no go;
@@ -31,10 +40,11 @@ the app is regenerated from them. The result won't be identical code — the goa
 1. `git switch -c rebuild/<YYYY-MM-DD>` from `main`.
 2. Save the oracle: `git archive main e2e | tar -x -C <scratchpad>/oracle` — the
    original Playwright specs, used only at the end. Don't show them to the agents.
-3. Reset the app code to the scaffold:
-   `git checkout $(git rev-list --max-parents=0 main) -- src e2e`, then delete files in
-   `src/` and `e2e/` that don't exist in that first commit.
-   Keep `docs/`, `.claude/` (agents, memory, skills), configs and `package.json`.
+3. Reset the app code to the starting point: `git checkout base -- src e2e scripts`,
+   then delete files in `src/`, `e2e/` and `scripts/` that don't exist at `base`
+   (`git ls-tree -r --name-only base -- src e2e scripts` lists what should remain).
+   Keep `docs/`, `.claude/` (agents, memory, skills), configs and `package.json` from
+   `main`. The baseline's own e2e specs stay in place and must keep passing.
 4. Run `npm install` and `npm run verify` — must be green before the first story.
 
 ## 3. Replay each story
