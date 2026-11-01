@@ -50,7 +50,7 @@ Relation to other stories:
 - **AC4:** Given I am signed in as a guest, when I choose "Sign out", then I see the login screen with both sign-in options and no signed-in state.
 - **AC5:** Given I have signed out after a guest sign-in, when I reload the page, then I still see the login screen and no signed-in state.
 - **AC6:** Given the login screen shows a Google cancelled or error message from a previous attempt, when I choose "Sign in as guest", then I am signed in and no cancelled or error message is shown anymore.
-- **AC7:** Given I am signed in as a guest, when I look at the page, then I see the same signed-in content as a Google user (the counter is visible) and no "Sign in with Google" option.
+- **AC7:** Given I am signed in as a guest, when I look at the page, then I see the same signed-in content as a Google user (the counter is visible) and no "Sign in with Google" option. (changed by [005](005-minesweeper.md): the counter is expected to be replaced by the game; "same content as a Google user" still holds)
 - **AC8:** Given I choose "Sign in as guest", when I am signed in, then the signed-in line reads "Signed in as Guest".
 - **AC9:** Given I have chosen "Sign in with Google" and the sign-in is in progress, when I look at the login screen, then "Sign in as guest" is disabled until the Google attempt ends, and it is enabled again after the attempt is cancelled or has failed.
 - **AC10:** Given I am signed in as a guest, when I reload the page, then I see the login screen and no signed-in state.
