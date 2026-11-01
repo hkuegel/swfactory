@@ -8,3 +8,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - When splitting a story, keep the original request line verbatim in both stories, add a split note, and log hak's words verbatim in the Decision log of the original (stories 001/002).
 - hak accepts proposed defaults in bulk ("Yes, confirm all"); log one Decision log entry per question anyway, and turn confirmed defaults into ACs only where observable, the rest into Context constraints (story 001).
 - The ~7 AC limit was exceeded on explicit orchestrator instruction (11 ACs in 001); flag it in the reply and offer a split (e.g. logout/session as own story) instead of silently complying (story 001).
+- Check technical feasibility of "nice" behaviours (stay signed in, silent restore) before turning defaults into ACs; hak dropped AC7/AC8 after the architect found them infeasible frontend-only. Never renumber ACs once design exists: strike them through as removed (story 001).

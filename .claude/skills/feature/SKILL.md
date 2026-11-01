@@ -15,16 +15,28 @@ yourself. Track the steps with the task list. After each step, read the story fi
 confirm the agent did its part before moving on. Collect every "Suggested for
 CLAUDE.md" item the agents return — you need them in the retro.
 
+**Formatting:** `product-owner`, `ux-designer` and `tech-writer` have no shell. After
+every step in which one of them edited markdown, run
+`npx prettier --write docs README.md CHANGELOG.md` yourself (`npm run verify` checks
+markdown too). Never format a file while another agent is still editing it.
+
 1. **Story** — `product-owner`: turn the idea into a story in `docs/backlog/`. Pass
    hak's request **verbatim** (the full text above) so it lands in "Original request".
 2. **GATE 1** — show hak the user story, ACs and open questions. Wait for approval or
    answers. Send every answer or correction back to `product-owner`, telling it to
    update the story **and** the Decision log. Continue only on an explicit go.
+   **Feasibility check:** if an answer or proposed default touches technical
+   constraints (storage, backend, sessions, security, third-party capabilities), ask
+   the `architect` for a short feasibility check of the affected ACs **before** they are
+   final, and show hak the result at the gate.
    Then, on `main` with a clean tree, commit the story and backlog index:
    `docs(backlog): add story NNN – <title>`. Then create the branch `feature/NNN-slug`.
 3. **Design** — `architect`: technical design (+ ADRs). If the story has UI, run
-   `ux-designer` too (both can run in parallel). If the architect sets
-   `status: blocked`, bring the open questions to hak and log the answers as in step 2.
+   `ux-designer` too: in parallel only for pure UI stories; if the story depends on an
+   external integration or platform limits (identity providers, third-party widgets,
+   browser APIs), run the `architect` first and the `ux-designer` afterwards on the
+   finished design. If the architect sets `status: blocked`, bring the open questions
+   to hak and log the answers as in step 2.
 4. **Build** — `developer`: implement on branch `feature/NNN-slug` until
    `npm run verify` is green.
 5. **Test** — `tester`: verify all ACs. On FAIL, send the defects to `developer`, then

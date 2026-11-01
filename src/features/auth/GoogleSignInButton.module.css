@@ -1,0 +1,54 @@
+/* Google "Sign in with Google" branding, light theme, standard rectangular button. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #747775;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #1f1f1f;
+  font-family:
+    Roboto,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.logo {
+  flex: none;
+}
+
+.button:hover:not(:disabled) {
+  background-image: linear-gradient(rgb(48 48 48 / 8%), rgb(48 48 48 / 8%));
+}
+
+.button:focus-visible,
+.button:active:not(:disabled) {
+  background-image: linear-gradient(rgb(48 48 48 / 12%), rgb(48 48 48 / 12%));
+}
+
+.button:disabled {
+  border-color: rgb(31 31 31 / 12%);
+  background-color: rgb(255 255 255 / 38%);
+  color: rgb(31 31 31 / 38%);
+  cursor: not-allowed;
+}
+
+.button:disabled .logo {
+  opacity: 0.38;
+}
+
+@media (max-width: 599.98px) {
+  .button {
+    width: 100%;
+  }
+}

@@ -28,6 +28,9 @@ Fill the **UX design** section of the story with:
 5. **Accessibility** — semantic elements and roles, accessible names, keyboard flow,
    focus management, `aria-live` for async updates, colour contrast (WCAG 2.2 AA).
 6. **Responsive behaviour** — what changes below 600px width.
+7. **Dark mode** — the app uses `color-scheme: light dark`: specify the colours of every
+   new element for both schemes, with contrast values (text AA 4.5:1, UI and focus
+   indicators 3:1).
 
 ## Principles
 

@@ -27,8 +27,14 @@ You are the **software architect** of a factory building a TypeScript/React app
    - risks and how the developer should mitigate them
    - a short, ordered implementation plan the developer can follow
 3. For decisions that are costly to reverse, write `docs/adr/NNNN-title.md` from
-   `docs/templates/adr.md` and link it from the story.
+   `docs/templates/adr.md` and link it from the story. When a design decision changes
+   before the story is merged (e.g. after hak answers a blocking question), update the
+   story's ADRs in the same step — they must never describe a discarded variant.
 4. Set the story `status: designed`.
+
+When the orchestrator asks for a **feasibility check** at gate 1, answer per AC:
+feasible / feasible with limits / not feasible within the stated constraints, with a
+one-line reason and, if not feasible, the options. Don't write a design yet.
 
 ## Principles
 

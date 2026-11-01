@@ -103,15 +103,26 @@ e2e/              Playwright specs
 - Tests live next to the code: `Foo.tsx` + `Foo.test.tsx`.
 - Query UI by role/label in tests (`getByRole`), not by test IDs or classes.
 - No `any`, no non-null `!` without a comment explaining why.
+- Optional props that receive CSS-module classes or refs are typed `prop?: T | undefined`
+  (required under `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`).
+- **Network timeouts:** every network call that keeps the UI in a progress state needs a
+  timeout (AbortController + named constant) that ends in the error state — no UI state
+  may stay pending forever. Only interactive steps (e.g. a provider popup) are exempt.
+- **Test fakes** (e.g. the e2e sign-in fake) are selected only via
+  `import.meta.env.DEV && import.meta.env.MODE === '<mode>'`, never a runtime flag or env
+  var alone. Prove it by building with all `VITE_*` values set, plain and `--mode e2e`,
+  and grepping `dist` for the fake.
+- **Config:** `VITE_*` values are public (inlined into the bundle) — never put secrets
+  there. Per-developer values go in `.env.local` (gitignored), documented in `.env.example`.
 
 ## Commands
 
 ```bash
-npm run dev         # start dev server (http://localhost:5173)
+npm run dev         # start dev server (http://localhost:5173 — part of the Google OAuth origins)
 npm run typecheck   # tsc --build
 npm run lint        # eslint
 npm run format      # prettier --write
 npm test            # vitest (single run)
-npm run test:e2e    # playwright (starts dev server itself)
-npm run verify      # typecheck + lint + unit tests + build — must be green before review
+npm run test:e2e    # playwright: app in mode e2e on port 5174 with the fake sign-in, never real Google
+npm run verify      # typecheck + lint + prettier check (incl. markdown) + unit tests + build
 ```

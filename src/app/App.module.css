@@ -3,3 +3,9 @@
   margin: 0 auto;
   padding: 4rem 1rem;
 }
+
+@media (max-width: 599.98px) {
+  .main {
+    padding-top: 2rem;
+  }
+}

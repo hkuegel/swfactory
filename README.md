@@ -21,6 +21,84 @@ npx playwright install chromium
 npm run dev
 ```
 
+The app runs without any setup. To sign in with Google, follow
+[Google sign-in setup](#google-sign-in-setup).
+
+## Google sign-in setup
+
+The login screen signs users in with Google. You need your own OAuth client ID to try
+sign-in on your machine. The automated tests do not need it (see [Testing](#testing)).
+
+### 1. Create an OAuth client in Google Cloud
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/) and select a project,
+   or create one.
+2. Open the **Credentials** page and create an **OAuth client ID**.
+3. Set **Application type** to **Web application**.
+4. Under **Authorized JavaScript origins**, add both of these origins:
+
+   ```text
+   http://localhost:5173
+   http://localhost
+   ```
+
+   Origins must match exactly: no path and no trailing slash. If you open the app under
+   another address, add that origin too.
+
+   Redirect URIs are not needed.
+
+5. Save and copy the **Client ID**. It ends in `.apps.googleusercontent.com`.
+
+### 2. Set up the consent screen
+
+Configure the consent screen once for the project:
+
+- Set the user type to **External**.
+- Add the scopes `openid`, `email` and `profile`.
+- Set the publishing status to **In production**. In **Testing**, only the test users you
+  list can sign in. The app is meant for any Google account. Google may label the
+  publishing action "Publish app".
+
+### 3. Add the client ID to your environment
+
+Copy the example file to `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
+Open `.env.local` and set your client ID:
+
+```text
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+```
+
+Restart `npm run dev` after you change the file. `.env.local` is gitignored, so your
+client ID stays out of git.
+
+### About the client ID
+
+- Variables with the `VITE_` prefix end up in the JavaScript bundle that the browser
+  loads. Anyone can read them.
+- A client ID is not a secret. Never put a client secret or any other secret into a
+  `VITE_` variable.
+- If `VITE_GOOGLE_CLIENT_ID` is empty, the app still runs and the login screen works.
+  Clicking **Sign in with Google** shows "Google sign-in failed. Please try again." The
+  browser console says that the client ID is not set.
+
+### Troubleshooting
+
+- **Clicking "Sign in with Google" right after the page loads shows the error.** Google's
+  script is still loading. Wait a moment and try again. If the message stays, reload the
+  page. Check that the browser can reach `accounts.google.com`.
+- **The same error appears when the browser blocks popups.** Sign-in opens a Google
+  popup. Allow popups for `localhost` and try again.
+- **Google's popup shows an error about the origin.** Check the authorized JavaScript
+  origins from step 1 against the address in your browser.
+
+Sign-in is not kept across page reloads yet. Every reload shows the login screen again.
+This comes with story 003 (`docs/backlog/003-stay-signed-in.md`).
+
 ## Working with the factory
 
 Open Claude Code in this folder and use:
@@ -69,6 +147,15 @@ e2e/              Playwright end-to-end tests
 | ------------------ | ---------------------------------------------- |
 | `npm run dev`      | Dev server on http://localhost:5173            |
 | `npm test`         | Unit and component tests (Vitest)              |
-| `npm run test:e2e` | End-to-end tests (Playwright)                  |
+| `npm run test:e2e` | End-to-end tests (Playwright, fake sign-in)    |
 | `npm run verify`   | Typecheck, lint, format check, tests and build |
 | `npm run format`   | Format all files with Prettier                 |
+
+## Testing
+
+- `npm test` runs the unit and component tests.
+- `npm run test:e2e` runs the Playwright tests. It starts the app in mode `e2e` on port 5174. In this mode, the app uses a fake Google sign-in. The tests never contact real
+  Google and do not need a client ID.
+
+To check sign-in with a real Google account, run `npm run dev` on port 5173 and sign in
+in the browser. Do not use the e2e tests for this.

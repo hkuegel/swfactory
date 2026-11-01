@@ -11,6 +11,10 @@ Bug: $ARGUMENTS
 
 You are the **orchestrator**; delegate each step with the Agent tool.
 
+**Formatting:** `product-owner` and `tech-writer` have no shell. After every step in
+which one of them edited markdown, run `npx prettier --write docs README.md CHANGELOG.md`
+yourself (`npm run verify` checks markdown too).
+
 1. **Record** — `product-owner`: create a story with `type: bug` and branch
    `fix/NNN-slug`; pass the bug description **verbatim** for "Original request". ACs
    describe the correct behaviour, context holds the observed behaviour and repro
