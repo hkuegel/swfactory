@@ -27,21 +27,46 @@ the story file path; the story file is the single source of truth for a feature.
 ## Process
 
 ```
-idea ─▶ product-owner ─▶ [GATE: hak approves story]
+idea ─▶ product-owner ─▶ [GATE 1: hak approves story → story committed on main]
      ─▶ architect (+ ux-designer if UI) ─▶ developer ─▶ tester
      ─▶ reviewer ──CHANGES_REQUESTED──▶ developer (max 3 rounds, then escalate to hak)
-              └─APPROVED─▶ tech-writer ─▶ [GATE: hak approves merge]
+              └─APPROVED─▶ tech-writer ─▶ retro ─▶ [GATE 2: hak approves retro proposals + commit]
 ```
 
 Story status (frontmatter `status:`) moves through:
 `draft → ready → designed → in-progress → in-test → in-review → done`
-(`blocked` at any point, with the reason in "Open questions").
+(`blocked` at any point, with the reason in "Open questions"; `superseded` when a
+newer story replaces it).
 
 Workflow entry points (skills in `.claude/skills/`):
 
 - `/feature <idea>` — full pipeline for a new feature
 - `/story <idea>` — only refine an idea into a story (no implementation)
 - `/bug <description>` — reproduce with a failing test, fix, verify, review
+- `/rebuild [up-to NNN]` — regenerate the app from the backlog on a fresh branch
+
+## Traceability
+
+The backlog must be enough to rebuild the app without any chat history:
+
+- **Original request** — hak's words, verbatim, in every story.
+- **Decision log** — every answer and correction from hak, appended, never edited.
+- **Links** — `supersedes:` / `superseded-by:` when a story replaces another,
+  `changes: [NNN/ACx]` when it modifies parts of one. Rebuilds replay `done` stories in
+  id order and skip `superseded` ones.
+- **Commit early** — the approved story is committed on `main` at gate 1, before any code.
+- **Tests as oracle** — e2e tests named after ACs verify that a rebuild behaves the same.
+
+## Learning
+
+- **Agent memory** — each agent has `memory: project` and keeps its own lessons in
+  `.claude/agent-memory/<agent>/MEMORY.md` (in git, so every lesson is reviewable
+  and revertable). Role-specific lessons only.
+- **Team knowledge** — lessons that apply to everyone go into this file or an ADR,
+  never into one agent's memory. Agents propose them as "Suggested for CLAUDE.md".
+- **Retro** — after each story the orchestrator analyses what went wrong and proposes
+  concrete edits to agents, this file or the templates. Only hak-approved proposals
+  are applied; agents never rewrite their own role files.
 
 ## Conventions
 

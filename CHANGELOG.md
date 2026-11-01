@@ -10,3 +10,7 @@ All notable changes to this project are documented here, following
 - Software factory setup: role agents, `/feature`, `/story` and `/bug` workflows,
   story and ADR templates.
 - React + TypeScript app scaffold with Vitest, Playwright, ESLint, Prettier and CI.
+- Traceability: stories record the original request and a decision log, link
+  superseded and changed stories, and are committed when approved.
+- `/rebuild` workflow to regenerate the app from the backlog.
+- Persistent per-agent memory and a retro step after each feature and bug fix.
