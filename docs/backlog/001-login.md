@@ -39,7 +39,7 @@ In automated tests the identity provider will be simulated. The ACs below descri
 
 ## Acceptance criteria
 
-- **AC1:** Given I am not signed in, when I open the app, then I see a login screen with a "Sign in with Google" option and no signed-in state.
+- **AC1:** Given I am not signed in, when I open the app, then I see a login screen with a "Sign in with Google" option and no signed-in state. (changed by [004](004-guest-login.md))
 - **AC2:** Given I am on the login screen, when I choose "Sign in with Google" and complete the Google sign-in successfully, then I see that I am signed in, with my name displayed, and the login screen is no longer shown.
 - **AC3:** Given I have chosen "Sign in with Google" and the sign-in is in progress, when I look at the login screen, then a progress indication is visible and the "Sign in with Google" option is disabled until the attempt ends.
 - **AC4:** Given I have chosen "Sign in with Google", when I cancel or close the Google sign-in without completing it, then I stay on the login screen, I see a message that the sign-in was cancelled, and the option is enabled again.
@@ -694,6 +694,12 @@ Additional probes (all passed, tests added): double click, rapid repeated failur
 - Sign out, then reload: login screen, no silent sign-in (AC10).
 - Each of the above in Chrome and in one non-Chromium browser (Firefox or Safari); `popup_closed` detection depends on the browser and on no strict COOP header.
 - Check that the consent screen publishing status is "In production", otherwise only test users can sign in.
+
+**Manual check results:**
+
+- 2026-11-01 — hak, own browser, `http://localhost:5173` with a real client ID: sign-in with hak's own Google account via Google's account picker **works** ("that works", hak).
+- Consent screen stays in **"Testing"** with hak as test user: publishing to "In production" requires a homepage and privacy-policy URL, which don't exist while the app only runs locally. Publish once the app has a public URL.
+- Not yet reported: closing the popup (AC4), blocked popup (AC5), sign-out + reload (AC10) with real Google, non-Chromium browser.
 
 ## Review
 
