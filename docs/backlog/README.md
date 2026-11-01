@@ -8,4 +8,4 @@ One file per story: `NNN-short-slug.md`, created by the `product-owner` agent fr
 | 001 | [Login with Google](001-login.md)                           | done   |
 | 002 | [Login with Microsoft work account](002-login-microsoft.md) | draft  |
 | 003 | [Stay signed in across reloads](003-stay-signed-in.md)      | draft  |
-| 004 | [Sign in as guest (for testing)](004-guest-login.md)        | ready  |
+| 004 | [Sign in as guest (for testing)](004-guest-login.md)        | done   |

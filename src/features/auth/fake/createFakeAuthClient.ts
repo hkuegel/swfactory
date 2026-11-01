@@ -38,7 +38,7 @@ const DEFAULT_ACCOUNT: FakeAccount = {
 
 function toUser(account: FakeAccount): AuthUser {
   const name = account.name?.trim();
-  return { id: account.sub, email: account.email, name: name ? name : null };
+  return { provider: 'google', id: account.sub, email: account.email, name: name ? name : null };
 }
 
 /**

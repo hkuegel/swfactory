@@ -22,18 +22,37 @@ npm run dev
 ```
 
 The app runs without any setup. To sign in with Google, follow
-[Google sign-in setup](#google-sign-in-setup).
+[Google sign-in setup](#google-sign-in-setup). To try the app without Google, use the
+guest button described in [Sign in as guest](#sign-in-as-guest-local-testing).
+
+## Sign in as guest (local testing)
+
+The login screen has a **Sign in as guest** button next to **Sign in with Google**. It
+appears only in the dev server (`npm run dev`) and in the e2e tests
+(`npm run test:e2e`). Use it to reach the signed-in state without a Google account. A
+guest sees the same signed-in screen as a Google user, with "Signed in as Guest". Like a
+Google user, a guest is not kept across page reloads.
+
+The button is not part of production builds. `npm run build`, `npm run preview` and a
+deployed app do not show it. `npm run verify` checks this: it fails if the guest label
+or the e2e fake end up in `dist/`.
 
 ## Google sign-in setup
 
-The login screen signs users in with Google. You need your own OAuth client ID to try
-sign-in on your machine. The automated tests do not need it (see [Testing](#testing)).
+The login screen signs users in with Google. To try Google sign-in on your machine, you
+need your own OAuth client ID. The automated tests and the guest button do not need one.
 
-### 1. Create an OAuth client in Google Cloud
+### 1. Create the OAuth client
 
-1. Open the [Google Cloud Console](https://console.cloud.google.com/) and select a project,
-   or create one.
-2. Open the **Credentials** page and create an **OAuth client ID**.
+1. Open the [Google Auth Platform overview](https://console.cloud.google.com/auth/overview)
+   and select a project, or create one. If the project has no setup yet, choose
+   **Get started** and go through the wizard:
+   - app information (name and support email),
+   - audience **External**,
+   - a contact email,
+   - finish.
+2. Open [Clients](https://console.cloud.google.com/auth/clients) and choose
+   **Create client**.
 3. Set **Application type** to **Web application**.
 4. Under **Authorized JavaScript origins**, add both of these origins:
 
@@ -45,19 +64,21 @@ sign-in on your machine. The automated tests do not need it (see [Testing](#test
    Origins must match exactly: no path and no trailing slash. If you open the app under
    another address, add that origin too.
 
-   Redirect URIs are not needed.
+   Leave **Authorized redirect URIs** empty. They are not needed.
 
 5. Save and copy the **Client ID**. It ends in `.apps.googleusercontent.com`.
 
-### 2. Set up the consent screen
+Creating the project and the client costs nothing. You don't need a billing account or
+a free trial.
 
-Configure the consent screen once for the project:
+### 2. Add test users
 
-- Set the user type to **External**.
-- Add the scopes `openid`, `email` and `profile`.
-- Set the publishing status to **In production**. In **Testing**, only the test users you
-  list can sign in. The app is meant for any Google account. Google may label the
-  publishing action "Publish app".
+While the app runs only on your machine, keep the publishing status on **Testing**.
+Only the Google accounts you list as test users can sign in.
+
+1. Open [Audience](https://console.cloud.google.com/auth/audience).
+2. Under **Test users**, add the Google accounts that may sign in. You can add up to 100.
+3. When you sign in, Google shows "Google hasn't verified this app". Choose **Continue**.
 
 ### 3. Add the client ID to your environment
 
@@ -76,6 +97,12 @@ VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 Restart `npm run dev` after you change the file. `.env.local` is gitignored, so your
 client ID stays out of git.
 
+### Publishing later
+
+Publishing the consent screen ("In production") lets any Google account sign in. Google
+requires a homepage and a privacy-policy URL for that. The app has neither while it runs
+only locally. Publish once the app has a public URL.
+
 ### About the client ID
 
 - Variables with the `VITE_` prefix end up in the JavaScript bundle that the browser
@@ -93,6 +120,8 @@ client ID stays out of git.
   page. Check that the browser can reach `accounts.google.com`.
 - **The same error appears when the browser blocks popups.** Sign-in opens a Google
   popup. Allow popups for `localhost` and try again.
+- **Google refuses the sign-in for your account.** While the app is in **Testing**, only
+  the test users can sign in. Add the account under **Audience**, **Test users**.
 - **Google's popup shows an error about the origin.** Check the authorized JavaScript
   origins from step 1 against the address in your browser.
 
@@ -137,25 +166,31 @@ and revert what the agents learned.
 docs/backlog/     user stories — the single source of truth per feature
 docs/adr/         architecture decision records
 docs/templates/   story and ADR templates
+scripts/          small build checks (check-dist.mjs)
 src/              the app (feature folders under src/features/)
 e2e/              Playwright end-to-end tests
 ```
 
 ## Scripts
 
-| Script             | Purpose                                        |
-| ------------------ | ---------------------------------------------- |
-| `npm run dev`      | Dev server on http://localhost:5173            |
-| `npm test`         | Unit and component tests (Vitest)              |
-| `npm run test:e2e` | End-to-end tests (Playwright, fake sign-in)    |
-| `npm run verify`   | Typecheck, lint, format check, tests and build |
-| `npm run format`   | Format all files with Prettier                 |
+| Script               | Purpose                                             |
+| -------------------- | --------------------------------------------------- |
+| `npm run dev`        | Dev server on http://localhost:5173                 |
+| `npm test`           | Unit and component tests (Vitest)                   |
+| `npm run test:e2e`   | End-to-end tests (Playwright, fake sign-in)         |
+| `npm run verify`     | Typecheck, lint, format, tests, build, dist check   |
+| `npm run check:dist` | Fail if dev-only code is in `dist/` (after a build) |
+| `npm run format`     | Format all files with Prettier                      |
+
+`npm run verify` runs the checks in this order: typecheck, lint, format check, unit
+tests, `vite build`, and `check:dist`. It does not run the e2e tests.
 
 ## Testing
 
 - `npm test` runs the unit and component tests.
-- `npm run test:e2e` runs the Playwright tests. It starts the app in mode `e2e` on port 5174. In this mode, the app uses a fake Google sign-in. The tests never contact real
-  Google and do not need a client ID.
+- `npm run test:e2e` runs the Playwright tests. It starts the app in mode `e2e` on port
+  5174, with a fake Google sign-in. The tests never contact real Google and need no
+  client ID.
 
 To check sign-in with a real Google account, run `npm run dev` on port 5173 and sign in
 in the browser. Do not use the e2e tests for this.

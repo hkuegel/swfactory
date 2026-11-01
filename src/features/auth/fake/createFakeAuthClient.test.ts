@@ -25,7 +25,7 @@ describe('createFakeAuthClient', () => {
     fake.control.settleSignIn('success');
     await expect(result).resolves.toEqual({
       kind: 'success',
-      user: { id: 'fake-ada', email: 'ada@example.com', name: 'Ada Lovelace' },
+      user: { provider: 'google', id: 'fake-ada', email: 'ada@example.com', name: 'Ada Lovelace' },
     });
   });
 
@@ -36,7 +36,7 @@ describe('createFakeAuthClient', () => {
     fake.control.settleSignIn('success');
     await expect(result).resolves.toEqual({
       kind: 'success',
-      user: { id: 's', email: 'noname@example.com', name: null },
+      user: { provider: 'google', id: 's', email: 'noname@example.com', name: null },
     });
   });
 

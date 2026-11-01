@@ -16,5 +16,5 @@ export function parseUserInfo(body: unknown): AuthUser | null {
   const id = nonBlankString(record['sub']);
   const email = nonBlankString(record['email']);
   if (!id || !email) return null;
-  return { id, email, name: nonBlankString(record['name']) };
+  return { provider: 'google', id, email, name: nonBlankString(record['name']) };
 }

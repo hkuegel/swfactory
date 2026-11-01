@@ -7,6 +7,8 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- Sign in as guest on the login screen, for local development and test runs only. It is
+  never part of a production build (#004).
 - Sign in with Google on the login screen. Once signed in, the header shows your name,
   or your email if Google provides no name (#001).
 - Sign out from the header. After signing out, the login screen is shown again (#001).
@@ -23,3 +25,5 @@ All notable changes to this project are documented here, following
 ### Changed
 
 - The counter and the placeholder text are shown only when signed in (#001).
+- `npm run verify` ends with `check:dist`, which fails if dev-only code (the guest sign-in
+  or the e2e fake) ends up in the production build (#004).

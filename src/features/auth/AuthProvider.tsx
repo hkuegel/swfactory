@@ -39,6 +39,12 @@ export function AuthProvider({ client, children }: AuthProviderProps) {
       });
   }, [client]);
 
+  // Story 004: no AuthClient involved, so it works even when Google can't (AC3).
+  const signInAsGuest = useCallback(() => {
+    if (inFlightRef.current || stateRef.current.status !== 'signedOut') return;
+    dispatch({ type: 'guestSignedIn' });
+  }, []);
+
   const signOut = useCallback(() => {
     if (stateRef.current.status !== 'signedIn') return;
     client.signOut();
@@ -46,8 +52,14 @@ export function AuthProvider({ client, children }: AuthProviderProps) {
   }, [client]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ state, signIn, signOut }),
-    [state, signIn, signOut],
+    () => ({
+      state,
+      signIn,
+      // Literal DEV guard (not a shared constant) so `vite build` drops the guest path (AC12).
+      signInAsGuest: import.meta.env.DEV ? signInAsGuest : undefined,
+      signOut,
+    }),
+    [state, signIn, signInAsGuest, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

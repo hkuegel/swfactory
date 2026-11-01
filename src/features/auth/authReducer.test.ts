@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { authReducer, initialAuthState, type AuthState } from './authReducer.ts';
+import { GUEST_USER } from './guestUser.ts';
 import type { AuthUser } from './types.ts';
 
-const user: AuthUser = { id: 'sub-1', email: 'jane@example.com', name: 'Jane Doe' };
+const user: AuthUser = {
+  provider: 'google',
+  id: 'sub-1',
+  email: 'jane@example.com',
+  name: 'Jane Doe',
+};
 const signingIn: AuthState = { status: 'signingIn' };
 const signedIn: AuthState = { status: 'signedIn', user };
 
@@ -54,6 +60,12 @@ describe('authReducer', () => {
     });
   });
 
+  it('004/AC6: guestSignedIn from signed out with a notice signs in the guest', () => {
+    expect(
+      authReducer({ status: 'signedOut', notice: 'error' }, { type: 'guestSignedIn' }),
+    ).toEqual({ status: 'signedIn', user: GUEST_USER });
+  });
+
   describe('ignored actions return the same state object', () => {
     const signedOutWithNotice: AuthState = { status: 'signedOut', notice: 'error' };
 
@@ -72,6 +84,8 @@ describe('authReducer', () => {
       ],
       ['signedOut while signed out', signedOutWithNotice, { type: 'signedOut' }],
       ['signedOut while signing in', signingIn, { type: 'signedOut' }],
+      ['004/AC9: guestSignedIn while signing in', signingIn, { type: 'guestSignedIn' }],
+      ['guestSignedIn while signed in', signedIn, { type: 'guestSignedIn' }],
     ] as const)('%s', (_label, state, action) => {
       expect(authReducer(state, action)).toBe(state);
     });

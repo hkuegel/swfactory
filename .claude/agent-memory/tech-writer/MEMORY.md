@@ -11,3 +11,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Write tables and lists by hand in Prettier style; the user runs Prettier afterwards and the tech writer can't run it (story 001).
 - Read the story's Implementation notes "Open points" and the Review for doc tasks; they name the README sections that are owed (story 001).
 - Before writing, check `docs/` for developer docs besides ADRs and backlog; in story 001 none existed, so only README and CHANGELOG changed (story 001).
+- Check the Test report's "Manual check results" before writing setup steps; hak's real setup overrode the design (publishing needs a homepage and privacy URL, so keep "Testing" with test users locally) (story 001).
+- Don't write Google Cloud steps as exact menu names; name the console page URL and the field, and say when a label may differ (story 001).
+- For dev-only features, say where they are absent (build, preview, deploy) and name the build check that enforces it (story 004).
+- Keep Scripts table column widths in sync when a command name gets longer; re-pad the whole table (story 004).

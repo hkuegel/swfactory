@@ -1,11 +1,20 @@
-export interface AuthUser {
-  /** Google subject (`sub`). Display/React keys only — never an authorization basis. */
-  readonly id: string;
-  /** Always present: the adapter treats a profile without email as an error. */
-  readonly email: string;
-  /** null if Google provides no name or a blank one (AC11). */
-  readonly name: string | null;
-}
+export type AuthUser =
+  | {
+      readonly provider: 'google';
+      /** Google subject (`sub`). Display/React keys only — never an authorization basis. */
+      readonly id: string;
+      /** Always present: the adapter treats a profile without email as an error. */
+      readonly email: string;
+      /** null if Google provides no name or a blank one (001/AC11). */
+      readonly name: string | null;
+    }
+  | {
+      /** Dev-only guest sign-in (story 004). Never an identity toward a backend. */
+      readonly provider: 'guest';
+      readonly id: 'guest';
+      readonly email: null;
+      readonly name: 'Guest';
+    };
 
 export type SignInErrorReason =
   | 'not_configured' // VITE_GOOGLE_CLIENT_ID missing

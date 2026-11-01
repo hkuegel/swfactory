@@ -2,6 +2,56 @@
   max-width: 400px;
 }
 
+/* Stacked sign-in buttons (story 004): same width, the widest button sets it. */
+.buttons {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Dev-only guest button: secondary, not Google-branded; the dashed border marks a test tool. */
+.guest {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px dashed #595959;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #1f1f1f;
+  font-family:
+    Roboto,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+  white-space: nowrap;
+  cursor: pointer;
+  --overlay: 31 31 31;
+}
+
+.guest:hover:not(:disabled) {
+  background-image: linear-gradient(rgb(var(--overlay) / 8%), rgb(var(--overlay) / 8%));
+}
+
+.guest:focus-visible,
+.guest:active:not(:disabled) {
+  background-image: linear-gradient(rgb(var(--overlay) / 12%), rgb(var(--overlay) / 12%));
+}
+
+.guest:disabled {
+  /* Text and border at 38 %; the border stays dashed. */
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+@media (max-width: 599.98px) {
+  .buttons {
+    display: flex;
+  }
+}
+
 .messages {
   /* Reserve one line so the button doesn't jump when progress appears and disappears. */
   min-height: 1.5em;
@@ -55,5 +105,11 @@
   /* #b3261e is only AA on light backgrounds; this keeps AA on the dark page background. */
   .error {
     color: #f2b8b5;
+  }
+
+  .guest {
+    border-color: #a6a6a6;
+    color: #e3e3e3;
+    --overlay: 227 227 227;
   }
 }

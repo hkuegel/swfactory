@@ -12,3 +12,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Probes worth repeating on UI-with-async-state stories: double click, settle twice, reload while pending, rapid repeated failures, hostile text (`<img onerror>`), very long strings, keyboard-only with Enter and Space (story 001; none found a defect there).
 - For timeout logic use `vi.useFakeTimers()` after `await setup()` (setup flushes with a real setTimeout) and `advanceTimersByTimeAsync`; in component tests wrap in `act(() => …)` (story 001 round 1).
 - Add boundary tests for timeouts (answer at limit-1 succeeds, limit fails, timer count 0 afterwards) and a stale-response-vs-next-attempt race test (story 001 round 1).
+- Keep tests minimal when hak asks (story 004): one test per AC or AC group at one level, skip what developer unit tests cover, run probes as throwaway specs (write in e2e/, run, delete) and list them as "checked, OK" unless they found a defect or real risk.
+- A temp spec in e2e/ can probe a `vite preview` production build via an absolute URL (start `npx vite preview --port N` in background, kill after) (story 004).
+- Mutation-check build guards by appending the forbidden string to dist/assets/*.js and re-running `npm run check:dist`, then rebuild (story 004).

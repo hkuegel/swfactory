@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { displayName } from './displayName.ts';
 
-const base = { id: '1', email: 'jane@example.com' };
+const base = { provider: 'google', id: '1', email: 'jane@example.com' } as const;
 
 describe('displayName', () => {
   it('AC2: returns the name when Google provides one', () => {

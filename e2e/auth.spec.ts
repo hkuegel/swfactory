@@ -319,11 +319,14 @@ test.describe('probing beyond the ACs', () => {
     await expectLoginView(page);
   });
 
-  test('keyboard only: the login screen has exactly one tab stop', async ({ page }) => {
+  test('keyboard only: the login screen has exactly two tab stops (Google, then guest)', async ({
+    page,
+  }) => {
     await page.keyboard.press('Tab');
     await expect(signInButton(page)).toBeFocused();
     await page.keyboard.press('Tab');
-    await expect(signInButton(page)).not.toBeFocused();
+    await expect(page.getByRole('button', { name: 'Sign in as guest' })).toBeFocused();
+    await page.keyboard.press('Tab');
     // Focus left the page content: no other tab stop exists on the login screen.
     expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
   });

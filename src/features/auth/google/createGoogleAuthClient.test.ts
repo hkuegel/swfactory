@@ -136,7 +136,7 @@ describe('createGoogleAuthClient', () => {
     gis().callback({ access_token: 'token-abc' });
     await expect(result).resolves.toEqual({
       kind: 'success',
-      user: { id: '42', email: 'jane@example.com', name: 'Jane Doe' },
+      user: { provider: 'google', id: '42', email: 'jane@example.com', name: 'Jane Doe' },
     });
     expect(fetchFn).toHaveBeenCalledWith(USERINFO_URL, {
       headers: { Authorization: 'Bearer token-abc' },
@@ -147,7 +147,10 @@ describe('createGoogleAuthClient', () => {
   it('AC11: userinfo without a name resolves with name null', async () => {
     await expect(
       signInWithToken(() => Promise.resolve(jsonResponse({ sub: '42', email: 'j@example.com' }))),
-    ).resolves.toEqual({ kind: 'success', user: { id: '42', email: 'j@example.com', name: null } });
+    ).resolves.toEqual({
+      kind: 'success',
+      user: { provider: 'google', id: '42', email: 'j@example.com', name: null },
+    });
   });
 
   it('AC5: a failed userinfo request resolves as error/unavailable', async () => {
@@ -394,7 +397,7 @@ describe('createGoogleAuthClient', () => {
       answer(jsonResponse({ sub: '42', email: 'jane@example.com', name: 'Jane Doe' }));
       await expect(result).resolves.toEqual({
         kind: 'success',
-        user: { id: '42', email: 'jane@example.com', name: 'Jane Doe' },
+        user: { provider: 'google', id: '42', email: 'jane@example.com', name: 'Jane Doe' },
       });
     });
 

@@ -1,3 +1,4 @@
+import { GUEST_USER } from './guestUser.ts';
 import type { AuthUser, SignInResult } from './types.ts';
 
 export type SignInNotice = 'cancelled' | 'error';
@@ -10,6 +11,7 @@ export type AuthState =
 export type AuthAction =
   | { readonly type: 'signInStarted' }
   | { readonly type: 'signInSettled'; readonly result: SignInResult }
+  | { readonly type: 'guestSignedIn' }
   | { readonly type: 'signedOut' };
 
 export const initialAuthState: AuthState = { status: 'signedOut', notice: null };
@@ -35,6 +37,9 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
       return state.status === 'signedOut' ? { status: 'signingIn' } : state;
     case 'signInSettled':
       return state.status === 'signingIn' ? settledState(action.result) : state;
+    case 'guestSignedIn':
+      // Only from signedOut (any notice is dropped, 004/AC6); never during a Google attempt (AC9).
+      return state.status === 'signedOut' ? { status: 'signedIn', user: GUEST_USER } : state;
     case 'signedOut':
       return state.status === 'signedIn' ? { status: 'signedOut', notice: null } : state;
   }

@@ -25,7 +25,9 @@ You are the last line of defence before hak merges.
      stale state, effect dependencies, error handling.
    - **Security:** XSS (`dangerouslySetInnerHTML`, URL injection), secrets in code,
      unsafe input handling, new dependencies' trustworthiness.
-   - **Tests:** do they test behaviour, would they catch a regression, are any trivially passing?
+   - **Tests:** do they test behaviour, would they catch a regression, are any trivially
+     passing? Are they proportionate ("Test proportionality" in `CLAUDE.md`) — flag the
+     same AC tested at several levels as well as real gaps.
    - **Design & conventions:** matches the technical design and `CLAUDE.md`; no dead
      code, duplication or needless abstraction.
    - **Accessibility:** labels, roles, keyboard, focus.

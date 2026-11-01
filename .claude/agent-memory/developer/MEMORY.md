@@ -11,3 +11,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Bound every non-interactive network call (fetch + body read) with AbortController + setTimeout (named constant) and a Promise.race fallback, because reviewers flag a UI that can hang in a progress state as major (story 001).
 - In adapters with fixed callbacks (GIS), track a per-attempt flag/identity so late callbacks for an already-decided attempt are ignored (story 001).
 - For fake-timer tests, finish async setup with real timers first, then `vi.useFakeTimers()` and `await vi.advanceTimersByTimeAsync(...)` (wrapped in `act` for components); `vi.useRealTimers()` in afterEach (story 001).
+- When `AuthUser` (or any shared type) becomes a union, fix test literals with a targeted sed (e.g. `{ id: '` → `{ provider: 'google', id: '`) and then grep multi-line literals, because `toEqual` failures only show at runtime, not in tsc (story 004).
+- Keep the test set minimal when the design names one (hak found 001 test-heavy): add only the listed unit/provider cases, and leave e2e-covered UI to the tester (story 004).
+- To give stacked buttons equal width without stretching them, wrap them in an `inline-flex` column and switch to `flex` below 600 px; 001 e2e checks that the Google button is <300 px wide (story 004).

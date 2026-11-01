@@ -102,16 +102,28 @@ e2e/              Playwright specs
 - Function components and hooks only; named exports; one component per file.
 - Tests live next to the code: `Foo.tsx` + `Foo.test.tsx`.
 - Query UI by role/label in tests (`getByRole`), not by test IDs or classes.
+- **Test proportionality:** one test per AC at the cheapest level that shows it — usually
+  one e2e test per AC (or per group of related ACs), which is also the `/rebuild` oracle.
+  Unit tests only for logic with branches (reducers, mappings, parsing, timeouts); no
+  component test that repeats what an e2e test already shows. Probes beyond the ACs are
+  kept as tests only if they found a defect or cover a real risk (security, races);
+  otherwise they're listed in the Test report as "checked, OK". The architect names the
+  minimal test set in the Technical design.
 - No `any`, no non-null `!` without a comment explaining why.
 - Optional props that receive CSS-module classes or refs are typed `prop?: T | undefined`
   (required under `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`).
 - **Network timeouts:** every network call that keeps the UI in a progress state needs a
   timeout (AbortController + named constant) that ends in the error state — no UI state
   may stay pending forever. Only interactive steps (e.g. a provider popup) are exempt.
-- **Test fakes** (e.g. the e2e sign-in fake) are selected only via
-  `import.meta.env.DEV && import.meta.env.MODE === '<mode>'`, never a runtime flag or env
-  var alone. Prove it by building with all `VITE_*` values set, plain and `--mode e2e`,
-  and grepping `dist` for the fake.
+- **Dev-only code** must never reach a production build:
+  - test fakes (e.g. the e2e sign-in fake) via
+    `import.meta.env.DEV && import.meta.env.MODE === '<mode>'`;
+  - dev-only features (e.g. "Sign in as guest") via `import.meta.env.DEV`;
+  - in both cases written out literally at every use site — never a shared constant,
+    runtime flag or env var alone — so Vite drops the code;
+  - their identifying strings are added to the forbidden list in
+    `scripts/check-dist.mjs` in the same change; `npm run verify` fails if they appear in
+    `dist/`.
 - **Config:** `VITE_*` values are public (inlined into the bundle) — never put secrets
   there. Per-developer values go in `.env.local` (gitignored), documented in `.env.example`.
 

@@ -7,7 +7,7 @@ import { Counter } from '../features/counter/Counter.tsx';
 import styles from './App.module.css';
 
 export function App() {
-  const { state, signIn, signOut } = useAuth();
+  const { state, signIn, signInAsGuest, signOut } = useAuth();
   const { identityRef, signInButtonRef } = useAuthFocus(state.status);
 
   return (
@@ -33,6 +33,7 @@ export function App() {
             inProgress={state.status === 'signingIn'}
             notice={state.status === 'signedOut' ? state.notice : null}
             onSignIn={signIn}
+            onSignInAsGuest={signInAsGuest}
           />
         )}
       </main>

@@ -5,11 +5,12 @@ describe('parseUserInfo', () => {
   it('AC2: maps sub, email and name', () => {
     expect(
       parseUserInfo({ sub: '123', email: 'jane@example.com', name: 'Jane Doe', picture: 'x' }),
-    ).toEqual({ id: '123', email: 'jane@example.com', name: 'Jane Doe' });
+    ).toEqual({ provider: 'google', id: '123', email: 'jane@example.com', name: 'Jane Doe' });
   });
 
   it('AC11: a missing name becomes null', () => {
     expect(parseUserInfo({ sub: '123', email: 'jane@example.com' })).toEqual({
+      provider: 'google',
       id: '123',
       email: 'jane@example.com',
       name: null,

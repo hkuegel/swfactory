@@ -7,10 +7,10 @@ import type { AuthClient } from './types.ts';
 import { useAuth } from './useAuth.ts';
 
 function Probe() {
-  const { state, signIn, signOut } = useAuth();
+  const { state, signIn, signInAsGuest, signOut } = useAuth();
   const text =
     state.status === 'signedIn'
-      ? `signedIn:${state.user.email}`
+      ? `signedIn:${state.user.email ?? state.user.name}`
       : state.status === 'signedOut'
         ? `signedOut:${state.notice ?? 'none'}`
         : 'signingIn';
@@ -22,6 +22,9 @@ function Probe() {
       </button>
       <button type="button" onClick={signOut}>
         sign out
+      </button>
+      <button type="button" onClick={signInAsGuest}>
+        sign in as guest
       </button>
     </>
   );
@@ -162,6 +165,18 @@ describe('AuthProvider', () => {
     const { user, status } = renderWith(client);
     await user.click(screen.getByRole('button', { name: 'sign in' }));
     expect(status()).toBe('signedOut:error');
+  });
+});
+
+describe('AuthProvider guest sign-in (story 004)', () => {
+  it('004/AC3: signs in as guest without calling the client, even if Google is not configured', async () => {
+    const signIn = vi.fn<AuthClient['signIn']>(() =>
+      Promise.resolve({ kind: 'error', reason: 'not_configured' }),
+    );
+    const { user, status } = renderWith({ signIn, signOut: () => undefined });
+    await user.click(screen.getByRole('button', { name: 'sign in as guest' }));
+    expect(status()).toBe('signedIn:Guest');
+    expect(signIn).not.toHaveBeenCalled();
   });
 });
 

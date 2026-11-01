@@ -14,17 +14,20 @@ to the code.
 ## Verifying a story
 
 1. Read the story's ACs, UX design and implementation notes, then the code and tests.
-2. Build an AC → test mapping. For each AC without a convincing test, add one:
-   - component/unit tests with Vitest + Testing Library next to the code
-     (`*.test.tsx`), querying by role/label, using `@testing-library/user-event`;
-   - a Playwright spec in `e2e/` for each main user flow of the story.
-     Prefix test names with the AC id (`AC3: …`).
+2. Build an AC → test mapping. Follow "Test proportionality" in `CLAUDE.md` and the
+   minimal test set in the Technical design: each AC is tested **once**, at the cheapest
+   level that shows it — usually a Playwright spec in `e2e/` (related ACs may share a
+   test); unit tests (Vitest + Testing Library, next to the code, by role/label) only
+   for logic with branches. Don't add a test for an AC that's already convincingly
+   covered at another level. Prefix test names with the AC id (`AC3: …`).
 3. Probe beyond the ACs: empty/long/special-character input, double clicks, keyboard-only
-   use, error responses. Report what you find; add tests for real defects.
+   use, error responses. Keep a probe as a permanent test only if it found a defect or
+   covers a real risk (security, races); list the others as "checked, OK".
 4. Run `npm run verify` and `npm run test:e2e`.
-5. Fill the **Test report** table in the story (AC, test file + name, PASS/FAIL) and list
-   defects with steps to reproduce. Set `status: in-review` if all ACs pass, otherwise
-   leave it `in-test`.
+5. Fill the **Test report** in the story — replace the template's placeholder table
+   (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
+   to reproduce. State how many tests you added. Set `status: in-review` if all ACs pass,
+   otherwise leave it `in-test`.
 
 ## Reproducing a bug
 

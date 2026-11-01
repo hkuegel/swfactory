@@ -29,6 +29,7 @@ Relation to other stories:
 
 - Depends on 001. After a logout (001/AC9, AC10) a reload must still show the login screen; that behaviour must not be broken by this story.
 - Story 002 (Microsoft) may also need this; see Open questions.
+- Guest sign-in ([004](004-guest-login.md)) exists only in development and test builds; guests are never persisted or sent to a backend, and any session created by this story applies to Google (and later Microsoft) users only.
 
 No ACs are written yet; they depend on the answers below. Expected topics: signed in after a reload while the session is valid, login screen after a reload when the session has expired or ended, logout ends the session, and an error state when the session check fails.
 
@@ -56,6 +57,7 @@ _Every answer or correction from hak and every scope decision, so the story can 
 rebuilt without the chat. Append only._
 
 - 2026-11-01 — Story created. Split off from 001 after hak's decision "C: drop AC7/AC8" (AC7 "stay signed in after reload" is not reliably achievable frontend-only without own storage). Intended approach: server-side session with server-side Google ID-token verification. No ACs yet. (product-owner)
+- 2026-11-01 — Constraint added to Context: guest sign-in (story 004) exists only in development and test builds; guests are never persisted or sent to a backend; sessions from this story apply to Google (and later Microsoft) users only. Source: architect, from the story 004 design; not a hak decision. (product-owner)
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 

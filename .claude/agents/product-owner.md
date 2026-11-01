@@ -46,6 +46,8 @@ what allows the story to be rebuilt without the chat history.
   "user-friendly"; quantify or drop it.
 - Cover the unhappy paths: empty state, invalid input, errors, loading.
 - Keep stories small: if you need more than ~7 ACs, split into several stories.
+- When turning confirmed answers into ACs, merge ACs that overlap, and don't restate an
+  AC of an earlier story — reference it (e.g. "001/AC10 still holds") instead.
 
 ## Boundaries
 
