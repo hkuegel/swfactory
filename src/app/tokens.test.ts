@@ -161,6 +161,13 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ['--color-focus', '--color-surface', NON_TEXT],
   ['--color-focus', '--cell-tile-fill', NON_TEXT],
   ['--color-focus', '--cell-revealed-fill', NON_TEXT],
+  // 3D: the focus ring also sits on the thicker lip of a raised tile (story 008).
+  ['--color-focus', '--cell-tile-lip', NON_TEXT],
+  ['--color-focus', '--cell-pressed-shade', NON_TEXT], // ring next to the lowered cell's top shade
+  // View control (story 008): segment border on the selected and hover fills.
+  ['--color-edge', '--color-accent-subtle', NON_TEXT],
+  ['--color-edge', '--color-accent-subtle-press', NON_TEXT],
+  ['--color-focus', '--color-accent-subtle-press', NON_TEXT],
   ['--color-focus', '--color-danger-bg', NON_TEXT],
   ['--color-danger', '--color-danger-bg', NON_TEXT],
   ['--color-danger', '--color-surface', NON_TEXT],
@@ -207,6 +214,35 @@ describe('design tokens', () => {
       }
     }
     expect(failures).toEqual([]);
+  });
+
+  it('AC3: the 3D tokens match tilt and depth, and the tilt is at most 35 degrees', () => {
+    const number = (name: string) => {
+      const found = light.get(name);
+      if (found === undefined) throw new Error(`${name} is missing`);
+      return parseFloat(found);
+    };
+    const tilt = number('--board3d-tilt');
+    expect(light.get('--board3d-tilt')).toMatch(/^\d+(\.\d+)?deg$/);
+    expect(tilt).toBeGreaterThan(0);
+    expect(tilt).toBeLessThanOrEqual(35);
+
+    // Plane tilted about its centre, perspective distance k times the grid height: the far
+    // (top) edge is scaled by far, the near (bottom) edge by near, the tilted height is cos.
+    const rad = (tilt * Math.PI) / 180;
+    const k = number('--board3d-depth');
+    const far = k / (k + Math.sin(rad) / 2);
+    const near = k / (k - Math.sin(rad) / 2);
+    expect(Math.abs(number('--board3d-top') - ((Math.cos(rad) / 2) * far - 0.5))).toBeLessThan(
+      0.002,
+    );
+    expect(Math.abs(number('--board3d-bottom') - ((Math.cos(rad) / 2) * near - 0.5))).toBeLessThan(
+      0.002,
+    );
+    // The near row sticks out by (near - 1) / 2 of the width on each side; margin is at least that.
+    const side = number('--board3d-side');
+    expect(side).toBeGreaterThanOrEqual((near - 1) / 2);
+    expect(side).toBeLessThanOrEqual((near - 1) / 2 + 0.005);
   });
 
   it('AC2/AC6: no module bypasses the tokens (colours, font, radius, motion)', () => {

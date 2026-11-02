@@ -121,7 +121,9 @@ e2e/              Playwright specs
   design values (exact colours, pixel sizes) — those live in the tokens and their test.
 - **Independent tests:** tests of one feature don't depend on another feature's layout or
   tab order — e.g. an auth test asserts that focus left the auth controls, not which game
-  control it landed on.
+  control it landed on. No counted Tab sequences and no raw coordinates of elements that
+  may move: focus by role or Tab until the target has focus, and call
+  `scrollIntoViewIfNeeded()` before raw input.
 - **Time and randomness** never inside reducers: pass `now` or a seed in the action. e2e
   tests control time with Playwright `page.clock`; a dev-only hook only if that doesn't
   work.
@@ -144,7 +146,10 @@ e2e/              Playwright specs
   (ADR 0004). No colour literals or `font-family` in CSS modules; dark mode only in the
   token file; every `transition` uses `var(--duration)`. Every state cue also exists as a
   border, outline or glyph, so it survives forced colours. `src/app/tokens.test.ts`
-  enforces this over the CSS, with the contrast pairs the modules actually paint.
+  enforces this over the CSS, with the contrast pairs the modules actually paint. Values
+  derived from tokens are `calc()` over the token, never a hand-rounded number. Variant
+  selectors (e.g. `[data-view]`) wrap their scoping part in `:where()`, so forced-colours
+  and other override blocks still win.
 - **Config:** `VITE_*` values are public (inlined into the bundle) — never put secrets
   there. Per-developer values go in `.env.local` (gitignored), documented in `.env.example`.
 

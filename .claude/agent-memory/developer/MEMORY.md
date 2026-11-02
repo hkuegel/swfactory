@@ -29,3 +29,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Restyling a shared control (focus colour, button size/width) breaks old e2e visual assertions (e.g. `rgb(11, 87, 208)` outline): run `npm run test:e2e` once and report such specs to the tester instead of editing `e2e/` (story 007).
 - To override a shared component's CSS-module class from a caller, use a two-class selector (`.wrapper .variantClass`) because import/bundle order of modules is not a reliable tie-breaker (story 007).
 - Check layout numbers with a throwaway playwright script (scrollWidth, cell width, well scrollWidth) at 320/375/800 and look at one screenshot before reporting; UX design arithmetic can be off (story 007).
+- A native radio/checkbox used as an invisible overlay needs `appearance: none` + `border-radius: var(--radius-control)` + `font: inherit`, because Chromium keeps the UA's `50%` radius and Arial otherwise and redesign.spec.ts AC2 checks every `input` for one radius and one font (story 008).
+- Adding a control above the board pushes it ~70 px down: touch e2e specs that use `boundingBox()` + CDP touch fall off the 720 px viewport, and Tab-order specs gain a stop; report both to the tester (story 008).
+- `lsof -tiTCP:5174` also lists client processes (Claude helper); use `-sTCP:LISTEN` to find a stale vite from an earlier stage and kill it before `npm run test:e2e` (story 008).
+- CSS Modules only emit classes that exist in the stylesheet: `styles.empty` etc. are `undefined` until a rule names them; adding 3D rules for them is what makes them appear (story 008).
+- Run ad-hoc playwright scripts with `node --input-type=module < /abs/path/script.mjs` from the repo root: a script in the scratchpad can't resolve `@playwright/test` (story 008).

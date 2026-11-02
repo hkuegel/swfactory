@@ -6,14 +6,14 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Render error `role="alert"` and similar roles only when content exists; empty persistent role regions break "no message shown" tests. Use a role-less `aria-live="polite"` wrapper for persistent regions (story 001).
 - Use native `disabled` for "disabled" ACs (tests use toBeDisabled), and specify explicit focus targets after a control becomes disabled/removed so focus never falls to body (story 001).
 - Third-party rendered widgets (Google iframe button) cannot be disabled or queried; always flag the AC impact to the architect and specify the custom-control alternative (story 001).
-- Story markdown is checked by prettier (npm run verify): put a blank line before every list and pad tables; I have no shell, so ask the caller to run `npx prettier --write` on the story (story 001).
+- Story markdown is checked by prettier (npm run verify): put a blank line before every list and pad tables; I have no shell, so ask the caller to run `npx prettier --write` on the story (story 001, 008).
 - ACs can be dropped after design; keep the design in numbered sections so obsolete states can be removed by targeted edits (story 001).
 - Always specify light AND dark colours with contrast values for any new coloured element; the app uses `color-scheme: light dark` (story 001 review, story 004).
 - When a story changes an earlier UX design, add a "superseded parts of NNN" list instead of editing the old story (story 004).
 - Page colours live in src/index.css (light #FAFAFA/#1A1A1A, dark #161616/#ECECEC, focus ring #0B57D0/#A8C7FA); compute contrast against these, not pure white/black (story 005). Story 007 replaces them by tokens in src/app/tokens.css; check there first.
 - For numeric inputs with "not a whole number" ACs use type="text" inputmode="numeric", since type="number" hides non-numeric input from validation (story 005).
 - Game/board UIs: roving tabindex grid, aria-label per cell, one polite live region for counter and a role-less wrapper for results; board scrolls inside its own container (story 005).
-- src/components/ was empty at story 001; only Counter in src/features/counter exists. Check again before inventing shared components (story 007 adds src/components/Button).
+- src/components/ holds only Button (+css); everything else is in src/features/<name>; check again before inventing shared components (story 007, 008).
 - Live regions that announce a state change must be mounted before the change; a region inserted together with its content is often not announced (story 005 review).
 - A live region whose text stays identical is not re-announced; specify clear-then-set (about 100 ms) for repeatable announcements such as "New game: …" (story 005 review).
 - Visually hidden announcements have no visible colour; say so explicitly so the dark-mode rule is still answered (story 005).
@@ -21,12 +21,18 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Presets that only fill inputs: use plain type="button" buttons, not radio/select (stale selected state once inputs are edited; select fires no change on re-pick); keep detail text out of the accessible name via aria-hidden + aria-describedby (story 006).
 - A ticking timer is plain text outside every live region, never role=timer/status and never inside the counter's aria-live paragraph; announce only the final value once (story 006).
 - Forced colours: buttons with `border: 0` (the "Start" button in 005) vanish; specify a real 1 px ButtonText border and keep focus as `outline`, not box-shadow (story 006).
-- Existing code to reuse in minesweeper: SetupForm (fieldset grid areas), GameStatus, MessageIcon, visuallyHidden class in Minesweeper.module.css; read the story file again before editing, the architect edits it in parallel (story 006).
+- Existing code to reuse in minesweeper: SetupForm (fieldset grid areas), GameStatus (chip, callout), MessageIcon, visuallyHidden class in each module css; read the story file again before editing, the architect edits it in parallel (story 006).
 - Message colours: keep message TEXT in the normal text colour and carry error/won/info by tinted bg + 4 px bar + icon; then AA holds in both schemes without hunting for tinted-text contrast (story 007).
-- Contrast-tested tokens must be opaque hex (architect's tokens test forbids alpha/overlays); give hover/pressed states their own hex tokens, incl. brand buttons (story 007).
+- Contrast-tested tokens must be opaque hex (architect's tokens test forbids alpha/overlays); give hover/pressed states their own hex tokens; only `--shadow-*` composites may use alpha (story 007, 008).
 - Contrast: I have no shell, so I compute by hand (sRGB linearisation); say so in the story, mark margins under 0.3 as tight, and ask the tester to re-check with a tool (story 007).
 - Board cell look for 3D readiness: only background, border, inset box-shadow, outline and SVG glyphs; no outer shadow/filter/clip-path; focus ring inside the cell (outline-offset -2px) (story 007).
 - Exploded vs plain mine must differ by shape: a decorative disc behind the glyph plus 2 px ring, not only a red tint (story 007).
 - Spec hover only in `@media (hover: hover)` so touch devices have no sticky hover (story 007).
 - Cell-size formulas for fluid boards must subtract panel padding, well padding and the grid gaps; keep it in tokens, since a wrong constant makes the page scroll sideways (story 007).
 - AC wording can collide with third-party branding (Google button fill/font) and functional loops (spinner vs "nothing loops"): list these in Open points for the product owner instead of silently deviating (story 007).
+- Native radios styled as a segmented control: input as full-size opacity:0 overlay (not display:none, not the 1 px clip) so Playwright check() works; draw focus ring on the sibling span, since the input's own outline is invisible; keep weight constant and the check mark in the DOM (visibility) so selecting never reflows (story 008).
+- A state change made on a focused native control (radio, checkbox) needs no live region: the control announces itself; a region would duplicate (story 008).
+- Check CSS specificity claims of the Technical design: a later `@media (forced-colors)` block does NOT win over a more specific earlier selector like `.scroller[data-view] .cell`; recommend `:where()` (story 008).
+- Dark mode: inset shadows in near-black on a near-black well are invisible (1.1:1); give dark its own cue (light 1 px edge) instead of relying on shade, and say shape carries the state (story 008).
+- No `filter: drop-shadow` on hundreds of SVG glyphs; use a `::before` background ellipse (story 008).
+- Perspective/transform math: compute the on-screen size of the smallest cell (width x 0.96, height also x cos tilt) and check the default 9x9 board at 320 px, not only at 375 px (story 008).

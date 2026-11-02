@@ -36,3 +36,10 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Playwright wipes `test-results/` on every run: write screenshots (or any artefact meant to outlive the run) to `screenshots/<story>/` (gitignored) and run the e2e suite BEFORE taking them (story 007).
 - "X equals its container" checks prove nothing when the container is the element's own flex wrapper; compare with an ancestor's content box (clientWidth minus padding) (story 007).
 - For forced-colours cell checks assert glyph paint != backdrop (fill/stroke resolved) rather than comparing markup; markup always differs even if the glyph is invisible (story 007).
+- Never compare two screenshots with `Buffer.equals` after a CSS transform was applied and removed: raster noise (<= 2/255 on rounded edges) makes it fail; decode both PNGs in the page (canvas getImageData) and count pixels above a per-channel tolerance (8) (story 008 `differingPixels`).
+- Replace "Tab once from X to reach the board" by a bounded loop (`for i<12 && no :focus in grid: press Tab`) so new controls above the board don't break old specs (story 008).
+- Bounding boxes of cells under a CSS perspective/rotateX include the slant (32 px cell reports 33 px); don't pin exact widths of 3D cells, and `box-shadow !== none` no longer tells hidden from revealed there (story 008).
+- A second Playwright project with `testMatch` + `grep: /AC(6|8):/` plus a `beforeEach` on `test.info().project.name` re-runs existing flows in another mode without duplicating bodies (story 008 `chromium-3d`).
+- To probe an old spec in a new mode, copy it to e2e/zz-*.spec.ts, add the mode switch to its sign-in helper, run, delete (story 008 forced colours in 3D).
+- Capability fallbacks: `page.addInitScript(() => { CSS.supports = () => false })` before goto works with the dev server (story 008 AC7).
+- Computed box-shadow/background of cells read right after a view switch can still be mid-transition (120 ms): `expect.poll(getAnimations().length).toBe(0)` before comparing 2D vs 3D values, or the test flakes (story 008).

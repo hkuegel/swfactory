@@ -7,6 +7,9 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- Switch the Minesweeper board between 2D and 3D with the View control, also during a game.
+  The game, flags, counter and timer stay as they are. The 3D board is tilted, and hidden
+  cells look raised. The view is 2D again after a reload or sign-out (#008).
 - Minesweeper game after sign-in, for guests too. Choose the rows and columns (5 to 30)
   and the number of mines (1 to rows × columns − 9). The first cell you reveal is never a
   mine (#005).

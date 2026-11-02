@@ -19,3 +19,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - When a design says "no `!important`" or "no X" and the UX or implementation needs an exception, write the exception into the ADR and Technical design at design time, because review had to flag the doc gap after the fact (story 007).
 - Forced colours remove box-shadow and gradients: require every cell/state cue to also exist as border, outline or glyph, and test states pairwise via a computed-style signature under `emulateMedia({forcedColors:'active'})` (story 007).
 - When a wrapper (panel) adds padding, any `100vw`-based fluid size formula must subtract it via shared tokens, not a literal (story 007).
+- For a CSS-only visual variant (3D tilt) put `perspective()` inside the element's own `transform` and keep the DOM identical; scroller `overflow` flattens preserve-3d, and a transform needs margin compensation because only transformed bounds scroll and left/top overflow is unreachable (story 008).
+- Derive geometry constants (margins, fluid-size divisors) from tilt/depth tokens in a unit test instead of trig in CSS, because Vite's CSS transform vs dev server could differ unseen (story 008).
+- To re-run existing e2e flows in a variant, use a second Playwright project with `grep` + a `test.info().project.name` check in beforeEach rather than copying test bodies (story 008).
+- jsdom has no `CSS.supports`: capability checks must be evaluated at mount (not module load) and be false-safe, so e2e can fake them with addInitScript (story 008).
