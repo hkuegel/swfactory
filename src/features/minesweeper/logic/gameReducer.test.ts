@@ -29,7 +29,7 @@ function startFixed(mines: readonly number[] = MINES): GameState {
   });
 }
 
-const reveal = (index: number): GameAction => ({ type: 'reveal', index });
+const reveal = (index: number, now = 0): GameAction => ({ type: 'reveal', index, now });
 const flag = (index: number): GameAction => ({ type: 'toggleFlag', index });
 
 describe('gameReducer', () => {
@@ -145,6 +145,30 @@ describe('gameReducer', () => {
     );
     expect(state.phase).toBe('won');
     expect(state.revealedCount).toBe(899);
+  });
+
+  it('AC3/AC4/AC5: startedAt is set by the first reveal, endedAt by the one that ends the game', () => {
+    const ready = run(startFixed(), flag(at(4, 4)));
+    expect(ready).toMatchObject({ startedAt: null, endedAt: null });
+
+    const playing = run(ready, reveal(at(2, 3), 1000), flag(at(0, 4)), reveal(at(2, 2), 5000));
+    expect(playing).toMatchObject({ phase: 'playing', startedAt: 1000, endedAt: null });
+
+    const lost = run(playing, reveal(at(3, 3), 7000));
+    expect(lost).toMatchObject({ phase: 'lost', startedAt: 1000, endedAt: 7000 });
+
+    const won = run(startFixed(), reveal(at(0, 0), 2000), reveal(at(4, 4), 9000));
+    expect(won).toMatchObject({ phase: 'won', startedAt: 2000, endedAt: 9000 });
+
+    const wonAtOnce = run(
+      null,
+      { type: 'start', config: { rows: 30, cols: 30, mines: 1 }, seed: 123 },
+      reveal(0, 4000),
+    );
+    expect(wonAtOnce).toMatchObject({ phase: 'won', startedAt: 4000, endedAt: 4000 });
+
+    const restarted = run(lost, { type: 'start', config: lost.config, seed: 2 });
+    expect(restarted).toMatchObject({ phase: 'ready', startedAt: null, endedAt: null });
   });
 
   it.each([

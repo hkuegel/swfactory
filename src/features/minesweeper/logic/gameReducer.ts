@@ -34,6 +34,8 @@ function startState(
     revealedCount: 0,
     flagCount: 0,
     explodedIndex: null,
+    startedAt: null,
+    endedAt: null,
   };
 }
 
@@ -47,7 +49,7 @@ function minesFor(state: GameState, firstIndex: number): boolean[] {
   return placeMines(config, firstIndex, seededRandom(state.seed));
 }
 
-function reveal(state: GameState, index: number): GameState {
+function reveal(state: GameState, index: number, now: number): GameState {
   if (state.phase === 'won' || state.phase === 'lost' || state.cells[index] !== 'hidden') {
     return state;
   }
@@ -58,8 +60,19 @@ function reveal(state: GameState, index: number): GameState {
     adjacent = adjacentCounts(mines, rows, cols);
   }
 
+  // Only a reveal can leave `ready`, so the first one starts the timer; flags never do (AC3).
+  const startedAt = state.startedAt ?? now;
+
   if (mines[index]) {
-    return { ...state, mines, adjacent, phase: 'lost', explodedIndex: index };
+    return {
+      ...state,
+      mines,
+      adjacent,
+      phase: 'lost',
+      explodedIndex: index,
+      startedAt,
+      endedAt: now,
+    };
   }
 
   // Iterative flood fill (AC5): no recursion, O(cells). Only zero-count cells expand, so
@@ -88,9 +101,11 @@ function reveal(state: GameState, index: number): GameState {
       cells: cells.map((cell, i) => (minesOnly[i] ? 'flagged' : cell)),
       revealedCount,
       flagCount: mineCount,
+      startedAt,
+      endedAt: now,
     };
   }
-  return { ...state, mines, adjacent, phase: 'playing', cells, revealedCount };
+  return { ...state, mines, adjacent, phase: 'playing', cells, revealedCount, startedAt };
 }
 
 function toggleFlag(state: GameState, index: number): GameState {
@@ -111,7 +126,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
     case 'start':
       return startState(state, action);
     case 'reveal':
-      return state && reveal(state, action.index);
+      return state && reveal(state, action.index, action.now);
     case 'toggleFlag':
       return state && toggleFlag(state, action.index);
   }

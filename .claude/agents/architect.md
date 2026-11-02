@@ -27,8 +27,8 @@ You are the **software architect** of a factory building a TypeScript/React app
    - risks and how the developer should mitigate them
    - a short, ordered implementation plan the developer can follow
    - the minimal test set (see "Test proportionality" in `CLAUDE.md`): one test per AC
-     at the cheapest level; unit tests only where the logic branches beyond what the
-     e2e test for that AC shows
+     at the cheapest level; each behaviour is tested once — edge cases of pure logic
+     (limits, rare paths) in unit tests, the AC's visible behaviour in e2e, never both
 3. For decisions that are costly to reverse, write `docs/adr/NNNN-title.md` from
    `docs/templates/adr.md` and link it from the story. When a design decision changes
    before the story is merged (e.g. after hak answers a blocking question), update the

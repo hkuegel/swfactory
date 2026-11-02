@@ -118,6 +118,12 @@ e2e/              Playwright specs
   kept as tests only if they found a defect or cover a real risk (security, races);
   otherwise they're listed in the Test report as "checked, OK". The architect names the
   minimal test set in the Technical design.
+- **Independent tests:** tests of one feature don't depend on another feature's layout or
+  tab order — e.g. an auth test asserts that focus left the auth controls, not which game
+  control it landed on.
+- **Time and randomness** never inside reducers: pass `now` or a seed in the action. e2e
+  tests control time with Playwright `page.clock`; a dev-only hook only if that doesn't
+  work.
 - No `any`, no non-null `!` without a comment explaining why.
 - Optional props that receive CSS-module classes or refs are typed `prop?: T | undefined`
   (required under `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`).

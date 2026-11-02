@@ -3,7 +3,8 @@ import { Board } from './Board.tsx';
 import { GameStatus } from './GameStatus.tsx';
 import { gameReducer } from './logic/gameReducer.ts';
 import { toIndex } from './logic/grid.ts';
-import type { GameConfig, SetupErrors, SetupField, SetupValues } from './logic/types.ts';
+import { presetToValues } from './logic/presets.ts';
+import type { GameConfig, Preset, SetupErrors, SetupField, SetupValues } from './logic/types.ts';
 import { DEFAULT_SETUP, validateSetup } from './logic/validateSetup.ts';
 import styles from './Minesweeper.module.css';
 import { SetupForm } from './SetupForm.tsx';
@@ -30,15 +31,16 @@ function toIndices(layout: MineLayout | undefined, config: GameConfig): number[]
   });
 }
 
-/**
- * Text for the live region after a successful Start. A restart with the same values would
- * give the same text, which screen readers don't announce again, so every other game gets a
- * trailing no-break space (invisible, and trimmed by text queries).
- */
-function newGameAnnouncement(config: GameConfig, gameId: number): string {
+/** Live-region text after a successful Start (UX §5). */
+function newGameText(config: GameConfig): string {
   const mines = config.mines === 1 ? '1 mine' : `${config.mines} mines`;
-  const text = `New game: ${config.rows} by ${config.cols}, ${mines}.`;
-  return gameId % 2 === 0 ? `${text}\u00a0` : text;
+  return `New game: ${config.rows} by ${config.cols}, ${mines}.`;
+}
+
+/** Live-region text after a preset was chosen (006 UX §4). */
+function presetText(preset: Preset): string {
+  const { rows, cols, mines } = preset.config;
+  return `${preset.name} values set: ${rows} rows, ${cols} columns, ${mines} mines.`;
 }
 
 /** The game (story 005): setup, status and board. Nothing is persisted. */
@@ -47,6 +49,11 @@ export function Minesweeper() {
   const [values, setValues] = useState<SetupValues>(DEFAULT_SETUP);
   const [errors, setErrors] = useState<SetupErrors>({});
   const [game, dispatch] = useReducer(gameReducer, null);
+  // One live region for "New game" and preset messages. `serial` makes every message differ
+  // from the previous one (trailing no-break space on every other one, invisible and trimmed
+  // by text queries), because screen readers don't announce unchanged text again.
+  const [announcement, setAnnouncement] = useState({ text: '', serial: 0 });
+  const announce = (text: string) => setAnnouncement((prev) => ({ text, serial: prev.serial + 1 }));
 
   const handleChange = useCallback((field: SetupField, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -58,6 +65,13 @@ export function Minesweeper() {
       ) satisfies SetupErrors;
     });
   }, []);
+
+  const handlePreset = (preset: Preset) => {
+    // Only the inputs change: no dispatch, so a game in progress stays as it is (AC2).
+    setValues(presetToValues(preset.config));
+    setErrors({});
+    announce(presetText(preset));
+  };
 
   const handleStart = () => {
     const result = validateSetup(values);
@@ -74,9 +88,13 @@ export function Minesweeper() {
         ? toIndices(window.__minesweeperMines, result.config)
         : undefined;
     dispatch({ type: 'start', config: result.config, seed, fixedMines });
+    announce(newGameText(result.config));
   };
 
-  const handleReveal = useCallback((index: number) => dispatch({ type: 'reveal', index }), []);
+  const handleReveal = useCallback(
+    (index: number) => dispatch({ type: 'reveal', index, now: Date.now() }),
+    [],
+  );
   const handleToggleFlag = useCallback(
     (index: number) => dispatch({ type: 'toggleFlag', index }),
     [],
@@ -86,15 +104,28 @@ export function Minesweeper() {
     <section aria-labelledby={headingId} className={styles.game}>
       <div className={styles.column}>
         <h2 id={headingId}>Minesweeper</h2>
-        <SetupForm values={values} errors={errors} onChange={handleChange} onStart={handleStart} />
-        {/* Mounted from the start, so every successful Start is announced (UX §5). */}
+        <SetupForm
+          values={values}
+          errors={errors}
+          onChange={handleChange}
+          onPreset={handlePreset}
+          onStart={handleStart}
+        />
+        {/* Mounted empty from the start, so every announcement is read (UX §5). */}
         <p className={styles.visuallyHidden} aria-live="polite" aria-atomic="true">
-          {game && newGameAnnouncement(game.config, game.id)}
+          {announcement.serial > 0 && announcement.serial % 2 === 0
+            ? `${announcement.text}\u00a0`
+            : announcement.text}
         </p>
         {game === null ? (
           <p className={styles.empty}>Set the board size and the number of mines to begin.</p>
         ) : (
-          <GameStatus remainingMines={game.config.mines - game.flagCount} phase={game.phase} />
+          <GameStatus
+            remainingMines={game.config.mines - game.flagCount}
+            phase={game.phase}
+            startedAt={game.startedAt}
+            endedAt={game.endedAt}
+          />
         )}
       </div>
       {game && (

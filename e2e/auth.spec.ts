@@ -310,12 +310,14 @@ test.describe('probing beyond the ACs', () => {
     await settle(page, 'success');
     await expect(page.locator('#identity')).toBeFocused();
 
-    // #identity is not a tab stop: the next stop is "Sign out", then the game setup.
+    // #identity is not a tab stop: the next stop is "Sign out".
     await page.keyboard.press('Tab');
     await expect(signOutButton(page)).toBeFocused();
+    // Leave "Sign out" by Tab, then come back with Shift+Tab: layout-independent.
     await page.keyboard.press('Tab');
-    await expect(page.getByLabel('Rows', { exact: true })).toBeFocused();
+    await expect(signOutButton(page)).not.toBeFocused();
     await page.keyboard.press('Shift+Tab');
+    await expect(signOutButton(page)).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(signInButton(page)).toBeFocused();
     await expectLoginView(page);

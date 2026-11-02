@@ -20,4 +20,6 @@ Live regions that mount together with their first content usually aren't announc
 
 The trailing no-break-space toggle that makes identical live text get announced again (story 005 round 2) is fine if it stays in a visually hidden region. Probe for visible text nodes containing U+00A0, and check that exact `getByText` still matches (both libraries trim it).
 
+Re-render isolation claims (e.g. "the tick only re-renders the timer") are cheapest to prove with a MutationObserver on the grid plus `page.clock.install` + `runFor`: count grid vs timer mutations (story 006: 0 vs 1 per second). For flex rows that "must fit at 375 px", measure each button's first text node with a Range against the button width at 375/360/340/320 and at 200 % zoom (half the width); min-width: 0 fixes can hide text overflow.
+
 Related: [[build-guard-checks]], [[test-proportionality]]

@@ -132,7 +132,9 @@ This comes with story 003 (`docs/backlog/003-stay-signed-in.md`).
 
 After you sign in, the page shows a Minesweeper game. Guests can play too.
 
-1. Set the rows, columns and mines. The defaults are 9, 9 and 10.
+1. Set the rows, columns and mines. The defaults are 9, 9 and 10. Or choose a preset:
+   **Beginner** (9 × 9, 10 mines), **Intermediate** (16 × 16, 40 mines) or **Expert**
+   (16 × 30, 99 mines). A preset only fills in the fields, so you can still change them.
 2. Choose **Start**. A new board appears. You can choose **Start** at any time, also during
    a game. No confirmation is asked, and the current game is discarded.
 
@@ -172,6 +174,11 @@ you place more flags than there are mines.
 You win when every cell without a mine is revealed. The remaining mines are then flagged.
 You lose when you reveal a mine. After the game ends, the board no longer accepts clicks,
 taps or flags.
+
+**Timer** shows the whole seconds since your first reveal, next to **Mines left**. It
+shows 0 until you reveal a cell, so flagging a cell does not start it. It stops when you
+win or lose and keeps the final time. **Start** sets it back to 0. The timer has no upper
+limit. When the game ends, screen readers also announce the final time.
 
 Nothing is saved. A reload or a sign-out starts again with the default values and no game.
 
