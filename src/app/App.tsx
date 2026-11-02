@@ -3,12 +3,13 @@ import { LoginView } from '../features/auth/LoginView.tsx';
 import { SignedInHeader } from '../features/auth/SignedInHeader.tsx';
 import { useAuth } from '../features/auth/useAuth.ts';
 import { useAuthFocus } from '../features/auth/useAuthFocus.ts';
-import { Counter } from '../features/counter/Counter.tsx';
+import { Minesweeper } from '../features/minesweeper/Minesweeper.tsx';
 import styles from './App.module.css';
 
 export function App() {
   const { state, signIn, signInAsGuest, signOut } = useAuth();
   const { identityRef, signInButtonRef } = useAuthFocus(state.status);
+  const signedIn = state.status === 'signedIn';
 
   return (
     <>
@@ -19,14 +20,11 @@ export function App() {
           onSignOut={signOut}
         />
       )}
-      <main className={styles.main}>
+      <main className={signedIn ? `${styles.main} ${styles.wide}` : styles.main}>
         <h1>Software Factory</h1>
-        {state.status === 'signedIn' ? (
-          // Presentation only, not access control: nothing is protected yet (story 001).
-          <>
-            <p>Your app starts here. Run /feature to build the first story.</p>
-            <Counter />
-          </>
+        {signedIn ? (
+          // Presentation only, not access control: nothing is protected (story 001).
+          <Minesweeper />
         ) : (
           <LoginView
             signInButtonRef={signInButtonRef}

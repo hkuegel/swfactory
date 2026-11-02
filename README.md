@@ -128,6 +128,53 @@ only locally. Publish once the app has a public URL.
 Sign-in is not kept across page reloads yet. Every reload shows the login screen again.
 This comes with story 003 (`docs/backlog/003-stay-signed-in.md`).
 
+## Playing Minesweeper
+
+After you sign in, the page shows a Minesweeper game. Guests can play too.
+
+1. Set the rows, columns and mines. The defaults are 9, 9 and 10.
+2. Choose **Start**. A new board appears. You can choose **Start** at any time, also during
+   a game. No confirmation is asked, and the current game is discarded.
+
+The fields accept these values:
+
+| Setting | Allowed                 | Default |
+| ------- | ----------------------- | ------- |
+| Rows    | 5 to 30                 | 9       |
+| Columns | 5 to 30                 | 9       |
+| Mines   | 1 to rows × columns − 9 | 10      |
+
+If a value is empty, not a whole number or out of range, the page names the field and says
+what is allowed. No board is created, and a game in progress is kept.
+
+The first cell you reveal is never a mine. It is empty, so the area around it opens.
+
+### Controls
+
+| Action        | Mouse       | Touch      | Keyboard       |
+| ------------- | ----------- | ---------- | -------------- |
+| Reveal a cell | Click       | Tap        | Enter or Space |
+| Flag a cell   | Right-click | Long-press | F              |
+
+On touch, hold a cell for about half a second to flag it. Dragging scrolls the board and
+does not reveal or flag a cell.
+
+With the keyboard, press Tab to enter the board. The arrow keys move between cells and stop
+at the edges. Home and End go to the first and last cell of the row. Ctrl+Home and Ctrl+End
+go to the first and last cell of the board.
+
+A flagged cell cannot be revealed. To remove a flag, right-click or long-press the cell
+again, or press F.
+
+**Mines left** shows the number of mines minus the number of flags. It goes negative when
+you place more flags than there are mines.
+
+You win when every cell without a mine is revealed. The remaining mines are then flagged.
+You lose when you reveal a mine. After the game ends, the board no longer accepts clicks,
+taps or flags.
+
+Nothing is saved. A reload or a sign-out starts again with the default values and no game.
+
 ## Working with the factory
 
 Open Claude Code in this folder and use:

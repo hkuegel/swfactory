@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIST = 'dist';
-const FORBIDDEN = ['Sign in as guest', '__fakeGoogle'];
+const FORBIDDEN = ['Sign in as guest', '__fakeGoogle', '__minesweeperMines'];
 
 function listFiles(dir) {
   return readdirSync(dir).flatMap((name) => {

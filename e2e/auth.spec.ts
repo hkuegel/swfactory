@@ -47,7 +47,8 @@ async function expectLoginView(page: Page) {
   await expect(page.getByText('Signed in as')).toHaveCount(0);
   await expect(signOutButton(page)).toHaveCount(0);
   await expect(page.getByRole('banner')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Clicked/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Minesweeper' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Start' })).toHaveCount(0);
 }
 
 async function expectNoMessage(page: Page) {
@@ -90,7 +91,8 @@ test.describe('sign in', () => {
     await expect(signInButton(page)).toHaveCount(0);
     await expect(page.getByText('Use your Google account to sign in.')).toHaveCount(0);
     await expect(signOutButton(page)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Clicked 0 times' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Minesweeper' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
     await expectNoMessage(page);
   });
 
@@ -308,11 +310,11 @@ test.describe('probing beyond the ACs', () => {
     await settle(page, 'success');
     await expect(page.locator('#identity')).toBeFocused();
 
-    // #identity is not a tab stop: the next stop is "Sign out", then the counter.
+    // #identity is not a tab stop: the next stop is "Sign out", then the game setup.
     await page.keyboard.press('Tab');
     await expect(signOutButton(page)).toBeFocused();
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('button', { name: 'Clicked 0 times' })).toBeFocused();
+    await expect(page.getByLabel('Rows', { exact: true })).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Enter');
     await expect(signInButton(page)).toBeFocused();

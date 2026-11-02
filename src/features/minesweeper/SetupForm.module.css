@@ -1,0 +1,142 @@
+.form {
+  margin: 0;
+}
+
+/* Wide: fields and "Start" in one row, messages below (UX §7). */
+.fieldset {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'fields start'
+    'errors errors';
+  gap: 0.75rem 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: 0.75rem;
+  padding: 0;
+  font-weight: 600;
+}
+
+.fields {
+  grid-area: fields;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.field {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 5rem;
+}
+
+.input {
+  width: 100%;
+  height: 40px;
+  padding: 0 0.75rem;
+  border: 1px solid #747775;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #1a1a1a;
+  font: inherit;
+}
+
+.input[aria-invalid='true'] {
+  border: 2px solid #b3261e;
+  /* Keep the text in place when the border grows by 1 px. */
+  padding: 0 calc(0.75rem - 1px);
+}
+
+.hint {
+  color: #5f6368;
+  font-size: 0.875rem;
+}
+
+.errors {
+  grid-area: errors;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  color: #b3261e;
+  overflow-wrap: anywhere;
+}
+
+.icon {
+  flex: none;
+  margin-top: calc((1.5em - 20px) / 2);
+}
+
+.start {
+  grid-area: start;
+  align-self: start;
+  /* Align with the inputs: below the one-line label and the 0.25rem gap. */
+  margin-top: calc(1.5em + 0.25rem);
+  height: 40px;
+  padding: 0 1.5rem;
+  border: 0;
+  border-radius: 4px;
+  background-color: #0b57d0;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  --overlay: 255 255 255;
+}
+
+.start:hover {
+  background-image: linear-gradient(rgb(var(--overlay) / 8%), rgb(var(--overlay) / 8%));
+}
+
+@media (max-width: 599.98px) {
+  .fieldset {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'fields'
+      'errors'
+      'start';
+  }
+
+  .start {
+    width: 100%;
+    margin-top: 0;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .input {
+    border-color: #9aa0a6;
+    color: #ececec;
+  }
+
+  .input[aria-invalid='true'] {
+    border-color: #f2b8b5;
+  }
+
+  .hint {
+    color: #bdc1c6;
+  }
+
+  .error {
+    color: #f2b8b5;
+  }
+
+  .start {
+    background-color: #a8c7fa;
+    color: #062e6f;
+    --overlay: 6 46 111;
+  }
+}

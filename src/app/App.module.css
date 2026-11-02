@@ -4,6 +4,19 @@
   padding: 4rem 1rem;
 }
 
+/*
+ * Signed in (story 005): the board may be wider than the 40 rem column, up to the viewport
+ * minus 1 rem on each side. The heading keeps the column; the game keeps it for setup and status.
+ */
+.wide {
+  max-width: none;
+}
+
+.wide > h1 {
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
 @media (max-width: 599.98px) {
   .main {
     padding-top: 2rem;

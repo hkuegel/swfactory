@@ -27,6 +27,9 @@ Fill the **UX design** section of the story with:
 4. **Copy** — exact user-facing texts (labels, buttons, error messages, empty states).
 5. **Accessibility** — semantic elements and roles, accessible names, keyboard flow,
    focus management, `aria-live` for async updates, colour contrast (WCAG 2.2 AA).
+   Every state change that doesn't move focus (new game, results, async updates) needs
+   a live announcement. Live regions are mounted empty from the start, never together
+   with their first content — otherwise the first message is silent.
 6. **Responsive behaviour** — what changes below 600px width.
 7. **Dark mode** — the app uses `color-scheme: light dark`: specify the colours of every
    new element for both schemes, with contrast values (text AA 4.5:1, UI and focus

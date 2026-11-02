@@ -1,0 +1,216 @@
+/* Scrolls inside its own box when the board is wider than the page (UX §7). */
+.scroller {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.grid {
+  /* Colours (UX §3), light. */
+  --hidden-fill: #cbd0d6;
+  --hidden-border: #6b7076;
+  --bevel-light: #ffffff;
+  --bevel-dark: #6b7076;
+  --revealed-fill: #f1f3f4;
+  --revealed-border: #b0b5ba;
+  --flag: #b3261e;
+  --pole: #1f1f1f;
+  --glyph: #1f1f1f;
+  --exploded-fill: #f9c6c2;
+  --exploded-border: #b3261e;
+  --focus: #0b57d0;
+  --overlay: 31 31 31;
+  --n1: #0b57d0;
+  --n2: #1e7b34;
+  --n3: #c5221f;
+  --n4: #5b2a9e;
+  --n5: #8c1d18;
+  --n6: #00696b;
+  --n7: #1f1f1f;
+  --n8: #5f6368;
+
+  --cell: 32px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  /* Centred when it fits; when it doesn't, the auto margins collapse and the box scrolls. */
+  width: max-content;
+  margin-inline: auto;
+}
+
+.row {
+  display: flex;
+  gap: 1px;
+}
+
+.cell {
+  display: grid;
+  place-items: center;
+  width: var(--cell);
+  height: var(--cell);
+  border: 1px solid var(--revealed-border);
+  background-color: var(--revealed-fill);
+  font-size: clamp(14px, calc(var(--cell) - 12px), 16px);
+  font-weight: 700;
+  line-height: 1;
+  cursor: default;
+  /* Touch (UX §4): panning must still work, no selection or callout menu. */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.hidden,
+.flagged {
+  border-color: var(--hidden-border);
+  background-color: var(--hidden-fill);
+  box-shadow:
+    inset 2px 2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark);
+}
+
+.grid:not([aria-readonly='true']) .hidden,
+.grid:not([aria-readonly='true']) .flagged {
+  cursor: pointer;
+}
+
+.grid:not([aria-readonly='true']) .hidden:hover,
+.grid:not([aria-readonly='true']) .flagged:hover {
+  background-image: linear-gradient(rgb(var(--overlay) / 8%), rgb(var(--overlay) / 8%));
+}
+
+.grid:not([aria-readonly='true']) .hidden:active,
+.grid:not([aria-readonly='true']) .flagged:active,
+.pressed {
+  background-image: linear-gradient(rgb(var(--overlay) / 16%), rgb(var(--overlay) / 16%));
+}
+
+.mineExploded {
+  border: 2px solid var(--exploded-border);
+  background-color: var(--exploded-fill);
+}
+
+.glyph {
+  width: 70%;
+  height: 70%;
+}
+
+.flag {
+  fill: var(--flag);
+}
+
+.pole {
+  fill: var(--pole);
+}
+
+.slash,
+.mineGlyph {
+  stroke: var(--glyph);
+  fill: var(--glyph);
+}
+
+.n1 {
+  color: var(--n1);
+}
+.n2 {
+  color: var(--n2);
+}
+.n3 {
+  color: var(--n3);
+}
+.n4 {
+  color: var(--n4);
+}
+.n5 {
+  color: var(--n5);
+}
+.n6 {
+  color: var(--n6);
+}
+.n7 {
+  color: var(--n7);
+}
+.n8 {
+  color: var(--n8);
+}
+
+@media (max-width: 599.98px) {
+  .grid {
+    /* Fluid below 600 px, never below the 24 px target size (WCAG 2.5.8). */
+    --cell: clamp(24px, calc((100vw - 2rem) / var(--cols)), 40px);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .grid {
+    --hidden-fill: #4a4f55;
+    --hidden-border: #9aa0a6;
+    --bevel-light: #7a8087;
+    --bevel-dark: #202124;
+    --revealed-fill: #202124;
+    --revealed-border: #3c4043;
+    --flag: #f28b82;
+    --pole: #ececec;
+    --glyph: #ececec;
+    --exploded-fill: #5c1a17;
+    --exploded-border: #f28b82;
+    --focus: #a8c7fa;
+    --overlay: 236 236 236;
+    --n1: #8ab4f8;
+    --n2: #81c995;
+    --n3: #f28b82;
+    --n4: #c58af9;
+    --n5: #fda48a;
+    --n6: #78d9ec;
+    --n7: #ececec;
+    --n8: #bdc1c6;
+  }
+}
+
+/* Windows high contrast: borders, glyphs and focus stay distinguishable (UX §3). */
+@media (forced-colors: active) {
+  .cell {
+    border-color: CanvasText;
+  }
+
+  /*
+   * Forced colours replace the fill and drop box-shadow, so the bevel is gone: keep hidden
+   * and flagged cells as raised "buttons" with a thick inner frame; revealed cells stay Canvas.
+   */
+  .hidden,
+  .flagged {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background-color: ButtonFace;
+    background-image: none;
+    color: ButtonText;
+    box-shadow: inset 0 0 0 2px ButtonText;
+  }
+
+  .mineExploded {
+    border-width: 3px;
+  }
+
+  .flag,
+  .pole,
+  .slash,
+  .mineGlyph {
+    fill: currentColor;
+    stroke: currentColor;
+  }
+
+  .pole,
+  .flag {
+    stroke: none;
+  }
+
+  .cell:focus-visible {
+    outline-color: Highlight;
+  }
+}

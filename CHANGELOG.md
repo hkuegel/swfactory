@@ -7,6 +7,12 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- Minesweeper game after sign-in, for guests too. Choose the rows and columns (5 to 30)
+  and the number of mines (1 to rows × columns − 9). The first cell you reveal is never a
+  mine (#005).
+- Flag a cell with right-click, long-press or the F key. Play with the arrow keys, Enter
+  and Space (#005).
+- Mines-left counter, and a message when the game is won or lost (#005).
 - Sign in as guest on the login screen, for local development and test runs only. It is
   never part of a production build (#004).
 - Sign in with Google on the login screen. Once signed in, the header shows your name,
@@ -24,6 +30,7 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- The placeholder text and the click counter are replaced by the Minesweeper game (#005).
 - The counter and the placeholder text are shown only when signed in (#001).
 - `npm run verify` ends with `check:dist`, which fails if dev-only code (the guest sign-in
   or the e2e fake) ends up in the production build (#004).
