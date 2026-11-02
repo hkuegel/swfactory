@@ -1,7 +1,7 @@
 ---
 id: 006
 title: Minesweeper presets and timer
-status: draft # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: ready # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 branch: feature/006-minesweeper-presets-timer
 supersedes: []
@@ -36,7 +36,7 @@ Nothing is persisted (005): the timer is lost on reload; best times are a separa
 
 - **AC1:** Given I am signed in and look at the setup, when I see the difficulty options, then there are exactly three presets named "Beginner", "Intermediate" and "Expert" next to the free inputs of [005/AC1](005-minesweeper.md).
 - **AC2:** Given the setup is shown, when I choose a preset, then the rows, columns and mines inputs show 9 / 9 / 10 (Beginner), 16 / 16 / 40 (Intermediate) or 16 / 30 / 99 (Expert), I can still edit them, and a board in progress stays unchanged until I choose "Start" (as in [005/AC2](005-minesweeper.md)).
-- **AC3:** Given a board has been created with "Start", when I look at the timer, then it shows 0 and does not advance until I reveal the first cell; after that it shows the whole seconds elapsed since the first reveal, increasing by one every second while the game is in progress.
+- **AC3:** Given a board has been created with "Start", when I look at the timer, then it shows 0 and does not advance until I reveal the first cell; after that it shows the whole seconds elapsed since the first reveal, increasing by one every second while the game is in progress, with no upper limit.
 - **AC4:** Given a game in progress with a running timer, when the game is won or lost, then the timer stops and keeps showing the elapsed seconds.
 - **AC5:** Given a game is in progress or finished, when I choose "Start" with valid values, then the timer shows 0 and does not run until the first reveal of the new game.
 
@@ -44,12 +44,12 @@ Nothing is persisted (005): the timer is lost on reload; best times are a separa
 
 - Best times, high-score table or statistics (follow-up story); the timer value is not stored.
 - Saving the chosen preset or the timer across reload or sign-out.
-- Further presets, custom named presets, or a preset that starts the game by itself (see Open questions).
+- Further presets, custom named presets, or a preset that starts the game by itself (see Decision log, 2026-11-02).
 - Chording and everything else listed as out of scope in [005](005-minesweeper.md).
 
 ## Open questions
 
-1. Does choosing a preset only fill the inputs, so that I still choose "Start" (consistent with 005, where the board changes only on "Start"), or does it start a game immediately? [It only fills the inputs; "Start" is still needed. AC2 is written this way.]
+_None._
 
 ## Decision log
 
@@ -57,6 +57,8 @@ _Every answer or correction from hak and every scope decision, so the story can 
 rebuilt without the chat. Append only._
 
 - 2026-11-01 — Story created by the split of 005 at hak's gate 1 ("Passt, mit Split"). Presets (005 Q2) and timer (005 Q5) were confirmed there with the proposed defaults, so ACs are written for both. One new open question recorded with a proposed default: whether a preset only fills the inputs or starts the game; not asked at gate 1, so the story stays draft until hak confirms. `changes: [005/AC1, 005/AC2]`. (product-owner)
+- 2026-11-02 — Gate 1, hak: "passt. leg los". Answer to the former open question 1 (does a preset only fill the inputs or start a game immediately): a preset only fills the inputs; "Start" is still needed, as in 005/AC2. Consequence: AC2 unchanged, question removed from "Open questions", status set to `ready`. (product-owner)
+- 2026-11-02 — Gate 1, hak: "passt. leg los" (accepts the orchestrator's proposal at gate 1). Scope decision: the timer has no upper limit, unlike classic Minesweeper, which stops at 999. Consequence: "with no upper limit" added to AC3; the 999 cap is not applied. (product-owner)
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
