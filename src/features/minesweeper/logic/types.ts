@@ -25,6 +25,10 @@ export interface GameState {
   readonly revealedCount: number;
   readonly flagCount: number;
   readonly explodedIndex: number | null;
+  /** Wall-clock ms of the first reveal (the one that leaves `ready`); null before. */
+  readonly startedAt: number | null;
+  /** Wall-clock ms of the reveal that won or lost the game; null while it is not over. */
+  readonly endedAt: number | null;
 }
 
 export type GameAction =
@@ -34,7 +38,8 @@ export type GameAction =
       readonly seed: number;
       readonly fixedMines?: readonly number[] | undefined;
     }
-  | { readonly type: 'reveal'; readonly index: number }
+  // `now` is required: forgetting it would silently break the timer, the compiler catches it.
+  | { readonly type: 'reveal'; readonly index: number; readonly now: number }
   | { readonly type: 'toggleFlag'; readonly index: number };
 
 /** Raw input strings, so "not a whole number" is detectable. */
@@ -54,3 +59,8 @@ export type SetupError =
   | { readonly kind: 'dependsOnSize' };
 
 export type SetupErrors = Partial<Record<SetupField, SetupError>>;
+
+export interface Preset {
+  readonly name: 'Beginner' | 'Intermediate' | 'Expert';
+  readonly config: GameConfig;
+}

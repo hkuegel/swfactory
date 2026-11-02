@@ -1,6 +1,7 @@
 import { useId, useRef, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
-import type { SetupErrors, SetupField, SetupValues } from './logic/types.ts';
+import { PRESETS } from './logic/presets.ts';
+import type { Preset, SetupErrors, SetupField, SetupValues } from './logic/types.ts';
 import { setupLimits } from './logic/validateSetup.ts';
 import { MessageIcon } from './MessageIcon.tsx';
 import styles from './SetupForm.module.css';
@@ -9,6 +10,7 @@ export interface SetupFormProps {
   readonly values: SetupValues;
   readonly errors: SetupErrors;
   readonly onChange: (field: SetupField, value: string) => void;
+  readonly onPreset: (preset: Preset) => void;
   readonly onStart: () => void;
 }
 
@@ -26,8 +28,8 @@ function errorMessage(field: SetupField, minesMax: number | null): string {
   return `Mines must be a whole number from 1 to ${minesLimit(minesMax)}.`;
 }
 
-/** Board setup (AC1, AC3): three text inputs with range hints, per-field errors and "Start". */
-export function SetupForm({ values, errors, onChange, onStart }: SetupFormProps) {
+/** Board setup (AC1, AC3): presets, three text inputs with range hints, per-field errors and "Start". */
+export function SetupForm({ values, errors, onChange, onPreset, onStart }: SetupFormProps) {
   const id = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const limits = setupLimits(values);
@@ -53,6 +55,34 @@ export function SetupForm({ values, errors, onChange, onStart }: SetupFormProps)
     <form ref={formRef} className={styles.form} noValidate onSubmit={handleSubmit}>
       <fieldset className={styles.fieldset}>
         <legend className={styles.legend}>Board setup</legend>
+        <fieldset className={styles.presets}>
+          <legend className={styles.legend}>Difficulty</legend>
+          <div className={styles.presetRow}>
+            {PRESETS.map((preset) => {
+              const { rows, cols, mines } = preset.config;
+              const descriptionId = `${id}-preset-${preset.name}`;
+              return (
+                <div className={styles.preset} key={preset.name}>
+                  {/* The description sits outside the button so it is not part of its name. */}
+                  <button
+                    type="button"
+                    className={styles.presetButton}
+                    aria-describedby={descriptionId}
+                    onClick={() => onPreset(preset)}
+                  >
+                    {preset.name}
+                    <span className={styles.presetDetail} aria-hidden="true">
+                      {rows} × {cols}, {mines} mines
+                    </span>
+                  </button>
+                  <span id={descriptionId} className={styles.visuallyHidden}>
+                    {rows} rows, {cols} columns, {mines} mines
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </fieldset>
         <div className={styles.fields}>
           {FIELDS.map((field) => {
             const inputId = `${id}-${field}`;

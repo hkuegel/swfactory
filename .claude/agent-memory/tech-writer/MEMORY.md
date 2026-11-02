@@ -17,4 +17,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Keep Scripts table column widths in sync when a command name gets longer; re-pad the whole table (story 004).
 - Describe controls per cell state from the UX Interactions table: a click on a flagged cell does nothing, flags come off by right-click, long-press or F (story 005).
 - Document keyboard extras only if the Implementation notes say they were built (Home/End were optional in UX and built in story 005).
-- Don't name planned follow-up stories (e.g. presets, timer) in CHANGELOG or README; document only what exists (story 005).
+- Don't name planned follow-up stories (e.g. best times) in CHANGELOG or README; document only what exists (story 005, reworded in 006).
+- Cite the id of the story that built a change in CHANGELOG, even when it was split off from an earlier story (story 006 split from 005).
+- Take README feature text from the ACs and the Implementation notes "Built" list; skip Test report probes and review nits, which are not user-facing (story 006).

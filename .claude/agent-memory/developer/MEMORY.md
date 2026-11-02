@@ -21,3 +21,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Delete files with plain `rm`, not `git rm`, because `git rm` stages the change and agents leave staging to hak (story 005).
 - In `@media (forced-colors: active)`, fills and `box-shadow` are dropped: give state cues that carry meaning `forced-color-adjust: none` + system colours, and check with Playwright `emulateMedia({ forcedColors: 'active' })` (story 005).
 - Mount live regions empty from the start and make each announcement's text differ (e.g. a no-break space on alternate ids), because screen readers ignore regions inserted together with their text and unchanged text (story 005).
+- Put a visually hidden description next to (not inside) a button that must have an exact accessible name, because hidden-by-clip text inside the button still counts toward the name (story 006).
+- When a live region should be "mounted empty", don't append a no-break-space repeat trick to empty text: guard it with `text !== ''` / serial > 0 (story 006).
+- A tab-order change in the UI breaks existing keyboard e2e specs (e.g. auth.spec.ts Tab after Sign out): run `npx playwright test` once at the end and report such failures to the tester (story 006).

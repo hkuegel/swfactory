@@ -11,3 +11,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Specify a minimal test set in the design: each AC tested once at the cheapest level that shows it (e2e per AC, unit only for reducer/pure logic), because hak found 001's 2:1 test-to-code ratio excessive (story 004).
 - For dev-only code, require `import.meta.env.DEV` literally at each use site plus a `dist` grep in verify, since cross-module constant folding isn't guaranteed to strip the code (story 004).
 - For UI-heavy stories, read the parallel UX section before fixing element semantics or focus model (e.g. button vs. gridcell) and follow UX there, because a11y semantics are UX-owned and the input wiring depends on them (story 005).
+- Time in a pure reducer: pass `now` in the action and store timestamps in state, derive seconds in a tiny component/hook; prefer Playwright `page.clock` over a dev-only hook, so no check-dist entry is needed (story 006).
+- Tie "start" events to leaving the initial phase, not to an intermediate phase: a game can end on its first reveal (ready → won) (story 006).
+- Update story status with Edit, not `sed -i` (macOS BSD sed needs `-i ''`), and always run prettier --write on story + README after, since it realigns the README status column (story 006).

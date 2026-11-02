@@ -7,6 +7,7 @@
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas:
+    'presets presets'
     'fields start'
     'errors errors';
   gap: 0.75rem 1rem;
@@ -20,6 +21,81 @@
   margin-bottom: 0.75rem;
   padding: 0;
   font-weight: 600;
+}
+
+.presets {
+  grid-area: presets;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.presets .legend {
+  margin-bottom: 0.5rem;
+}
+
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.preset {
+  display: flex;
+  position: relative;
+}
+
+.presetButton {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 6.5rem;
+  min-height: 40px;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #747775;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #0b57d0;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  --overlay: 11 87 208;
+}
+
+.presetButton:hover {
+  background-image: linear-gradient(rgb(var(--overlay) / 8%), rgb(var(--overlay) / 8%));
+}
+
+.presetButton:active {
+  background-image: linear-gradient(rgb(var(--overlay) / 16%), rgb(var(--overlay) / 16%));
+}
+
+.presetButton:focus-visible {
+  outline: 2px solid #0b57d0;
+  outline-offset: 2px;
+}
+
+.presetDetail {
+  color: #5f6368;
+  font-size: 0.875rem;
+  font-weight: 400;
+  text-align: center;
+}
+
+/* Read by screen readers, not shown. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .fields {
@@ -105,6 +181,7 @@
   .fieldset {
     grid-template-columns: 1fr;
     grid-template-areas:
+      'presets'
       'fields'
       'errors'
       'start';
@@ -113,6 +190,18 @@
   .start {
     width: 100%;
     margin-top: 0;
+  }
+
+  /* "Intermediate" plus the wide padding is wider than a third of 375 px: let the items
+     shrink to the basis and tighten the padding so the three share one row (UX §7). */
+  .preset {
+    flex: 1 1 6.5rem;
+    min-width: 0;
+  }
+
+  .presetButton {
+    min-width: 0;
+    padding-inline: 0.25rem;
   }
 }
 
@@ -138,5 +227,39 @@
     background-color: #a8c7fa;
     color: #062e6f;
     --overlay: 6 46 111;
+  }
+
+  .presetButton {
+    border-color: #9aa0a6;
+    color: #a8c7fa;
+    --overlay: 168 199 250;
+  }
+
+  .presetButton:focus-visible {
+    outline-color: #a8c7fa;
+  }
+
+  .presetDetail {
+    color: #bdc1c6;
+  }
+}
+
+/* Fills are dropped in forced colours: keep a real border so the edges stay visible. */
+@media (forced-colors: active) {
+  .start {
+    border: 1px solid ButtonText;
+  }
+
+  .presetButton {
+    border-color: ButtonText;
+    color: ButtonText;
+  }
+
+  .presetButton:hover {
+    border-color: Highlight;
+  }
+
+  .presetDetail {
+    color: inherit;
   }
 }

@@ -5,9 +5,34 @@
   margin: 1.5rem 0 1rem;
 }
 
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+
 .counter {
   margin: 0;
   font-variant-numeric: tabular-nums;
+}
+
+/* Reserve room so the timer does not jump while the counter changes between ordinary values. */
+.counter span {
+  display: inline-block;
+  min-width: 4ch;
+}
+
+/* Read by screen readers, not shown. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .result {

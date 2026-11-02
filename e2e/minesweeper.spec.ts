@@ -398,3 +398,181 @@ test('AC10: revealing every safe cell wins: all mines flagged, counter 0, board 
   await expect(counter(page)).toHaveText('Mines left: 0');
   await expect(page.getByText(WON)).toBeVisible();
 });
+
+// Story 006 – presets and timer. The timer runs on Playwright's fake clock (page.clock): installed
+// before goto, paused after sign-in, so time moves only with runFor and the seconds are exact.
+test.describe('006 presets and timer', () => {
+  const T0 = new Date('2026-01-01T10:00:00Z');
+  const preset = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
+  const timer = (page: Page) => page.getByText('Time:');
+
+  test.beforeEach(async ({ page }) => {
+    // The outer beforeEach already signed in on the real clock; reload under the fake one.
+    await page.clock.install({ time: T0 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Sign in as guest' }).click();
+    await expect(page.getByText('Signed in as')).toBeVisible();
+    await page.clock.pauseAt(new Date(T0.getTime() + 60_000));
+  });
+
+  test('AC3: the timer shows 0 until the first reveal, then whole seconds, with no cap', async ({
+    page,
+  }) => {
+    await startFixed5x5(page, CORNERS);
+    await expect(timer(page)).toHaveText('Time: 0');
+    await cell(page, 3, 3).click({ button: 'right' }); // a flag does not start it
+    await page.clock.runFor(5000);
+    await expect(timer(page)).toHaveText('Time: 0');
+
+    await cell(page, 1, 2).click(); // first reveal, shows 1: the game goes on
+    await page.clock.runFor(999);
+    await expect(timer(page)).toHaveText('Time: 0');
+    await page.clock.runFor(1);
+    await expect(timer(page)).toHaveText('Time: 1');
+    await page.clock.runFor(2000);
+    await expect(timer(page)).toHaveText('Time: 3');
+    await page.clock.fastForward(1_000_000); // one jump: the value comes from timestamps
+    await expect(timer(page)).toHaveText('Time: 1003'); // no 999 cap
+  });
+
+  test('AC1: exactly three presets, next to the free inputs', async ({ page }) => {
+    const difficulty = page.getByRole('group', { name: 'Difficulty' });
+    await expect(difficulty.getByRole('button')).toHaveText([
+      /^Beginner/,
+      /^Intermediate/,
+      /^Expert/,
+    ]);
+    await expect(preset(page, 'Beginner')).toBeVisible();
+    await expect(preset(page, 'Intermediate')).toBeVisible();
+    await expect(preset(page, 'Expert')).toBeVisible();
+    await expect(rowsInput(page)).toBeVisible();
+    await expect(colsInput(page)).toBeVisible();
+    await expect(minesInput(page)).toBeVisible();
+    await expect(startButton(page)).toBeVisible();
+  });
+
+  test('AC2: a preset fills the inputs, they stay editable, and a board changes only with Start', async ({
+    page,
+  }) => {
+    for (const [name, rows, cols, mines] of [
+      ['Intermediate', '16', '16', '40'],
+      ['Expert', '16', '30', '99'],
+      ['Beginner', '9', '9', '10'],
+    ] as const) {
+      await preset(page, name).click();
+      await expect(rowsInput(page)).toHaveValue(rows);
+      await expect(colsInput(page)).toHaveValue(cols);
+      await expect(minesInput(page)).toHaveValue(mines);
+    }
+    await expect(preset(page, 'Beginner')).toBeFocused(); // focus stays on the pressed button
+    await expect(grid(page)).toHaveCount(0); // a preset never starts a game
+
+    // Still editable, and an invalid message is cleared by a preset.
+    await preset(page, 'Expert').click();
+    await minesInput(page).fill('5');
+    await expect(minesInput(page)).toHaveValue('5');
+    await rowsInput(page).fill('99');
+    await startButton(page).click();
+    await expect(page.getByText('Rows must be a whole number from 5 to 30.')).toBeVisible();
+    await preset(page, 'Beginner').click();
+    await expect(page.getByText('Rows must be a whole number from 5 to 30.')).toHaveCount(0);
+    await expect(rowsInput(page)).not.toHaveAttribute('aria-invalid', 'true');
+
+    // A board in progress stays unchanged until Start.
+    await startFixed5x5(page, CORNERS);
+    await cell(page, 1, 2).click();
+    await cell(page, 3, 3).click({ button: 'right' });
+    await page.clock.runFor(2000);
+    await expect(timer(page)).toHaveText('Time: 2');
+    await preset(page, 'Intermediate').click();
+    await expect(rowsInput(page)).toHaveValue('16');
+    await expect(page.getByRole('gridcell')).toHaveCount(25);
+    await expectCell(page, 1, 2, '1 mine nearby');
+    await expectCell(page, 3, 3, 'flagged');
+    await expect(counter(page)).toHaveText('Mines left: 1');
+    await expect(timer(page)).toHaveText('Time: 2');
+    await page.clock.runFor(1000);
+    await expect(timer(page)).toHaveText('Time: 3'); // the timer keeps running
+    // The fixed layout has 2 mines: drop it, or the reducer rejects 40 mines.
+    await page.evaluate(() => {
+      delete (window as MinesWindow).__minesweeperMines;
+    });
+    await startButton(page).click();
+    await expect(page.getByRole('gridcell')).toHaveCount(256);
+    await expect(counter(page)).toHaveText('Mines left: 40');
+  });
+
+  test('AC4: a lost game freezes the timer on its value', async ({ page }) => {
+    await startFixed5x5(page, CORNERS);
+    await cell(page, 1, 2).click();
+    await page.clock.runFor(2000);
+    await expect(timer(page)).toHaveText('Time: 2');
+    await cell(page, 1, 1).click(); // the mine
+    await expect(page.getByText(LOST)).toBeVisible();
+    await expect(page.getByText('Finished in 2 seconds.')).toBeAttached();
+    await page.clock.runFor(5000);
+    await expect(timer(page)).toHaveText('Time: 2');
+  });
+
+  test('AC4: a won game freezes the timer on its value', async ({ page }) => {
+    await startFixed5x5(page, [
+      [1, 2],
+      [2, 1],
+    ]);
+    await cell(page, 4, 4).click();
+    await page.clock.runFor(1000);
+    await expect(timer(page)).toHaveText('Time: 1');
+    await cell(page, 1, 1).click(); // last safe cell
+    await expect(page.getByText(WON)).toBeVisible();
+    await expect(page.getByText('Finished in 1 second.')).toBeAttached();
+    await page.clock.runFor(5000);
+    await expect(timer(page)).toHaveText('Time: 1');
+  });
+
+  test('AC5: Start resets the timer, which stays 0 until the first reveal of the new game', async ({
+    page,
+  }) => {
+    await startFixed5x5(page, CORNERS);
+    await cell(page, 1, 2).click();
+    await page.clock.runFor(4000);
+    await expect(timer(page)).toHaveText('Time: 4');
+
+    // While running.
+    await startFixed5x5(page, CORNERS);
+    await expect(timer(page)).toHaveText('Time: 0');
+    await page.clock.runFor(3000);
+    await expect(timer(page)).toHaveText('Time: 0');
+
+    // After a finished game.
+    await cell(page, 1, 2).click();
+    await page.clock.runFor(2000);
+    await cell(page, 1, 1).click(); // lose
+    await expect(page.getByText(LOST)).toBeVisible();
+    await expect(timer(page)).toHaveText('Time: 2');
+    await startFixed5x5(page, CORNERS);
+    await expect(timer(page)).toHaveText('Time: 0');
+    await page.clock.runFor(3000);
+    await expect(timer(page)).toHaveText('Time: 0');
+    await cell(page, 1, 2).click();
+    await page.clock.runFor(1000);
+    await expect(timer(page)).toHaveText('Time: 1');
+  });
+
+  // UX §7: at 375 px the three presets share one row (about 104 px each).
+  test.describe('phone width', () => {
+    test.use({ viewport: { width: 375, height: 800 } });
+
+    test('UX7: at 375 px the three presets share one row without horizontal scrolling', async ({
+      page,
+    }) => {
+      const boxes = await Promise.all(
+        ['Beginner', 'Intermediate', 'Expert'].map((name) => preset(page, name).boundingBox()),
+      );
+      const ys = boxes.map((box) => Math.round(box?.y ?? -1));
+      expect(new Set(ys).size).toBe(1);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    });
+  });
+});

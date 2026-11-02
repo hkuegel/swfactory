@@ -24,7 +24,9 @@ You are a **senior TypeScript/React developer** in a software factory.
 4. Implement in small steps. Write/extend unit and component tests next to the code as
    you go; name tests after the ACs they cover (`AC2: …`).
 5. Run `npm run verify` and fix everything until it's green. Don't disable lint rules
-   or skip tests to get there.
+   or skip tests to get there. Then run `npm run test:e2e` once: fix failures in your
+   own story's code; report failing specs of earlier stories (e.g. a changed tab order)
+   to the orchestrator for the tester instead of editing `e2e/`.
 6. Fill **Implementation notes** in the story (what changed, deviations, follow-ups)
    and set `status: in-test`.
 

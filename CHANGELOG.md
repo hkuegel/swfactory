@@ -13,6 +13,11 @@ All notable changes to this project are documented here, following
 - Flag a cell with right-click, long-press or the F key. Play with the arrow keys, Enter
   and Space (#005).
 - Mines-left counter, and a message when the game is won or lost (#005).
+- Difficulty presets in the Minesweeper setup: Beginner (9 × 9, 10 mines), Intermediate
+  (16 × 16, 40 mines) and Expert (16 × 30, 99 mines). A preset only fills in the fields;
+  choose Start to play (#006).
+- Timer next to "Mines left" in the Minesweeper game. It starts at the first reveal,
+  stops on win or loss and resets on Start. Screen readers announce the final time (#006).
 - Sign in as guest on the login screen, for local development and test runs only. It is
   never part of a production build (#004).
 - Sign in with Google on the login screen. Once signed in, the header shows your name,
