@@ -1,5 +1,6 @@
 import { useId, useRef, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
+import { Button } from '../../components/Button.tsx';
 import { PRESETS } from './logic/presets.ts';
 import type { Preset, SetupErrors, SetupField, SetupValues } from './logic/types.ts';
 import { setupLimits } from './logic/validateSetup.ts';
@@ -64,8 +65,8 @@ export function SetupForm({ values, errors, onChange, onPreset, onStart }: Setup
               return (
                 <div className={styles.preset} key={preset.name}>
                   {/* The description sits outside the button so it is not part of its name. */}
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     className={styles.presetButton}
                     aria-describedby={descriptionId}
                     onClick={() => onPreset(preset)}
@@ -74,7 +75,7 @@ export function SetupForm({ values, errors, onChange, onPreset, onStart }: Setup
                     <span className={styles.presetDetail} aria-hidden="true">
                       {rows} × {cols}, {mines} mines
                     </span>
-                  </button>
+                  </Button>
                   <span id={descriptionId} className={styles.visuallyHidden}>
                     {rows} rows, {cols} columns, {mines} mines
                   </span>
@@ -118,9 +119,9 @@ export function SetupForm({ values, errors, onChange, onPreset, onStart }: Setup
             ))}
           </div>
         )}
-        <button type="submit" className={styles.start}>
+        <Button type="submit" variant="primary" className={styles.start}>
           Start
-        </button>
+        </Button>
       </fieldset>
     </form>
   );

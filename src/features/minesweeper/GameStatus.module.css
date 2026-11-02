@@ -1,18 +1,25 @@
+/* Status block: divider, chips, then the result callout (UX §5.2). */
 .status {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin: 1.5rem 0 1rem;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 1.5rem;
+  gap: var(--space-2);
 }
 
+/* Status chip, same look as the timer. */
 .counter {
   margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface-subtle);
   font-variant-numeric: tabular-nums;
 }
 
@@ -20,6 +27,7 @@
 .counter span {
   display: inline-block;
   min-width: 4ch;
+  font-weight: 600;
 }
 
 /* Read by screen readers, not shown. */
@@ -35,35 +43,36 @@
   border: 0;
 }
 
+/* Callout: tinted background, 4 px bar and icon carry the state; the text stays --color-text. */
 .result {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
+  padding: 10px var(--space-3);
+  border-left: 4px solid var(--callout-color);
+  border-radius: var(--radius-control);
+  background-color: var(--callout-bg);
+  color: var(--color-text);
+  font-size: var(--text-lg);
   font-weight: 600;
+  line-height: var(--leading-sm);
   overflow-wrap: anywhere;
 }
 
 .icon {
   flex: none;
-  /* Centre the 20 px icon on the first 1.5em line. */
-  margin-top: calc((1.5em - 20px) / 2);
+  /* Centre the 20 px icon on the first line. */
+  margin-top: calc((1.4em - 20px) / 2);
+  color: var(--callout-color);
 }
 
 .won {
-  color: #1e7b34;
+  --callout-color: var(--color-success);
+  --callout-bg: var(--color-success-bg);
 }
 
 .lost {
-  color: #b3261e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .won {
-    color: #81c995;
-  }
-
-  .lost {
-    color: #f2b8b5;
-  }
+  --callout-color: var(--color-danger);
+  --callout-bg: var(--color-danger-bg);
 }

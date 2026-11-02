@@ -1,15 +1,24 @@
+/*
+ * The soft panel around the game (UX §3.1). Below 600 px it is edge to edge (no side border,
+ * no radius, no shadow); from 600 px it fits its content, at least as wide as the 40 rem column,
+ * and never wider than the page.
+ */
 .game {
-  padding-bottom: 2rem;
+  min-width: 0;
+  padding: var(--panel-pad);
+  border-block: 1px solid var(--color-border);
+  background-color: var(--color-surface);
 }
 
-/* Setup and status keep the 40 rem content column; only the board may be wider (UX §1). */
+/* Setup and status keep the 40 rem content column; only the board may be wider. */
 .column {
   max-width: 40rem;
   margin-inline: auto;
 }
 
 .empty {
-  margin: 1.5rem 0 0;
+  margin: var(--space-5) 0 0;
+  color: var(--color-text-muted);
 }
 
 /* Read by screen readers, not shown. */
@@ -23,4 +32,22 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+@media (min-width: 600px) {
+  .game {
+    width: fit-content;
+    min-width: min(100%, calc(40rem + 2 * (var(--panel-pad) + var(--panel-border))));
+    max-width: 100%;
+    margin-inline: auto;
+    border: var(--panel-border) solid var(--color-border);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-panel);
+  }
+}
+
+@media (forced-colors: active) {
+  .game {
+    border-color: CanvasText;
+  }
 }

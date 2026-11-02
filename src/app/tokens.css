@@ -1,0 +1,195 @@
+/*
+ * Design tokens (story 007, ADR 0004). The only file with colour literals.
+ * Light values live in :root, dark values in one media block below; CSS Modules only read
+ * var(--…). Every colour token has a dark value (src/app/tokens.test.ts checks this) and all
+ * contrast-tested colours are opaque 6-digit hex.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces, text, edges */
+  --color-page: #f2f4f7;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #eef1f5;
+  --color-border: #d5d9e0; /* decorative hairline */
+  --color-edge: #737c8b; /* border that carries meaning (3:1) */
+  --color-text: #1b1f24;
+  --color-text-muted: #4a5360;
+  --color-input-bg: #ffffff;
+
+  /* Accent and states */
+  --color-accent: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-accent-active: #1e3a8a;
+  --color-on-accent: #ffffff;
+  --color-accent-subtle: #e8effd;
+  --color-accent-subtle-press: #d5e1fb;
+  --color-focus: #1d4ed8;
+  --color-danger: #b3261e;
+  --color-danger-bg: #fdecea;
+  --color-danger-solid: #b3261e;
+  --color-on-danger-solid: #ffffff;
+  --color-success: #1a7030;
+  --color-success-bg: #e8f5ea;
+  --color-disabled-bg: #e6e9ee;
+  --color-disabled-text: #6b7482;
+
+  /* Board cells */
+  --cell-revealed-fill: #e5e9ef;
+  --cell-revealed-edge: #cfd5de;
+  --cell-tile-fill: #f7f8fa;
+  --cell-tile-hover: #ffffff;
+  --cell-tile-pressed: #e9edf3;
+  --cell-tile-highlight: #ffffff;
+  --cell-tile-lip: #c3cad6;
+  --cell-pressed-shade: #b9c1ce;
+
+  /* Digits 1 to 8 on a revealed cell */
+  --n1: #0b57d0;
+  --n2: #1a7030;
+  --n3: #c5221f;
+  --n4: #5b2a9e;
+  --n5: #8c1d18;
+  --n6: #00696b;
+  --n7: #1b1f24;
+  --n8: #5f6368;
+
+  /* "Sign in with Google" keeps Google's branding (AC2 exception), standard theme */
+  --google-fill: #ffffff;
+  --google-text: #1f1f1f;
+  --google-border: #747775;
+  --google-hover: #eeeeee;
+  --google-press: #e6e6e6;
+  --google-disabled-fill: #ffffff;
+  --google-disabled-border: #e4e4e4;
+  --google-disabled-text: #aaaaaa;
+
+  /* Depth (decoration only, never the sole cue) */
+  --shadow-panel: 0 1px 2px rgb(16 24 40 / 6%), 0 8px 24px rgb(16 24 40 / 6%);
+  --shadow-control: 0 1px 2px rgb(16 24 40 / 10%);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radius */
+  --radius-control: 8px; /* every button, input, callout, chip */
+  --radius-cell: 6px;
+  --radius-well: 12px;
+  --radius-panel: 16px;
+
+  /* Size */
+  --control-height: 44px;
+  --cell-gap: 2px;
+  --tile-lip: 3px;
+  --focus-width: 2px;
+
+  /* Board chrome (below 600 px the panel is edge to edge); the board's fluid cell size
+     subtracts it. Real paddings and these tokens must stay equal. */
+  --page-pad: 0px;
+  --panel-border: 0px;
+  --panel-pad: 16px;
+  --well-pad: 4px;
+  --well-border: 1px;
+  --board-chrome: calc(
+    2 *
+      (
+        var(--page-pad) + var(--panel-border) + var(--panel-pad) + var(--well-pad) +
+          var(--well-border)
+      )
+  );
+
+  /* Type */
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-h2: 1.375rem;
+  --text-h1: 1.75rem;
+  --leading-sm: 1.4;
+  --leading-base: 1.5;
+
+  /* Motion: at most 200 ms (0s under reduced motion, below) */
+  --duration: 120ms;
+  --ease: ease-out;
+}
+
+@media (min-width: 600px) {
+  :root {
+    --page-pad: 24px;
+    --panel-border: 1px;
+    --panel-pad: 24px;
+    --well-pad: 8px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-page: #111318;
+    --color-surface: #1b1f26;
+    --color-surface-subtle: #252a33;
+    --color-border: #2b313b;
+    --color-edge: #8b94a3;
+    --color-text: #e8eaed;
+    --color-text-muted: #a9b1bd;
+    --color-input-bg: #12151a;
+
+    --color-accent: #a8c7fa;
+    --color-accent-hover: #bfd3fb;
+    --color-accent-active: #8eb1f3;
+    --color-on-accent: #062e6f;
+    --color-accent-subtle: #232b3d;
+    --color-accent-subtle-press: #2d3850;
+    --color-focus: #a8c7fa;
+    --color-danger: #f2b8b5;
+    --color-danger-bg: #3a1b1a;
+    --color-danger-solid: #f28b82;
+    --color-on-danger-solid: #1b1f24;
+    --color-success: #81c995;
+    --color-success-bg: #16291b;
+    --color-disabled-bg: #2a2f38;
+    --color-disabled-text: #8b94a3;
+
+    --cell-revealed-fill: #0e1014;
+    --cell-revealed-edge: #232831;
+    --cell-tile-fill: #343a45;
+    --cell-tile-hover: #3f4652;
+    --cell-tile-pressed: #2a2f38;
+    --cell-tile-highlight: #4a515d;
+    --cell-tile-lip: #1c2028;
+    --cell-pressed-shade: #0a0c10;
+
+    --n1: #8ab4f8;
+    --n2: #81c995;
+    --n3: #f28b82;
+    --n4: #c58af9;
+    --n5: #fda48a;
+    --n6: #78d9ec;
+    --n7: #e8eaed;
+    --n8: #bdc1c6;
+
+    --google-fill: #131314;
+    --google-text: #e3e3e3;
+    --google-border: #8e918f;
+    --google-hover: #242425;
+    --google-press: #2c2c2d;
+    --google-disabled-fill: #181a1f;
+    --google-disabled-border: #333639;
+    --google-disabled-text: #65686b;
+
+    --shadow-panel: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 30%);
+    --shadow-control: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0s;
+  }
+}

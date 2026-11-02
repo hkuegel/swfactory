@@ -11,5 +11,5 @@ One file per story: `NNN-short-slug.md`, created by the `product-owner` agent fr
 | 004 | [Sign in as guest (for testing)](004-guest-login.md)                          | done   |
 | 005 | [Minesweeper with configurable board size and mine count](005-minesweeper.md) | done   |
 | 006 | [Minesweeper presets and timer](006-minesweeper-presets-timer.md)             | done   |
-| 007 | [Minesweeper redesign: nicer look of the 2D UI](007-minesweeper-redesign.md)  | ready  |
+| 007 | [Minesweeper redesign: nicer look of the 2D UI](007-minesweeper-redesign.md)  | done   |
 | 008 | [Minesweeper 3D mode, switchable during play](008-minesweeper-3d-mode.md)     | ready  |

@@ -35,6 +35,10 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- New modern look for the login screen, the header and the Minesweeper game: rounded
+  shapes, one blue accent colour, and light and dark colours that follow your system
+  setting. Buttons look the same everywhere, contrast is better, and forced colours and
+  reduced motion are supported. How the app works does not change (#007).
 - The placeholder text and the click counter are replaced by the Minesweeper game (#005).
 - The counter and the placeholder text are shown only when signed in (#001).
 - `npm run verify` ends with `check:dist`, which fails if dev-only code (the guest sign-in

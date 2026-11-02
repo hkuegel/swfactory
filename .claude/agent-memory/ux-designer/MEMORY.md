@@ -10,10 +10,10 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - ACs can be dropped after design; keep the design in numbered sections so obsolete states can be removed by targeted edits (story 001).
 - Always specify light AND dark colours with contrast values for any new coloured element; the app uses `color-scheme: light dark` (story 001 review, story 004).
 - When a story changes an earlier UX design, add a "superseded parts of NNN" list instead of editing the old story (story 004).
-- Page colours live in src/index.css (light #FAFAFA/#1A1A1A, dark #161616/#ECECEC, focus ring #0B57D0/#A8C7FA); compute contrast against these, not pure white/black (story 005).
+- Page colours live in src/index.css (light #FAFAFA/#1A1A1A, dark #161616/#ECECEC, focus ring #0B57D0/#A8C7FA); compute contrast against these, not pure white/black (story 005). Story 007 replaces them by tokens in src/app/tokens.css; check there first.
 - For numeric inputs with "not a whole number" ACs use type="text" inputmode="numeric", since type="number" hides non-numeric input from validation (story 005).
 - Game/board UIs: roving tabindex grid, aria-label per cell, one polite live region for counter and a role-less wrapper for results; board scrolls inside its own container (story 005).
-- src/components/ was empty at story 001; only Counter in src/features/counter exists. Check again before inventing shared components.
+- src/components/ was empty at story 001; only Counter in src/features/counter exists. Check again before inventing shared components (story 007 adds src/components/Button).
 - Live regions that announce a state change must be mounted before the change; a region inserted together with its content is often not announced (story 005 review).
 - A live region whose text stays identical is not re-announced; specify clear-then-set (about 100 ms) for repeatable announcements such as "New game: …" (story 005 review).
 - Visually hidden announcements have no visible colour; say so explicitly so the dark-mode rule is still answered (story 005).
@@ -22,3 +22,11 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - A ticking timer is plain text outside every live region, never role=timer/status and never inside the counter's aria-live paragraph; announce only the final value once (story 006).
 - Forced colours: buttons with `border: 0` (the "Start" button in 005) vanish; specify a real 1 px ButtonText border and keep focus as `outline`, not box-shadow (story 006).
 - Existing code to reuse in minesweeper: SetupForm (fieldset grid areas), GameStatus, MessageIcon, visuallyHidden class in Minesweeper.module.css; read the story file again before editing, the architect edits it in parallel (story 006).
+- Message colours: keep message TEXT in the normal text colour and carry error/won/info by tinted bg + 4 px bar + icon; then AA holds in both schemes without hunting for tinted-text contrast (story 007).
+- Contrast-tested tokens must be opaque hex (architect's tokens test forbids alpha/overlays); give hover/pressed states their own hex tokens, incl. brand buttons (story 007).
+- Contrast: I have no shell, so I compute by hand (sRGB linearisation); say so in the story, mark margins under 0.3 as tight, and ask the tester to re-check with a tool (story 007).
+- Board cell look for 3D readiness: only background, border, inset box-shadow, outline and SVG glyphs; no outer shadow/filter/clip-path; focus ring inside the cell (outline-offset -2px) (story 007).
+- Exploded vs plain mine must differ by shape: a decorative disc behind the glyph plus 2 px ring, not only a red tint (story 007).
+- Spec hover only in `@media (hover: hover)` so touch devices have no sticky hover (story 007).
+- Cell-size formulas for fluid boards must subtract panel padding, well padding and the grid gaps; keep it in tokens, since a wrong constant makes the page scroll sideways (story 007).
+- AC wording can collide with third-party branding (Google button fill/font) and functional loops (spinner vs "nothing loops"): list these in Open points for the product owner instead of silently deviating (story 007).

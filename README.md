@@ -229,6 +229,17 @@ src/              the app (feature folders under src/features/)
 e2e/              Playwright end-to-end tests
 ```
 
+## Styling
+
+Colours, corner radii, type sizes and durations come from `src/app/tokens.css`. The
+light values are in `:root`, the dark values in one `prefers-color-scheme: dark` block
+below them (see [ADR 0004](docs/adr/0004-design-tokens-css-custom-properties.md)). Add a
+new colour to both blocks.
+
+CSS modules use only these tokens, never a colour literal or a dark-mode block of their
+own. `src/app/tokens.test.ts` checks the contrast of the text and icon pairs in both
+schemes and fails on any value that bypasses the tokens. Run it with `npm test`.
+
 ## Scripts
 
 | Script               | Purpose                                             |

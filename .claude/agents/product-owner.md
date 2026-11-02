@@ -24,6 +24,9 @@ without guessing.
 3. Paste hak's request **verbatim** into "Original request" — the exact text the
    orchestrator passed you, no paraphrasing.
 4. Fill in: user story, context, acceptance criteria, out of scope, open questions.
+   For visual stories, check each AC against third-party branding rules (e.g. the Google
+   sign-in button) and existing functional indicators (spinners, focus rings) and word
+   the exceptions into the AC before gate 1.
 5. If the story changes behaviour of an existing story, set the links in both files:
    - fully replaces it → `supersedes: [NNN]` here; in the old story set
      `superseded-by: <this id>` and `status: superseded`;

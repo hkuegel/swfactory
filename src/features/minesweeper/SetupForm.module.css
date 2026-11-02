@@ -2,7 +2,7 @@
   margin: 0;
 }
 
-/* Wide: fields and "Start" in one row, messages below (UX §7). */
+/* Wide: fields and "Start" in one row, messages below (UX §5.2). */
 .fieldset {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -10,7 +10,7 @@
     'presets presets'
     'fields start'
     'errors errors';
-  gap: 0.75rem 1rem;
+  gap: var(--space-3) var(--space-4);
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -18,9 +18,12 @@
 }
 
 .legend {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
   padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
   font-weight: 600;
+  line-height: var(--leading-sm);
 }
 
 .presets {
@@ -32,13 +35,13 @@
 }
 
 .presets .legend {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
 }
 
 .presetRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .preset {
@@ -46,42 +49,20 @@
   position: relative;
 }
 
-.presetButton {
-  display: flex;
+/* Secondary button with two centred lines; the wrapper selector beats the Button's own rules. */
+.preset .presetButton {
   flex: 1;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   min-width: 6.5rem;
-  min-height: 40px;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid #747775;
-  border-radius: 4px;
-  background-color: transparent;
-  color: #0b57d0;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  --overlay: 11 87 208;
-}
-
-.presetButton:hover {
-  background-image: linear-gradient(rgb(var(--overlay) / 8%), rgb(var(--overlay) / 8%));
-}
-
-.presetButton:active {
-  background-image: linear-gradient(rgb(var(--overlay) / 16%), rgb(var(--overlay) / 16%));
-}
-
-.presetButton:focus-visible {
-  outline: 2px solid #0b57d0;
-  outline-offset: 2px;
+  min-height: 56px;
+  padding: var(--space-1) var(--space-3);
 }
 
 .presetDetail {
-  color: #5f6368;
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
   font-weight: 400;
+  line-height: var(--leading-sm);
   text-align: center;
 }
 
@@ -102,79 +83,89 @@
   grid-area: fields;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1rem;
+  gap: var(--space-3) var(--space-4);
 }
 
 .field {
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
   min-width: 5rem;
+}
+
+.field label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-sm);
 }
 
 .input {
   width: 100%;
-  height: 40px;
-  padding: 0 0.75rem;
-  border: 1px solid #747775;
-  border-radius: 4px;
-  background-color: transparent;
-  color: #1a1a1a;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-edge);
+  border-radius: var(--radius-control);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
   font: inherit;
+  transition: border-color var(--duration) var(--ease);
+}
+
+@media (hover: hover) {
+  .input:hover {
+    border-color: var(--color-text-muted);
+  }
+}
+
+.input:focus {
+  border-color: var(--color-accent);
 }
 
 .input[aria-invalid='true'] {
-  border: 2px solid #b3261e;
+  border: 2px solid var(--color-danger);
   /* Keep the text in place when the border grows by 1 px. */
-  padding: 0 calc(0.75rem - 1px);
+  padding: 0 calc(var(--space-3) - 1px);
 }
 
 .hint {
-  color: #5f6368;
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
 }
 
 .errors {
   grid-area: errors;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-2);
 }
 
+/* Callout: tinted background, 4 px bar and icon carry the state; the text stays --color-text. */
 .error {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
-  color: #b3261e;
+  padding: 10px var(--space-3);
+  border-left: 4px solid var(--color-danger);
+  border-radius: var(--radius-control);
+  background-color: var(--color-danger-bg);
+  color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
 .icon {
   flex: none;
   margin-top: calc((1.5em - 20px) / 2);
+  color: var(--color-danger);
 }
 
-.start {
+.fieldset .start {
   grid-area: start;
   align-self: start;
-  /* Align with the inputs: below the one-line label and the 0.25rem gap. */
-  margin-top: calc(1.5em + 0.25rem);
-  height: 40px;
-  padding: 0 1.5rem;
-  border: 0;
-  border-radius: 4px;
-  background-color: #0b57d0;
-  color: #ffffff;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  --overlay: 255 255 255;
-}
-
-.start:hover {
-  background-image: linear-gradient(rgb(var(--overlay) / 8%), rgb(var(--overlay) / 8%));
+  /* Align with the inputs: below the one-line label and the gap. */
+  margin-top: calc(var(--text-sm) * var(--leading-sm) + var(--space-1));
 }
 
 @media (max-width: 599.98px) {
@@ -187,76 +178,31 @@
       'start';
   }
 
-  .start {
+  .fieldset .start {
     width: 100%;
     margin-top: 0;
   }
 
   /* "Intermediate" plus the wide padding is wider than a third of 375 px: let the items
-     shrink to the basis and tighten the padding so the three share one row (UX §7). */
+     shrink to the basis and tighten the padding so the three share one row. */
   .preset {
-    flex: 1 1 6.5rem;
+    flex: 1 1 5.5rem;
     min-width: 0;
   }
 
-  .presetButton {
+  .preset .presetButton {
     min-width: 0;
-    padding-inline: 0.25rem;
+    padding-inline: var(--space-1);
   }
 }
 
-@media (prefers-color-scheme: dark) {
+@media (forced-colors: active) {
   .input {
-    border-color: #9aa0a6;
-    color: #ececec;
+    border-color: ButtonText;
   }
 
   .input[aria-invalid='true'] {
-    border-color: #f2b8b5;
-  }
-
-  .hint {
-    color: #bdc1c6;
-  }
-
-  .error {
-    color: #f2b8b5;
-  }
-
-  .start {
-    background-color: #a8c7fa;
-    color: #062e6f;
-    --overlay: 6 46 111;
-  }
-
-  .presetButton {
-    border-color: #9aa0a6;
-    color: #a8c7fa;
-    --overlay: 168 199 250;
-  }
-
-  .presetButton:focus-visible {
-    outline-color: #a8c7fa;
-  }
-
-  .presetDetail {
-    color: #bdc1c6;
-  }
-}
-
-/* Fills are dropped in forced colours: keep a real border so the edges stay visible. */
-@media (forced-colors: active) {
-  .start {
-    border: 1px solid ButtonText;
-  }
-
-  .presetButton {
-    border-color: ButtonText;
-    color: ButtonText;
-  }
-
-  .presetButton:hover {
-    border-color: Highlight;
+    border-color: CanvasText;
   }
 
   .presetDetail {

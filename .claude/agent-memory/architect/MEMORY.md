@@ -14,3 +14,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Time in a pure reducer: pass `now` in the action and store timestamps in state, derive seconds in a tiny component/hook; prefer Playwright `page.clock` over a dev-only hook, so no check-dist entry is needed (story 006).
 - Tie "start" events to leaving the initial phase, not to an intermediate phase: a game can end on its first reveal (ready → won) (story 006).
 - Update story status with Edit, not `sed -i` (macOS BSD sed needs `-i ''`), and always run prettier --write on story + README after, since it realigns the README status column (story 006).
+- For design tokens prefer light + `@media (prefers-color-scheme: dark)` blocks over `light-dark()`: e2e runs on the dev server, so a production-only CSS transform by Vite would go unseen; guard parity with a unit test over `tokens.css?raw` (story 007).
+- Reduced motion via a `--duration` token set to `0s` in the media query is the primary guard; a global `!important` on `*` in index.css is only a safety net for animations and longhand transitions (story 007).
+- When a design says "no `!important`" or "no X" and the UX or implementation needs an exception, write the exception into the ADR and Technical design at design time, because review had to flag the doc gap after the fact (story 007).
+- Forced colours remove box-shadow and gradients: require every cell/state cue to also exist as border, outline or glyph, and test states pairwise via a computed-style signature under `emulateMedia({forcedColors:'active'})` (story 007).
+- When a wrapper (panel) adds padding, any `100vw`-based fluid size formula must subtract it via shared tokens, not a literal (story 007).

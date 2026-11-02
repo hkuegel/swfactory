@@ -25,7 +25,10 @@ to the code.
    covers a real risk (security, races); list the others as "checked, OK". If the UX
    design specifies dark-mode, forced-colours or reduced-motion behaviour, check each
    once with `page.emulateMedia(…)` and list the result there too.
-4. Run `npm run verify` and `npm run test:e2e`.
+4. Run `npm run verify` and `npm run test:e2e`. For visual stories, take the screenshot
+   states listed in the UX design **after** the last e2e run (Playwright wipes
+   `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and
+   name the path in the Test report.
 5. Fill the **Test report** in the story — replace the template's placeholder table
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
    to reproduce. State how many tests you added. Set `status: in-review` if all ACs pass,

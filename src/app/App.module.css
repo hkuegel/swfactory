@@ -1,24 +1,34 @@
+/* Login: one centred column; the card inside sets its own width (UX §5.1). */
 .main {
   max-width: 40rem;
   margin: 0 auto;
-  padding: 4rem 1rem;
+  padding: var(--space-6) var(--space-4);
 }
 
 /*
- * Signed in (story 005): the board may be wider than the 40 rem column, up to the viewport
- * minus 1 rem on each side. The heading keeps the column; the game keeps it for setup and status.
+ * Signed in: the panel may be wider than the 40 rem column, up to the viewport minus the page
+ * padding. Below 600 px the panel is edge to edge (--page-pad is 0 there); the heading keeps
+ * its own inset (UX §5.2).
  */
 .wide {
   max-width: none;
+  padding: var(--space-6) var(--page-pad);
 }
 
 .wide > h1 {
-  max-width: 40rem;
-  margin-inline: auto;
+  padding-inline: var(--space-4);
 }
 
-@media (max-width: 599.98px) {
+@media (min-width: 600px) {
   .main {
-    padding-top: 2rem;
+    padding-top: var(--space-8);
+  }
+
+  .wide {
+    padding-top: var(--space-7);
+  }
+
+  .wide > h1 {
+    padding-inline: 0;
   }
 }

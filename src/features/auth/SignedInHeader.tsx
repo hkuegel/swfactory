@@ -1,4 +1,5 @@
 import type { Ref } from 'react';
+import { Button } from '../../components/Button.tsx';
 import styles from './SignedInHeader.module.css';
 
 export interface SignedInHeaderProps {
@@ -14,9 +15,9 @@ export function SignedInHeader({ displayName, onSignOut, identityRef }: SignedIn
       <p id="identity" ref={identityRef} tabIndex={-1} className={styles.identity}>
         Signed in as <span>{displayName}</span>
       </p>
-      <button type="button" className={styles.signOut} onClick={onSignOut}>
+      <Button variant="secondary" className={styles.signOut} onClick={onSignOut}>
         Sign out
-      </button>
+      </Button>
     </header>
   );
 }

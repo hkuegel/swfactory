@@ -40,7 +40,9 @@ markdown too). Never format a file while another agent is still editing it.
    `ux-designer` too: in parallel only for pure UI stories; if the story depends on an
    external integration or platform limits (identity providers, third-party widgets,
    browser APIs), run the `architect` first and the `ux-designer` afterwards on the
-   finished design. If the architect sets `status: blocked`, bring the open questions
+   finished design. When both ran in parallel, compare the two sections for
+   contradictions (a rule in one that the other breaks) before the build and have the
+   `architect` resolve them, ADRs included. If the architect sets `status: blocked`, bring the open questions
    to hak and log the answers as in step 2.
 4. **Build** — `developer`: implement on branch `feature/NNN-slug` until
    `npm run verify` is green.
@@ -63,7 +65,8 @@ markdown too). Never format a file while another agent is still editing it.
    review verdict, the retro proposals, and every open manual check (real devices,
    real third-party services) that no agent could run. Ask which proposals to apply,
    whether hak runs or waives each manual check, and whether to commit. Record the
-   manual-check results in the Test report. Apply only approved proposals (record the outcome in the Retrospective
+   manual-check results in the Test report. For visual stories, check that
+   `screenshots/NNN/` exists and show hak the key states for sign-off. Apply only approved proposals (record the outcome in the Retrospective
    section), set the story `status: done`, update the backlog index, then commit on the
    story branch — code, story, memory and agent changes together. Never push or merge
    without a separate go.
