@@ -62,6 +62,10 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Sign in as guest' }).click();
   await expect(page.getByText('Signed in as')).toBeVisible();
+  // Story 008/AC4: the project `chromium-3d` replays the flows of AC6, AC8, AC9 and AC10 in 3D.
+  if (test.info().project.name === 'chromium-3d') {
+    await page.getByRole('radio', { name: '3D' }).check();
+  }
 });
 
 test('AC1: the setup shows labelled inputs with ranges and defaults, Start, and no board', async ({
@@ -249,6 +253,8 @@ test.describe('touch', () => {
     await startFixed5x5(page, CORNERS);
     const client = await page.context().newCDPSession(page);
     const press = async (target: Locator, holdMs: number) => {
+      // CDP touch events use viewport coordinates: the cell must be on screen.
+      await target.scrollIntoViewIfNeeded();
       const box = await target.boundingBox();
       if (!box) throw new Error('cell has no box');
       const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -289,8 +295,12 @@ test('AC7: the counter is mines minus flags, and goes negative', async ({ page }
 test('AC8: the board is played with the keyboard only', async ({ page }) => {
   await startFixed5x5(page, CORNERS);
   const focused = page.locator(':focus');
+  // Tab from Start until the board is reached: the number of stops in between (View control, ...)
+  // is not this test's business, but the board must be reachable and one tab stop.
   await startButton(page).focus();
-  await page.keyboard.press('Tab'); // the board is one tab stop
+  for (let i = 0; i < 12 && (await grid(page).locator(':focus').count()) === 0; i++) {
+    await page.keyboard.press('Tab');
+  }
   await expect(focused).toHaveAccessibleName('Row 1, column 1, hidden');
 
   await page.keyboard.press('ArrowLeft');

@@ -14,4 +14,6 @@ Also check the Technical design's "minimal test set" itself: in story 006 it ask
 
 Cross-spec coupling: auth.spec pins the game's first tab stop, so every setup change breaks it (005, 006). Point this out when it's touched again.
 
+Screenshot or pixel-diff "A differs from B" assertions: check whether the images can differ in size. A helper that returns MAX on a size mismatch makes the assertion pass no matter what (story 008: the 3D scroller has another size). The "equals" direction is the one that carries weight.
+
 Related: [[async-adapter-checks]]

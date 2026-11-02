@@ -43,6 +43,7 @@
   --cell-tile-highlight: #ffffff;
   --cell-tile-lip: #c3cad6;
   --cell-pressed-shade: #b9c1ce;
+  --cell-recess-light: #ffffff; /* 1 px bottom edge of a lowered cell in 3D (decoration) */
 
   /* Digits 1 to 8 on a revealed cell */
   --n1: #0b57d0;
@@ -67,6 +68,8 @@
   /* Depth (decoration only, never the sole cue) */
   --shadow-panel: 0 1px 2px rgb(16 24 40 / 6%), 0 8px 24px rgb(16 24 40 / 6%);
   --shadow-control: 0 1px 2px rgb(16 24 40 / 10%);
+  --shadow-glyph-3d: rgb(16 24 40 / 25%); /* ground ellipse under a 3D flag or mine */
+  --shadow-board-3d: 0 6px 10px -2px rgb(16 24 40 / 30%); /* slab shadow under the 3D grid */
 
   /* Spacing */
   --space-1: 4px;
@@ -89,6 +92,20 @@
   --cell-gap: 2px;
   --tile-lip: 3px;
   --focus-width: 2px;
+
+  /* 3D board view (story 008): a plane tilted back by --board3d-tilt with perspective
+     --board3d-depth times the grid height. top, bottom and side are margins (times grid height
+     or width) that shrink the layout box to the projected one; src/app/tokens.test.ts derives
+     them from tilt and depth. */
+  --board3d-tilt: 25deg; /* at most 35deg */
+  --board3d-depth: 5;
+  --board3d-top: -0.0652;
+  --board3d-bottom: -0.0268;
+  --board3d-side: 0.023;
+  --board3d-cell-min: 26px; /* phone floor of the cell size in 3D: far row at least 24 px wide */
+  --tile-lip-3d: 5px; /* thicker lip of raised tiles (2D: --tile-lip) */
+  --glyph-lift-3d: 1px;
+  --recess-depth-3d: 2px;
 
   /* Board chrome (below 600 px the panel is edge to edge); the board's fluid cell size
      subtracts it. Real paddings and these tokens must stay equal. */
@@ -164,6 +181,7 @@
     --cell-tile-highlight: #4a515d;
     --cell-tile-lip: #1c2028;
     --cell-pressed-shade: #0a0c10;
+    --cell-recess-light: #2f3642;
 
     --n1: #8ab4f8;
     --n2: #81c995;
@@ -185,6 +203,8 @@
 
     --shadow-panel: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 30%);
     --shadow-control: none;
+    --shadow-glyph-3d: rgb(0 0 0 / 55%);
+    --shadow-board-3d: 0 6px 10px -2px rgb(0 0 0 / 60%);
   }
 }
 

@@ -14,7 +14,17 @@ export default defineConfig({
     baseURL: `http://localhost:${port}`,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      // Story 008/AC4: the flows of 005 (flag, long press, keyboard, lose, win) once more with
+      // the 3D view chosen (minesweeper.spec.ts selects it in its beforeEach).
+      name: 'chromium-3d',
+      testMatch: 'minesweeper.spec.ts',
+      grep: /AC(6|8|9|10):/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
   webServer: {
     // Dev server in mode "e2e": swaps in the fake AuthClient (window.__fakeGoogle).
     command: `npm run dev -- --mode e2e --port ${port} --strictPort`,

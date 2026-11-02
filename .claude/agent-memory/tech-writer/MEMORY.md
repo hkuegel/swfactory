@@ -23,3 +23,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Keep CHANGELOG lines user-facing: name the look and the behaviour, not internal terms like "design tokens" or ADR numbers; put those in the README developer note (story 007).
 - Point README links only at files that exist: check the ADR path with Glob before linking it (story 007).
 - Describe a restyle with no behaviour change as one "Changed" entry with the story id, not one bullet per visual feature (story 007).
+- Name a second Playwright project in README Testing with what it re-runs, and say `npm run test:e2e` runs all projects, because `playwright test` runs every project by default (story 008).
+- Write a mode or view feature as one README paragraph under the game's own heading, with the reset rule (reload, sign-out) stated once, because hak asked for short prose (story 008).
+- Story files run past 400 lines; read the Test report and Review by offset, since the first read is capped and truncates (story 008).

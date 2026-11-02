@@ -163,6 +163,88 @@
   }
 }
 
+/*
+ * 3D view (story 008): the same DOM, the grid tilted back with weak perspective and a little
+ * relief from shadows. No layers (no preserve-3d, translateZ, will-change), no filter or
+ * clip-path, nothing on outline or overflow of .cell, and no transition on transform or layout
+ * (the switch is instant). Every selector that restyles a cell has its scroller part inside
+ * :where(), so it has the specificity of the 2D rule: the 2D hover/active rules stay stronger
+ * and the forced-colours block below wins by order.
+ */
+.scroller[data-view='3d'] .grid {
+  --grid-h: calc(var(--rows) * var(--cell) + (var(--rows) - 1) * var(--cell-gap));
+  --grid-w: calc(var(--cols) * var(--cell) + (var(--cols) - 1) * var(--cell-gap));
+
+  /* A transform changes no layout, so the margins shrink the layout box to the projected one
+     and give the near row (a little wider than the grid) room on both sides. */
+  margin: calc(var(--grid-h) * var(--board3d-top)) calc(var(--grid-w) * var(--board3d-side))
+    calc(var(--grid-h) * var(--board3d-bottom));
+  transform: perspective(calc(var(--grid-h) * var(--board3d-depth))) rotateX(var(--board3d-tilt));
+  transform-origin: 50% 50%;
+  box-shadow: var(--shadow-board-3d);
+}
+
+@media (max-width: 599.98px) {
+  .scroller[data-view='3d'] .grid {
+    /* As in 2D, with a higher floor (the far row stays at least 24 px wide on screen) and the
+       margins above counted in (the grid plus both side margins must fit). */
+    --cell: clamp(
+      var(--board3d-cell-min),
+      calc(
+        (100vw - var(--board-chrome) - (var(--cols) - 1) * var(--cell-gap)) / var(--cols) /
+          (1 + 2 * var(--board3d-side))
+      ),
+      40px
+    );
+  }
+}
+
+:where(.scroller[data-view='3d']) .cell {
+  position: relative;
+}
+
+/* Raised tiles: a thicker lip. */
+:where(.scroller[data-view='3d']) :is(.hidden, .flagged) {
+  box-shadow:
+    inset 0 1px 0 var(--cell-tile-highlight),
+    inset 0 calc(-1 * var(--tile-lip-3d)) 0 var(--cell-tile-lip);
+}
+
+/* Lowered cells: a shade inside the top edge and a light bottom edge. Inset shadows only. */
+:where(.scroller[data-view='3d']) :is(.empty, .number, .mine, .mineExploded, .flagWrong) {
+  box-shadow:
+    inset 0 var(--recess-depth-3d) 3px var(--cell-pressed-shade),
+    inset 0 -1px 0 var(--cell-recess-light);
+}
+
+/* Flags and mines are small objects: lifted a pixel, with a ground ellipse (a background of a
+   pseudo-element, not a filter, so 700 glyphs create no offscreen surfaces). */
+:where(.scroller[data-view='3d']) :is(.flagged, .mine) .glyph {
+  position: relative;
+  transform: translateY(calc(-1 * var(--glyph-lift-3d)));
+}
+
+:where(.scroller[data-view='3d']) :is(.flagged, .mine)::before {
+  content: '';
+  position: absolute;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--shadow-glyph-3d);
+  pointer-events: none;
+}
+
+:where(.scroller[data-view='3d']) .flagged::before {
+  bottom: calc(var(--tile-lip-3d) + 3px);
+  left: 22%;
+  width: 34%;
+}
+
+:where(.scroller[data-view='3d']) .mine::before {
+  bottom: 12%;
+  left: 27%;
+  width: 46%;
+}
+
 /* Windows high contrast: borders, glyphs and focus stay distinguishable (UX §8). */
 @media (forced-colors: active) {
   .scroller {
@@ -216,5 +298,10 @@
 
   .cell:focus-visible {
     outline-color: Highlight;
+  }
+
+  /* 3D: no relief without shadows; the shapes stay. */
+  :where(.scroller[data-view='3d']) :is(.flagged, .mine)::before {
+    display: none;
   }
 }

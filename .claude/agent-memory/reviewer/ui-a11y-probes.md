@@ -26,4 +26,10 @@ Contrast audits: derive the fg/bg pairs from what the modules actually paint, in
 
 Forced-colours e2e signatures that include `innerHTML` can't catch invisible glyphs: the markup differs even when the glyph is painted Canvas on Canvas. Ask for computed glyph fill vs cell background instead (story 007).
 
+Probe pitfalls that nearly became false alarms (story 008): `getComputedStyle` read right after a click returns mid-transition values (cells fade box-shadow over `--duration`), so wait about 300 ms first. `page.mouse.down` at a `boundingBox()` below the 720 px viewport silently hits nothing (`:active` false, no `.pressed`), so call `scrollIntoViewIfNeeded()` first.
+
+Layer and performance claims ("no per-cell layers"): count layers with a CDP `LayerTree.enable` / `layerTreeDidChange` before and after the switch. Record rAF frame gaps across the switch on a 30 × 30 board and add a grid MutationObserver for "no remount". In 008: +1 layer, one 33 ms frame, 0 mutations.
+
+CSS calc constants derived from tokens (e.g. `/ 1.05` = 1 + 2 × a margin token) drift when the token changes and no test ties them together. Ask for the calc to use the token itself (story 008).
+
 Related: [[build-guard-checks]], [[test-proportionality]]

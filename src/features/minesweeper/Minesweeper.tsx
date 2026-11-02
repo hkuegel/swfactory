@@ -1,6 +1,7 @@
 import { useCallback, useId, useReducer, useState } from 'react';
 import { Board } from './Board.tsx';
 import { GameStatus } from './GameStatus.tsx';
+import { supports3dView, type BoardView } from './logic/boardView.ts';
 import { gameReducer } from './logic/gameReducer.ts';
 import { toIndex } from './logic/grid.ts';
 import { presetToValues } from './logic/presets.ts';
@@ -8,6 +9,7 @@ import type { GameConfig, Preset, SetupErrors, SetupField, SetupValues } from '.
 import { DEFAULT_SETUP, validateSetup } from './logic/validateSetup.ts';
 import styles from './Minesweeper.module.css';
 import { SetupForm } from './SetupForm.tsx';
+import { ViewToggle } from './ViewToggle.tsx';
 
 type MineLayout = readonly (readonly [row: number, col: number])[];
 
@@ -49,6 +51,10 @@ export function Minesweeper() {
   const [values, setValues] = useState<SetupValues>(DEFAULT_SETUP);
   const [errors, setErrors] = useState<SetupErrors>({});
   const [game, dispatch] = useReducer(gameReducer, null);
+  // A presentation choice, not game state (story 008). Not persisted: a reload or sign-out
+  // (unmount) resets it to 2D (AC8). The capability is read once per mount, never at module load.
+  const [view, setView] = useState<BoardView>('2d');
+  const [available3d] = useState(supports3dView);
   // One live region for "New game" and preset messages. `serial` makes every message differ
   // from the previous one (trailing no-break space on every other one, invisible and trimmed
   // by text queries), because screen readers don't announce unchanged text again.
@@ -117,6 +123,7 @@ export function Minesweeper() {
             ? `${announcement.text}\u00a0`
             : announcement.text}
         </p>
+        <ViewToggle view={view} onChange={setView} available3d={available3d} />
         {game === null ? (
           <p className={styles.empty}>Set the board size and the number of mines to begin.</p>
         ) : (
@@ -129,7 +136,13 @@ export function Minesweeper() {
         )}
       </div>
       {game && (
-        <Board key={game.id} game={game} onReveal={handleReveal} onToggleFlag={handleToggleFlag} />
+        <Board
+          key={game.id}
+          game={game}
+          view={view}
+          onReveal={handleReveal}
+          onToggleFlag={handleToggleFlag}
+        />
       )}
     </section>
   );

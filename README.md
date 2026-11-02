@@ -180,6 +180,16 @@ shows 0 until you reveal a cell, so flagging a cell does not start it. It stops 
 win or lose and keeps the final time. **Start** sets it back to 0. The timer has no upper
 limit. When the game ends, screen readers also announce the final time.
 
+### 3D view
+
+The **View** control sits above the game status, with the options **2D** and **3D**. It is
+there before the first **Start**, during a game and after a win or loss. Choose **3D** at
+any time, also in the middle of a game. Nothing is lost: the board, the flags, **Mines left**
+and the timer stay as they are. In 3D the board is tilted, and hidden cells look raised.
+Mouse, touch, keyboard and screen reader work the same as in 2D. If your browser cannot show
+3D, **3D** is shown as unavailable with a short note, and you can keep playing in 2D. The view
+is 2D again after a reload or a sign-out.
+
 Nothing is saved. A reload or a sign-out starts again with the default values and no game.
 
 ## Working with the factory
@@ -260,6 +270,8 @@ tests, `vite build`, and `check:dist`. It does not run the e2e tests.
 - `npm run test:e2e` runs the Playwright tests. It starts the app in mode `e2e` on port
   5174, with a fake Google sign-in. The tests never contact real Google and need no
   client ID.
+- The Playwright tests run in two projects. `chromium` runs all tests. `chromium-3d` re-runs
+  the Minesweeper game tests with the 3D view chosen. `npm run test:e2e` runs both.
 
 To check sign-in with a real Google account, run `npm run dev` on port 5173 and sign in
 in the browser. Do not use the e2e tests for this.
