@@ -117,7 +117,8 @@ e2e/              Playwright specs
   component test that repeats what an e2e test already shows. Probes beyond the ACs are
   kept as tests only if they found a defect or cover a real risk (security, races);
   otherwise they're listed in the Test report as "checked, OK". The architect names the
-  minimal test set in the Technical design.
+  minimal test set in the Technical design. e2e specs assert an AC's intent, never
+  design values (exact colours, pixel sizes) — those live in the tokens and their test.
 - **Independent tests:** tests of one feature don't depend on another feature's layout or
   tab order — e.g. an auth test asserts that focus left the auth controls, not which game
   control it landed on.
@@ -139,6 +140,11 @@ e2e/              Playwright specs
   - their identifying strings are added to the forbidden list in
     `scripts/check-dist.mjs` in the same change; `npm run verify` fails if they appear in
     `dist/`.
+- **Styling:** colours, radii, type sizes and durations come from `src/app/tokens.css`
+  (ADR 0004). No colour literals or `font-family` in CSS modules; dark mode only in the
+  token file; every `transition` uses `var(--duration)`. Every state cue also exists as a
+  border, outline or glyph, so it survives forced colours. `src/app/tokens.test.ts`
+  enforces this over the CSS, with the contrast pairs the modules actually paint.
 - **Config:** `VITE_*` values are public (inlined into the bundle) — never put secrets
   there. Per-developer values go in `.env.local` (gitignored), documented in `.env.example`.
 

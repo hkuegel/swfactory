@@ -1,78 +1,74 @@
-/* Scrolls inside its own box when the board is wider than the page (UX §7). */
+/*
+ * The board well: a recessed tray and the only box that scrolls sideways (AC5). It fits the
+ * grid, is centred when it fits and scrolls inside itself when it doesn't.
+ */
 .scroller {
+  width: fit-content;
   max-width: 100%;
+  margin: var(--space-5) auto 0;
+  padding: var(--well-pad);
   overflow: auto;
+  overscroll-behavior-x: contain;
+  border: var(--well-border) solid var(--color-border);
+  border-radius: var(--radius-well);
+  background-color: var(--cell-revealed-fill);
 }
 
 .grid {
-  /* Colours (UX §3), light. */
-  --hidden-fill: #cbd0d6;
-  --hidden-border: #6b7076;
-  --bevel-light: #ffffff;
-  --bevel-dark: #6b7076;
-  --revealed-fill: #f1f3f4;
-  --revealed-border: #b0b5ba;
-  --flag: #b3261e;
-  --pole: #1f1f1f;
-  --glyph: #1f1f1f;
-  --exploded-fill: #f9c6c2;
-  --exploded-border: #b3261e;
-  --focus: #0b57d0;
-  --overlay: 31 31 31;
-  --n1: #0b57d0;
-  --n2: #1e7b34;
-  --n3: #c5221f;
-  --n4: #5b2a9e;
-  --n5: #8c1d18;
-  --n6: #00696b;
-  --n7: #1f1f1f;
-  --n8: #5f6368;
-
   --cell: 32px;
 
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  /* Centred when it fits; when it doesn't, the auto margins collapse and the box scrolls. */
+  gap: var(--cell-gap);
   width: max-content;
-  margin-inline: auto;
 }
 
 .row {
   display: flex;
-  gap: 1px;
+  gap: var(--cell-gap);
 }
 
+/*
+ * Cells use only background, border, inset box-shadow, outline and SVG glyphs (no outer shadow,
+ * filter or clip-path), so the look survives a tilted board in story 008.
+ */
 .cell {
   display: grid;
   place-items: center;
   width: var(--cell);
   height: var(--cell);
-  border: 1px solid var(--revealed-border);
-  background-color: var(--revealed-fill);
+  border: 1px solid var(--cell-revealed-edge);
+  border-radius: var(--radius-cell);
+  background-color: var(--cell-revealed-fill);
   font-size: clamp(14px, calc(var(--cell) - 12px), 16px);
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 1;
   cursor: default;
-  /* Touch (UX §4): panning must still work, no selection or callout menu. */
+  transition:
+    background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+  /* Touch: panning must still work, no selection or callout menu. */
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
 
+/* Inside the cell, so neighbours and the scroll box never clip it. */
 .cell:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: var(--focus-width) solid var(--color-focus);
   outline-offset: -2px;
 }
 
+/* Hidden and flagged: a raised tile with a highlight on top and a thick lip below. */
 .hidden,
 .flagged {
-  border-color: var(--hidden-border);
-  background-color: var(--hidden-fill);
+  border-color: var(--color-edge);
+  background-color: var(--cell-tile-fill);
   box-shadow:
-    inset 2px 2px 0 var(--bevel-light),
-    inset -2px -2px 0 var(--bevel-dark);
+    inset 0 1px 0 var(--cell-tile-highlight),
+    inset 0 calc(-1 * var(--tile-lip)) 0 var(--cell-tile-lip);
 }
 
 .grid:not([aria-readonly='true']) .hidden,
@@ -80,20 +76,25 @@
   cursor: pointer;
 }
 
-.grid:not([aria-readonly='true']) .hidden:hover,
-.grid:not([aria-readonly='true']) .flagged:hover {
-  background-image: linear-gradient(rgb(var(--overlay) / 8%), rgb(var(--overlay) / 8%));
+@media (hover: hover) {
+  .grid:not([aria-readonly='true']) .hidden:hover,
+  .grid:not([aria-readonly='true']) .flagged:hover {
+    background-color: var(--cell-tile-hover);
+  }
 }
 
+/* Pressed (mouse down or touch long press): the tile is pushed in. */
 .grid:not([aria-readonly='true']) .hidden:active,
 .grid:not([aria-readonly='true']) .flagged:active,
-.pressed {
-  background-image: linear-gradient(rgb(var(--overlay) / 16%), rgb(var(--overlay) / 16%));
+.grid:not([aria-readonly='true']) .hidden.pressed,
+.grid:not([aria-readonly='true']) .flagged.pressed {
+  background-color: var(--cell-tile-pressed);
+  box-shadow: inset 0 2px 4px var(--cell-pressed-shade);
 }
 
 .mineExploded {
-  border: 2px solid var(--exploded-border);
-  background-color: var(--exploded-fill);
+  border: 2px solid var(--color-danger-solid);
+  background-color: var(--color-danger-bg);
 }
 
 .glyph {
@@ -102,17 +103,27 @@
 }
 
 .flag {
-  fill: var(--flag);
+  fill: var(--color-danger-solid);
 }
 
 .pole {
-  fill: var(--pole);
+  fill: var(--color-text);
 }
 
 .slash,
 .mineGlyph {
-  stroke: var(--glyph);
-  fill: var(--glyph);
+  stroke: var(--color-text);
+  fill: var(--color-text);
+}
+
+.mineDisc {
+  fill: var(--color-danger-solid);
+  stroke: none;
+}
+
+.mineExploded .mineGlyph {
+  stroke: var(--color-on-danger-solid);
+  fill: var(--color-on-danger-solid);
 }
 
 .n1 {
@@ -142,59 +153,52 @@
 
 @media (max-width: 599.98px) {
   .grid {
-    /* Fluid below 600 px, never below the 24 px target size (WCAG 2.5.8). */
-    --cell: clamp(24px, calc((100vw - 2rem) / var(--cols)), 40px);
+    /* Fluid below 600 px, never below the 24 px target size (WCAG 2.5.8); the chrome token
+       is the sum of the paddings and borders around the grid. */
+    --cell: clamp(
+      24px,
+      calc((100vw - var(--board-chrome) - (var(--cols) - 1) * var(--cell-gap)) / var(--cols)),
+      40px
+    );
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .grid {
-    --hidden-fill: #4a4f55;
-    --hidden-border: #9aa0a6;
-    --bevel-light: #7a8087;
-    --bevel-dark: #202124;
-    --revealed-fill: #202124;
-    --revealed-border: #3c4043;
-    --flag: #f28b82;
-    --pole: #ececec;
-    --glyph: #ececec;
-    --exploded-fill: #5c1a17;
-    --exploded-border: #f28b82;
-    --focus: #a8c7fa;
-    --overlay: 236 236 236;
-    --n1: #8ab4f8;
-    --n2: #81c995;
-    --n3: #f28b82;
-    --n4: #c58af9;
-    --n5: #fda48a;
-    --n6: #78d9ec;
-    --n7: #ececec;
-    --n8: #bdc1c6;
-  }
-}
-
-/* Windows high contrast: borders, glyphs and focus stay distinguishable (UX §3). */
+/* Windows high contrast: borders, glyphs and focus stay distinguishable (UX §8). */
 @media (forced-colors: active) {
-  .cell {
+  .scroller {
     border-color: CanvasText;
   }
 
+  /* Revealed cells (empty, number, mine, wrong flag): flat, thin grey border, no lip. */
+  .cell {
+    border-color: GrayText;
+  }
+
   /*
-   * Forced colours replace the fill and drop box-shadow, so the bevel is gone: keep hidden
-   * and flagged cells as raised "buttons" with a thick inner frame; revealed cells stay Canvas.
+   * Hidden and flagged tiles keep their own colours: a thick border plus a bottom lip keep the
+   * raised shape. forced-color-adjust none is what keeps box-shadow here.
    */
   .hidden,
   .flagged {
     forced-color-adjust: none;
-    border-color: ButtonText;
+    border: 2px solid ButtonText;
     background-color: ButtonFace;
     background-image: none;
     color: ButtonText;
-    box-shadow: inset 0 0 0 2px ButtonText;
+    box-shadow: inset 0 -3px 0 ButtonText;
   }
 
   .mineExploded {
-    border-width: 3px;
+    border: 3px solid CanvasText;
+  }
+
+  .mineDisc {
+    fill: CanvasText;
+  }
+
+  .mineExploded .mineGlyph {
+    stroke: Canvas;
+    fill: Canvas;
   }
 
   .flag,

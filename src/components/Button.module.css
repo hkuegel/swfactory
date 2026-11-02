@@ -1,0 +1,86 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+}
+
+/* Primary: one filled action per screen ("Start"). */
+.primary {
+  padding: 0 var(--space-5);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-control);
+}
+
+.primary:active:not(:disabled) {
+  background-color: var(--color-accent-active);
+  box-shadow: none;
+}
+
+.primary:disabled {
+  background-color: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  box-shadow: none;
+}
+
+/* Secondary: outlined (presets, "Sign out"). */
+.secondary {
+  padding: 0 var(--space-4);
+  border-color: var(--color-edge);
+  background-color: transparent;
+  color: var(--color-accent);
+}
+
+.secondary:active:not(:disabled) {
+  background-color: var(--color-accent-subtle-press);
+}
+
+.secondary:disabled {
+  border-color: var(--color-border);
+  color: var(--color-disabled-text);
+}
+
+/* Hover only where a pointer can hover, so touch screens never keep a sticky hover. */
+@media (hover: hover) {
+  .primary:hover:not(:disabled):not(:active) {
+    background-color: var(--color-accent-hover);
+  }
+
+  .secondary:hover:not(:disabled):not(:active) {
+    background-color: var(--color-accent-subtle);
+  }
+}
+
+/* Fills are dropped in forced colours: keep real borders so the edges stay visible. */
+@media (forced-colors: active) {
+  .primary {
+    border-color: ButtonText;
+  }
+
+  .secondary {
+    border-color: ButtonText;
+    color: ButtonText;
+  }
+
+  .secondary:hover:not(:disabled) {
+    border-color: Highlight;
+  }
+
+  .button:disabled {
+    border-color: GrayText;
+    color: GrayText;
+  }
+}

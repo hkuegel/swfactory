@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App.tsx';
 import { AuthProvider } from './features/auth/AuthProvider.tsx';
 import { createAuthClient } from './features/auth/createAuthClient.ts';
+import './app/tokens.css';
 import './index.css';
 
 const root = document.getElementById('root');

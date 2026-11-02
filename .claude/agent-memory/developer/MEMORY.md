@@ -24,3 +24,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Put a visually hidden description next to (not inside) a button that must have an exact accessible name, because hidden-by-clip text inside the button still counts toward the name (story 006).
 - When a live region should be "mounted empty", don't append a no-break-space repeat trick to empty text: guard it with `text !== ''` / serial > 0 (story 006).
 - A tab-order change in the UI breaks existing keyboard e2e specs (e.g. auth.spec.ts Tab after Sign out): run `npx playwright test` once at the end and report such failures to the tester (story 006).
+- Vitest returns an empty string for `*.css` / `*.css?raw` imports: read CSS in tests with `node:fs` and `/// <reference types="node" />` at the top of that test file (story 007).
+- BSD sed on macOS needs `sed -i ''`; for multi-line edits use a short python3 heredoc (story 007).
+- Restyling a shared control (focus colour, button size/width) breaks old e2e visual assertions (e.g. `rgb(11, 87, 208)` outline): run `npm run test:e2e` once and report such specs to the tester instead of editing `e2e/` (story 007).
+- To override a shared component's CSS-module class from a caller, use a two-class selector (`.wrapper .variantClass`) because import/bundle order of modules is not a reliable tie-breaker (story 007).
+- Check layout numbers with a throwaway playwright script (scrollWidth, cell width, well scrollWidth) at 320/375/800 and look at one screenshot before reporting; UX design arithmetic can be off (story 007).

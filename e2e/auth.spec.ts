@@ -58,6 +58,17 @@ async function expectNoMessage(page: Page) {
   await expect(page.getByText(PROGRESS)).toHaveCount(0);
 }
 
+/** Content width of the login card (the element around the intro text), without its padding. */
+async function loginCardContentWidth(page: Page) {
+  return page
+    .getByText('Use your Google account to sign in.')
+    .locator('..')
+    .evaluate((el) => {
+      const style = getComputedStyle(el);
+      return el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    });
+}
+
 async function hasHorizontalScroll(page: Page) {
   return page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -337,11 +348,21 @@ test.describe('probing beyond the ACs', () => {
 
   test('the focus ring is visible on the sign-in button', async ({ page }) => {
     await page.keyboard.press('Tab');
-    const outline = await signInButton(page).evaluate((el) => {
+    await expect(signInButton(page)).toBeFocused();
+    // A visible ring (at least 2 px, solid, not transparent); its colour is the design's business.
+    const ring = await signInButton(page).evaluate((el) => {
       const style = getComputedStyle(el);
-      return `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`;
+      return {
+        style: style.outlineStyle,
+        width: parseFloat(style.outlineWidth),
+        colour: style.outlineColor,
+        focusVisible: el.matches(':focus-visible'),
+      };
     });
-    expect(outline).toBe('solid 2px rgb(11, 87, 208)');
+    expect(ring.focusVisible).toBe(true);
+    expect(ring.style).toBe('solid');
+    expect(ring.width).toBeGreaterThanOrEqual(2);
+    expect(ring.colour).not.toMatch(/rgba\(.*, 0\)$|transparent/);
   });
 
   test('name and email are rendered as text, not as markup', async ({ page }) => {
@@ -374,12 +395,14 @@ test.describe('narrow viewport (below 600 px)', () => {
   }) => {
     await expectLoginView(page);
     const box = await signInButton(page).boundingBox();
-    const main = await page.getByRole('main').boundingBox();
+    const cardContent = await loginCardContentWidth(page);
     expect(box).not.toBeNull();
-    expect(main).not.toBeNull();
-    // Full width of the content column, 40 px high.
-    expect(Math.round(box?.width ?? 0)).toBe(Math.round((main?.width ?? 0) - 32));
-    expect(Math.round(box?.height ?? 0)).toBe(40);
+    // Full width of the login card's content box (not of its own flex container), at least 40 px high.
+    expect(Math.round(box?.width ?? 0)).toBe(Math.round(cardContent));
+    expect(cardContent).toBeGreaterThan(200);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(40);
+    // Inside the viewport, with nothing scrolling sideways.
+    expect((box?.x ?? -1) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= 375).toBe(true);
     expect(await hasHorizontalScroll(page)).toBe(false);
   });
 
@@ -429,8 +452,16 @@ test.describe('wide viewport (600 px and above)', () => {
     expect(signOut?.y ?? 0).toBeLessThan((identity?.y ?? 0) + (identity?.height ?? 0));
   });
 
-  test('the sign-in button is not stretched to full width', async ({ page }) => {
+  test('the login card stays a readable column and the sign-in button fills it', async ({
+    page,
+  }) => {
     const box = await signInButton(page).boundingBox();
-    expect(box?.width ?? 0).toBeLessThan(300);
+    const cardContent = await loginCardContentWidth(page);
+    // The button never stretches across the whole wide window: it fills the card's content box
+    // (the card is 28 rem = 448 px at most) and is centred, not as wide as the page.
+    expect(box?.width ?? 0).toBeLessThanOrEqual(448);
+    expect(Math.round(box?.width ?? 0)).toBe(Math.round(cardContent));
+    const centre = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+    expect(Math.abs(centre - 900 / 2)).toBeLessThanOrEqual(2);
   });
 });

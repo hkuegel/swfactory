@@ -22,4 +22,8 @@ The trailing no-break-space toggle that makes identical live text get announced 
 
 Re-render isolation claims (e.g. "the tick only re-renders the timer") are cheapest to prove with a MutationObserver on the grid plus `page.clock.install` + `runFor`: count grid vs timer mutations (story 006: 0 vs 1 per second). For flex rows that "must fit at 375 px", measure each button's first text node with a Range against the button width at 375/360/340/320 and at 200 % zoom (half the width); min-width: 0 fixes can hide text overflow.
 
+Contrast audits: derive the fg/bg pairs from what the modules actually paint, including hover, press, invalid, callout icons and glyphs on revealed cells. Don't take them from the design's contrast table. Compute them with a small node script in the scratchpad that reads `src/app/tokens.css`. In story 007 the unit test's PAIRS left out six pairs that were in use (all passed).
+
+Forced-colours e2e signatures that include `innerHTML` can't catch invisible glyphs: the markup differs even when the glyph is painted Canvas on Canvas. Ask for computed glyph fill vs cell background instead (story 007).
+
 Related: [[build-guard-checks]], [[test-proportionality]]

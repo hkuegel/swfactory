@@ -20,3 +20,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Don't name planned follow-up stories (e.g. best times) in CHANGELOG or README; document only what exists (story 005, reworded in 006).
 - Cite the id of the story that built a change in CHANGELOG, even when it was split off from an earlier story (story 006 split from 005).
 - Take README feature text from the ACs and the Implementation notes "Built" list; skip Test report probes and review nits, which are not user-facing (story 006).
+- Keep CHANGELOG lines user-facing: name the look and the behaviour, not internal terms like "design tokens" or ADR numbers; put those in the README developer note (story 007).
+- Point README links only at files that exist: check the ADR path with Glob before linking it (story 007).
+- Describe a restyle with no behaviour change as one "Changed" entry with the story id, not one bullet per visual feature (story 007).

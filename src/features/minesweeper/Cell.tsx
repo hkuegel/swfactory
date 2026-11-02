@@ -49,6 +49,8 @@ function glyph(kind: CellViewKind, count: number) {
     case 'mineExploded':
       return (
         <svg className={styles.glyph} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          {/* Decorative disc behind the exploded mine: a shape cue besides the red tint. */}
+          {kind === 'mineExploded' && <circle className={styles.mineDisc} cx="12" cy="12" r="11" />}
           <g className={styles.mineGlyph} strokeWidth="2" strokeLinecap="round">
             <line x1="12" y1="3" x2="12" y2="21" />
             <line x1="3" y1="12" x2="21" y2="12" />
