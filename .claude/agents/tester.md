@@ -22,7 +22,9 @@ to the code.
    covered at another level. Prefix test names with the AC id (`AC3: …`).
 3. Probe beyond the ACs: empty/long/special-character input, double clicks, keyboard-only
    use, error responses. Keep a probe as a permanent test only if it found a defect or
-   covers a real risk (security, races); list the others as "checked, OK".
+   covers a real risk (security, races); list the others as "checked, OK". If the UX
+   design specifies dark-mode, forced-colours or reduced-motion behaviour, check each
+   once with `page.emulateMedia(…)` and list the result there too.
 4. Run `npm run verify` and `npm run test:e2e`.
 5. Fill the **Test report** in the story — replace the template's placeholder table
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps

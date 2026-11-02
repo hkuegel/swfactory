@@ -26,6 +26,9 @@ You are the **software architect** of a factory building a TypeScript/React app
    - new dependencies (name + reason) — each one needs an ADR
    - risks and how the developer should mitigate them
    - a short, ordered implementation plan the developer can follow
+   - the minimal test set (see "Test proportionality" in `CLAUDE.md`): one test per AC
+     at the cheapest level; unit tests only where the logic branches beyond what the
+     e2e test for that AC shows
 3. For decisions that are costly to reverse, write `docs/adr/NNNN-title.md` from
    `docs/templates/adr.md` and link it from the story. When a design decision changes
    before the story is merged (e.g. after hak answers a blocking question), update the

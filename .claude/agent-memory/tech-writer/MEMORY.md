@@ -15,3 +15,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Don't write Google Cloud steps as exact menu names; name the console page URL and the field, and say when a label may differ (story 001).
 - For dev-only features, say where they are absent (build, preview, deploy) and name the build check that enforces it (story 004).
 - Keep Scripts table column widths in sync when a command name gets longer; re-pad the whole table (story 004).
+- Describe controls per cell state from the UX Interactions table: a click on a flagged cell does nothing, flags come off by right-click, long-press or F (story 005).
+- Document keyboard extras only if the Implementation notes say they were built (Home/End were optional in UX and built in story 005).
+- Don't name planned follow-up stories (e.g. presets, timer) in CHANGELOG or README; document only what exists (story 005).

@@ -35,7 +35,7 @@ function expectLoginView() {
   expect(screen.queryByRole('banner')).not.toBeInTheDocument();
   expect(screen.queryByText(/Signed in as/)).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /Clicked/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
 }
 
 afterEach(() => {
@@ -73,7 +73,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Sign in with Google' })).not.toBeInTheDocument();
     expect(screen.queryByText('Use your Google account to sign in.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clicked 0 times' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Software Factory' })).toBeInTheDocument();
   });
 
@@ -197,15 +197,19 @@ describe('App: probing beyond the ACs', () => {
     expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument();
   });
 
-  it('AC9: the counter state does not survive a sign-out', async () => {
+  it('AC9: the game state does not survive a sign-out', async () => {
     const { user, fake } = renderApp();
     await user.click(signInButton());
     await settle(fake, 'success');
-    await user.click(screen.getByRole('button', { name: 'Clicked 0 times' }));
+    await user.clear(screen.getByLabelText('Rows'));
+    await user.type(screen.getByLabelText('Rows'), '12');
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByRole('grid', { name: 'Minesweeper board' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Sign out' }));
     await user.click(signInButton());
     await settle(fake, 'success');
-    expect(screen.getByRole('button', { name: 'Clicked 0 times' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Rows')).toHaveValue('9');
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument();
   });
 
   it('rapid repeated failures never leave the button disabled or stack messages', async () => {

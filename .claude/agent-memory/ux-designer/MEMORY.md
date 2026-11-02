@@ -10,4 +10,10 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - ACs can be dropped after design; keep the design in numbered sections so obsolete states can be removed by targeted edits (story 001).
 - Always specify light AND dark colours with contrast values for any new coloured element; the app uses `color-scheme: light dark` (story 001 review, story 004).
 - When a story changes an earlier UX design, add a "superseded parts of NNN" list instead of editing the old story (story 004).
+- Page colours live in src/index.css (light #FAFAFA/#1A1A1A, dark #161616/#ECECEC, focus ring #0B57D0/#A8C7FA); compute contrast against these, not pure white/black (story 005).
+- For numeric inputs with "not a whole number" ACs use type="text" inputmode="numeric", since type="number" hides non-numeric input from validation (story 005).
+- Game/board UIs: roving tabindex grid, aria-label per cell, one polite live region for counter and a role-less wrapper for results; board scrolls inside its own container (story 005).
 - src/components/ was empty at story 001; only Counter in src/features/counter exists. Check again before inventing shared components.
+- Live regions that announce a state change must be mounted before the change; a region inserted together with its content is often not announced (story 005 review).
+- A live region whose text stays identical is not re-announced; specify clear-then-set (about 100 ms) for repeatable announcements such as "New game: …" (story 005 review).
+- Visually hidden announcements have no visible colour; say so explicitly so the dark-mode rule is still answered (story 005).

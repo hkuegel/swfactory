@@ -15,6 +15,11 @@ yourself. Track the steps with the task list. After each step, read the story fi
 confirm the agent did its part before moving on. Collect every "Suggested for
 CLAUDE.md" item the agents return — you need them in the retro.
 
+**Model economy:** pass `model: haiku` for regression runs of the `tester` and for
+small doc edits (Decision log entries, status changes, index rows). For follow-ups
+within the same story (review fixes, answers to questions), resume the agent with
+SendMessage instead of starting a new one — it keeps its context.
+
 **Formatting:** `product-owner`, `ux-designer` and `tech-writer` have no shell. After
 every step in which one of them edited markdown, run
 `npx prettier --write docs README.md CHANGELOG.md` yourself (`npm run verify` checks
@@ -55,8 +60,10 @@ markdown too). Never format a file while another agent is still editing it.
      lessons that look wrong or belong in `CLAUDE.md` instead;
    - if nothing went wrong, say so in one line and propose nothing.
 9. **GATE 2** — present to hak: story path, branch, files changed, AC/test table,
-   review verdict, and the retro proposals. Ask which proposals to apply and whether
-   to commit. Apply only approved proposals (record the outcome in the Retrospective
+   review verdict, the retro proposals, and every open manual check (real devices,
+   real third-party services) that no agent could run. Ask which proposals to apply,
+   whether hak runs or waives each manual check, and whether to commit. Record the
+   manual-check results in the Test report. Apply only approved proposals (record the outcome in the Retrospective
    section), set the story `status: done`, update the backlog index, then commit on the
    story branch — code, story, memory and agent changes together. Never push or merge
    without a separate go.

@@ -54,11 +54,15 @@ test('AC2/AC8: signing in as guest is immediate and reads "Signed in as Guest"',
   await expect(page.locator('#identity')).toBeFocused();
 });
 
-test('AC7: a guest sees the same signed-in content as a Google user', async ({ page }) => {
+// Changed by story 005: the signed-in content is the Minesweeper game, no longer the counter.
+test('AC7: a guest sees the same signed-in content as a Google user (the game)', async ({
+  page,
+}) => {
   await guestButton(page).click();
-  await expect(page.getByRole('button', { name: 'Clicked 0 times' })).toBeVisible();
-  await page.getByRole('button', { name: 'Clicked 0 times' }).click();
-  await expect(page.getByRole('button', { name: 'Clicked 1 time' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Minesweeper' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await expect(page.getByRole('grid', { name: 'Minesweeper board' })).toBeVisible();
   await expect(googleButton(page)).toHaveCount(0);
 });
 

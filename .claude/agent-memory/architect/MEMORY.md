@@ -10,3 +10,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Give e2e its own dev-server port whenever the app behaves differently in e2e mode, because Playwright's reuseExistingServer silently reuses a normal `npm run dev` (story 001).
 - Specify a minimal test set in the design: each AC tested once at the cheapest level that shows it (e2e per AC, unit only for reducer/pure logic), because hak found 001's 2:1 test-to-code ratio excessive (story 004).
 - For dev-only code, require `import.meta.env.DEV` literally at each use site plus a `dist` grep in verify, since cross-module constant folding isn't guaranteed to strip the code (story 004).
+- For UI-heavy stories, read the parallel UX section before fixing element semantics or focus model (e.g. button vs. gridcell) and follow UX there, because a11y semantics are UX-owned and the input wiring depends on them (story 005).
