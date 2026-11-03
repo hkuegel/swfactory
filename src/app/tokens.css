@@ -43,7 +43,27 @@
   --cell-tile-highlight: #ffffff;
   --cell-tile-lip: #c3cad6;
   --cell-pressed-shade: #b9c1ce;
-  --cell-recess-light: #ffffff; /* 1 px bottom edge of a lowered cell in 3D (decoration) */
+
+  /* 3D scene (story 009, UX §3.2): read by scene3d/palette.ts. Colours are opaque hex; the two
+     overlay tints carry no text (ADR 0004 alpha exception). */
+  --scene-table: #4b463f;
+  --scene-slab: #34312d;
+  --scene-tile-top: #f3eee4;
+  --scene-revealed-top: #e5e9ef; /* equals --cell-revealed-fill (tokens.test.ts) */
+  --scene-key: #fff4e5;
+  --scene-fill-sky: #ffffff;
+  --scene-fill-ground: #ebe5db;
+  --scene-mine-lit: #59616d;
+  --scene-mine-shade: #1b1f24;
+  --scene-focus-halo: #ffffff;
+  --scene-hover-tint: rgb(29 78 216 / 18%);
+  --scene-pressed-tint: rgb(27 31 36 / 16%);
+  /* Unitless look numbers (light intensities × π in three r187, shadow strength, gloss) */
+  --scene-key-intensity: 0.46;
+  --scene-fill-intensity: 0.6;
+  --scene-shadow-strength: 0.55;
+  --scene-gloss: 0.55;
+  --scene-env-intensity: 0.3;
 
   /* Digits 1 to 8 on a revealed cell */
   --n1: #0b57d0;
@@ -68,8 +88,6 @@
   /* Depth (decoration only, never the sole cue) */
   --shadow-panel: 0 1px 2px rgb(16 24 40 / 6%), 0 8px 24px rgb(16 24 40 / 6%);
   --shadow-control: 0 1px 2px rgb(16 24 40 / 10%);
-  --shadow-glyph-3d: rgb(16 24 40 / 25%); /* ground ellipse under a 3D flag or mine */
-  --shadow-board-3d: 0 6px 10px -2px rgb(16 24 40 / 30%); /* slab shadow under the 3D grid */
 
   /* Spacing */
   --space-1: 4px;
@@ -93,19 +111,12 @@
   --tile-lip: 3px;
   --focus-width: 2px;
 
-  /* 3D board view (story 008): a plane tilted back by --board3d-tilt with perspective
-     --board3d-depth times the grid height. top, bottom and side are margins (times grid height
-     or width) that shrink the layout box to the projected one; src/app/tokens.test.ts derives
-     them from tilt and depth. */
-  --board3d-tilt: 25deg; /* at most 35deg */
-  --board3d-depth: 5;
-  --board3d-top: -0.0652;
-  --board3d-bottom: -0.0268;
-  --board3d-side: 0.023;
-  --board3d-cell-min: 26px; /* phone floor of the cell size in 3D: far row at least 24 px wide */
-  --tile-lip-3d: 5px; /* thicker lip of raised tiles (2D: --tile-lip) */
-  --glyph-lift-3d: 1px;
-  --recess-depth-3d: 2px;
+  /* 3D board view (stories 008, 009): tilt, sway and margins come from scene3d/geometry.ts.
+     --board3d-fit is 1 + 2 · inline margin / grid width for a square board (tokens.test.ts
+     derives it from geometry.ts); --board3d-rim is the table around the board. */
+  --board3d-cell-min: 26.25px; /* phone floor of the 3D cell: far edge of the far row ≥ 24 px on every board shape and sway (geometry.test.ts) */
+  --board3d-fit: 1.056;
+  --board3d-rim: 4px;
 
   /* Board chrome (below 600 px the panel is edge to edge); the board's fluid cell size
      subtracts it. Real paddings and these tokens must stay equal. */
@@ -143,6 +154,7 @@
     --panel-border: 1px;
     --panel-pad: 24px;
     --well-pad: 8px;
+    --board3d-rim: 16px;
   }
 }
 
@@ -181,7 +193,24 @@
     --cell-tile-highlight: #4a515d;
     --cell-tile-lip: #1c2028;
     --cell-pressed-shade: #0a0c10;
-    --cell-recess-light: #2f3642;
+
+    --scene-table: #2a2622;
+    --scene-slab: #14120f;
+    --scene-tile-top: #343a45;
+    --scene-revealed-top: #0e1014;
+    --scene-key: #ffe0b8;
+    --scene-fill-sky: #ffffff;
+    --scene-fill-ground: #8f8a84;
+    --scene-mine-lit: #e8eaed;
+    --scene-mine-shade: #9aa0a8;
+    --scene-focus-halo: #0e1014;
+    --scene-hover-tint: rgb(168 199 250 / 22%);
+    --scene-pressed-tint: rgb(0 0 0 / 28%);
+    --scene-key-intensity: 0.51;
+    --scene-fill-intensity: 0.55;
+    --scene-shadow-strength: 0.75;
+    --scene-gloss: 0.5;
+    --scene-env-intensity: 0.06;
 
     --n1: #8ab4f8;
     --n2: #81c995;
@@ -203,8 +232,6 @@
 
     --shadow-panel: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 30%);
     --shadow-control: none;
-    --shadow-glyph-3d: rgb(0 0 0 / 55%);
-    --shadow-board-3d: 0 6px 10px -2px rgb(0 0 0 / 60%);
   }
 }
 

@@ -1,18 +1,24 @@
 /// <reference lib="dom" />
 // e2e/ is typed by tsconfig.node.json (no DOM lib), but page.evaluate callbacks run in the browser.
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-// Story 008 – Minesweeper 3D mode. AC4 (the 005/006 flows in 3D) is the Playwright project
-// `chromium-3d`, which re-runs AC6, AC8, AC9 and AC10 of minesweeper.spec.ts; the 3D tokens
-// (tilt at most 35 degrees, compensation margins) are unit-tested in src/app/tokens.test.ts.
+// Story 008 – Minesweeper 3D mode: the View control (AC1), state across switches (AC2), the
+// accessible structure and focus ring (AC5) and "not remembered" (AC8). AC4 (the 005/006 flows
+// in 3D) is the Playwright project `chromium-3d`, which re-runs AC6, AC8, AC9 and AC10 of
+// minesweeper.spec.ts. The look, the motion and the fallbacks of 008 (AC3, AC6, AC7) were
+// replaced by story 009 and live in minesweeper-3d-scene.spec.ts.
 // Fixed mine layouts: window.__minesweeperMines (1-based pairs here, 0-based for the hook).
 
 type Pair = readonly [row: number, col: number];
-type TestWindow = Window & { __minesweeperMines?: Pair[] };
+type TestWindow = Window & {
+  __minesweeperMines?: Pair[];
+  __board3dProbe?: { pause(): void };
+};
 
 const startButton = (page: Page) => page.getByRole('button', { name: 'Start' });
 const grid = (page: Page) => page.getByRole('grid', { name: 'Minesweeper board' });
-const scroller = (page: Page) => grid(page).locator('..');
+// The grid's parent is the stage wrapper (story 009); the scroller is the ancestor with data-view.
+const scroller = (page: Page) => grid(page).locator('xpath=ancestor::*[@data-view]');
 const counter = (page: Page) => page.getByText('Mines left:');
 const timer = (page: Page) => page.getByText('Time:');
 const rowsInput = (page: Page) => page.getByLabel('Rows', { exact: true });
@@ -23,6 +29,21 @@ const radio2d = (page: Page) => page.getByRole('radio', { name: '2D' });
 const radio3d = (page: Page) => page.getByRole('radio', { name: '3D' });
 const UNAVAILABLE = '3D is not available in this browser.';
 const LOST = 'You lost. You revealed a mine.';
+
+/**
+ * Chooses "3D" and waits until the scene is ready (story 009/AC6: it loads asynchronously), then
+ * freezes the scene clock with the probe: no sway loop, so cells are stable for Playwright's
+ * click/scroll actions and nothing animates between two reads.
+ */
+async function choose3d(page: Page) {
+  await radio3d(page).check();
+  await expect(viewGroup(page)).not.toHaveAttribute('aria-busy', 'true', { timeout: 15_000 });
+  await expect(page.getByText(UNAVAILABLE)).toHaveCount(0); // fail loudly if WebGL is missing
+  await expect
+    .poll(() => page.evaluate(() => (window as TestWindow).__board3dProbe !== undefined))
+    .toBe(true);
+  await page.evaluate(() => (window as TestWindow).__board3dProbe?.pause());
+}
 
 const cell = (page: Page, row: number, col: number) =>
   page.getByRole('gridcell', { name: new RegExp(`^Row ${row}, column ${col},`) });
@@ -71,53 +92,6 @@ const WALL: readonly Pair[] = [
   [5, 3],
 ];
 
-const settled = (page: Page) =>
-  expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
-
-/**
- * Number of pixels whose colour differs by more than `tolerance` (per channel, of 255) between
- * two PNG screenshots of the same size. Switching 3D -> 2D leaves anti-aliasing noise of at most
- * 2/255 on a few rounded cell edges (the raster of the grid after a transform), which is not a
- * visible difference; a real difference of the look is far above the tolerance.
- */
-async function differingPixels(page: Page, a: Buffer, b: Buffer, tolerance = 8): Promise<number> {
-  return page.evaluate(
-    async ([x, y, tol]) => {
-      const load = (data: string) =>
-        new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('cannot decode screenshot'));
-          img.src = `data:image/png;base64,${data}`;
-        });
-      const pixels = (img: HTMLImageElement) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('no 2d context');
-        ctx.drawImage(img, 0, 0);
-        return ctx.getImageData(0, 0, img.width, img.height);
-      };
-      const [imgX, imgY] = await Promise.all([load(x), load(y)]);
-      if (imgX.width !== imgY.width || imgX.height !== imgY.height) return Number.MAX_SAFE_INTEGER;
-      const px = pixels(imgX).data;
-      const py = pixels(imgY).data;
-      let count = 0;
-      for (let i = 0; i < px.length; i += 4) {
-        const d = Math.max(
-          Math.abs((px[i] ?? 0) - (py[i] ?? 0)),
-          Math.abs((px[i + 1] ?? 0) - (py[i + 1] ?? 0)),
-          Math.abs((px[i + 2] ?? 0) - (py[i + 2] ?? 0)),
-        );
-        if (d > Number(tol)) count++;
-      }
-      return count;
-    },
-    [a.toString('base64'), b.toString('base64'), String(tolerance)] as const,
-  );
-}
-
 const tilt = (page: Page) => grid(page).evaluate((el) => getComputedStyle(el).transform);
 
 test.describe('View control', () => {
@@ -136,7 +110,7 @@ test.describe('View control', () => {
     await expect(grid(page)).toHaveCount(0);
 
     // Mouse (the whole segment is the target), also before Start.
-    await radio3d(page).check();
+    await choose3d(page);
     await expect(radio3d(page)).toBeChecked();
     await expect(radio2d(page)).not.toBeChecked();
     await radio2d(page).check();
@@ -200,7 +174,7 @@ test.describe('state across switches', () => {
     page,
   }) => {
     // (a) Not started yet: no board appears, and the first board follows the choice.
-    await radio3d(page).check();
+    await choose3d(page);
     await expect(grid(page)).toHaveCount(0);
     await radio2d(page).check();
     await expect(grid(page)).toHaveCount(0);
@@ -251,114 +225,6 @@ test.describe('state across switches', () => {
   });
 });
 
-test.describe('3D look', () => {
-  test.beforeEach(async ({ page }) => {
-    await openGame(page);
-  });
-
-  test('AC3: the 3D board is tilted and has relief, and 2D afterwards is unchanged', async ({
-    page,
-  }) => {
-    await startFixed5x5(page, WALL);
-    await cell(page, 3, 3).click({ button: 'right' }); // a flagged mine cell
-    await cell(page, 3, 1).click(); // opens columns 1 and 2
-    await cell(page, 1, 5).click({ button: 'right' }); // flagged, safe
-    // Mouse and focus away from the board, so no hover or focus ring differs between shots.
-    await page.mouse.move(0, 0);
-    await radio2d(page).focus();
-    const hiddenShadow = () => cell(page, 5, 5).evaluate((el) => getComputedStyle(el).boxShadow);
-    const emptyShadow = () => cell(page, 1, 1).evaluate((el) => getComputedStyle(el).boxShadow);
-    const shoot = async () => {
-      await settled(page);
-      return scroller(page).screenshot();
-    };
-
-    const a = await shoot();
-    expect(await tilt(page)).toBe('none');
-    const hidden2d = await hiddenShadow();
-    const empty2d = await emptyShadow();
-
-    await radio3d(page).check();
-    await page.mouse.move(0, 0);
-    // Tilted about the x axis with perspective: a matrix3d (the angle limit is in tokens.test.ts).
-    const m = (await tilt(page)).match(/^matrix3d\((.*)\)$/);
-    expect(m, 'transform is a 3D matrix').not.toBeNull();
-    const cos = Number((m?.[1] ?? '').split(',')[5]);
-    expect(cos).toBeLessThan(0.99); // visibly tilted
-    // Relief: raised tiles get a thicker lip, lowered cells an inner shade. Cells fade their
-    // shadow for 120 ms after a switch: read the computed value only after that settled.
-    await settled(page);
-    expect(await hiddenShadow()).not.toBe(hidden2d);
-    expect(await emptyShadow()).not.toBe(empty2d);
-
-    await radio2d(page).check();
-    await page.mouse.move(0, 0);
-    const c = await shoot();
-    expect(await differingPixels(page, a, c), '2D after 3D equals 2D before').toBe(0);
-    expect(await tilt(page)).toBe('none');
-  });
-
-  test('AC3: a fitting 3D board has no scrollbars and no spill-over', async ({ page }) => {
-    await radio3d(page).check();
-    await startGame(page, 9, 9, 10);
-    const overflow = await scroller(page).evaluate((el) => ({
-      w: el.scrollWidth - el.clientWidth,
-      h: el.scrollHeight - el.clientHeight,
-    }));
-    expect(overflow.w).toBeLessThanOrEqual(1);
-    expect(overflow.h).toBeLessThanOrEqual(1);
-  });
-
-  test.describe('phone width', () => {
-    test.use({ viewport: { width: 320, height: 800 } });
-
-    test('AC3: at 320 px the far row is at least 24 px wide, the last cell of 30 x 30 is reachable, a 9 x 9 board needs no sideways scroll', async ({
-      page,
-    }) => {
-      await radio3d(page).check();
-
-      // The default board fits the well at 320 px and (below) at 375 px.
-      await startGame(page, 9, 9, 10);
-      const fit = () =>
-        scroller(page).evaluate((el) => ({
-          scrollbar: el.scrollWidth - el.clientWidth,
-          page: document.documentElement.scrollWidth - window.innerWidth,
-        }));
-      expect((await fit()).scrollbar).toBeLessThanOrEqual(1);
-      expect((await fit()).page).toBeLessThanOrEqual(0);
-      await page.setViewportSize({ width: 375, height: 800 });
-      expect((await fit()).scrollbar).toBeLessThanOrEqual(1);
-      await page.setViewportSize({ width: 320, height: 800 });
-
-      // The largest board: far row at least 24 px wide, near row wider, last cell reachable.
-      await startGame(page, 30, 30, 99);
-      const far = await cell(page, 1, 1).boundingBox();
-      const near = await cell(page, 30, 1).boundingBox();
-      expect(far?.width ?? 0).toBeGreaterThanOrEqual(24);
-      expect(near?.width ?? 0).toBeGreaterThan(far?.width ?? 0);
-      const last = cell(page, 30, 30);
-      await last.scrollIntoViewIfNeeded();
-      const inside = async (target: Locator) => {
-        const box = await target.boundingBox();
-        const well = await scroller(page).boundingBox();
-        if (!box || !well) throw new Error('no box');
-        return {
-          left: box.x - well.x,
-          top: box.y - well.y,
-          right: well.x + well.width - (box.x + box.width),
-          bottom: well.y + well.height - (box.y + box.height),
-        };
-      };
-      for (const edge of Object.values(await inside(last))) {
-        expect(edge).toBeGreaterThanOrEqual(-0.5);
-      }
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-      ).toBe(true);
-    });
-  });
-});
-
 test.describe('accessibility in 3D', () => {
   test.beforeEach(async ({ page }) => {
     await openGame(page);
@@ -375,7 +241,7 @@ test.describe('accessibility in 3D', () => {
       const names = await grid(page).ariaSnapshot();
       expect(names).toContain('Row 1, column 1, empty');
       expect(names).toContain('flagged');
-      await radio3d(page).check();
+      await choose3d(page);
       expect(await grid(page).ariaSnapshot()).toBe(names);
       await expect(grid(page)).toHaveAttribute('aria-rowcount', '5');
       await expect(grid(page)).toHaveAttribute('aria-colcount', '5');
@@ -409,6 +275,19 @@ test.describe('accessibility in 3D', () => {
       expect(ring.style).not.toBe('none');
       expect(ring.width).toBeGreaterThanOrEqual(2);
       expect(ring.colour).toBe(focusColour);
+      // 009 UX §6.1: the pixels under the ring change with light and shadow, so the ring is
+      // sandwiched between two halo lines (outside and inside) that keep its 3:1 contrast.
+      const haloColour = await page.evaluate(() => {
+        const probe = document.createElement('div');
+        probe.style.backgroundColor = 'var(--scene-focus-halo)';
+        document.body.append(probe);
+        const colour = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return colour;
+      });
+      const halo = await target.evaluate((el) => getComputedStyle(el).boxShadow);
+      expect(halo.split(haloColour).length - 1, 'outer and inner halo line').toBe(2);
+      expect(halo).toContain('inset');
       const box = await target.boundingBox();
       const well = await scroller(page).boundingBox();
       if (!box || !well) throw new Error('no box');
@@ -420,103 +299,12 @@ test.describe('accessibility in 3D', () => {
   }
 });
 
-test.describe('motion', () => {
-  test.beforeEach(async ({ page }) => {
-    await openGame(page);
-    await startFixed5x5(page, WALL);
-    await cell(page, 3, 1).click(); // revealed cells: their shadows change with the view
-    await cell(page, 1, 5).click({ button: 'right' });
-    await page.mouse.move(0, 0);
-    await settled(page);
-  });
-
-  const motion = (page: Page) =>
-    page.evaluate(() => {
-      const animations = document.getAnimations().map((a) => {
-        const t = a.effect?.getTiming();
-        return { iterations: Number(t?.iterations), duration: Number(t?.duration) };
-      });
-      const durations = ['.grid', '[role="gridcell"]'].map((sel) => {
-        const el =
-          sel === '.grid' ? document.querySelector('[role="grid"]') : document.querySelector(sel);
-        return el ? getComputedStyle(el).transitionDuration : '';
-      });
-      return { animations, durations };
-    });
-
-  test('AC6: with reduced motion the switch is immediate and nothing moves', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await radio3d(page).check();
-    const on = await motion(page);
-    expect(on.animations).toEqual([]);
-    for (const d of on.durations) expect(parseFloat(d)).toBe(0);
-    await radio2d(page).check();
-    expect((await motion(page)).animations).toEqual([]);
-  });
-
-  test('AC6: with normal motion a switch animates for at most 300 ms and nothing loops', async ({
-    page,
-  }) => {
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await radio3d(page).check();
-    const on = await motion(page);
-    for (const a of on.animations) {
-      expect(a.iterations).toBe(1);
-      expect(a.duration).toBeLessThanOrEqual(300);
-    }
-    await settled(page);
-    await page.waitForTimeout(500);
-    await settled(page); // still nothing running: no loops, no self-moving 3D view
-    await radio2d(page).check();
-    for (const a of (await motion(page)).animations) {
-      expect(a.iterations).toBe(1);
-      expect(a.duration).toBeLessThanOrEqual(300);
-    }
-    await settled(page);
-  });
-});
-
-test.describe('capability fallback', () => {
-  test('AC7: without 3D support "3D" is shown as unavailable and 2D works without errors', async ({
-    page,
-  }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => {
-      if (m.type() === 'error') errors.push(m.text());
-    });
-    await page.addInitScript(() => {
-      CSS.supports = () => false;
-    });
-    await openGame(page);
-
-    await expect(radio3d(page)).toBeDisabled();
-    await expect(radio3d(page)).toHaveAccessibleDescription(UNAVAILABLE);
-    await expect(page.getByText(UNAVAILABLE, { exact: true })).toBeVisible();
-    await expect(radio2d(page)).toBeChecked();
-    await expect(radio2d(page)).toBeEnabled();
-
-    await startFixed5x5(page, CORNERS);
-    await cell(page, 1, 2).click();
-    await expect(cell(page, 1, 2)).toHaveAccessibleName('Row 1, column 2, 1 mine nearby');
-    await radio2d(page).focus();
-    await page.keyboard.press('ArrowRight'); // the disabled option is skipped
-    await expect(radio2d(page)).toBeChecked();
-    await expect(radio2d(page)).toBeFocused();
-    expect(await tilt(page)).toBe('none');
-    await radio2d(page).check();
-    await expect(radio2d(page)).toBeChecked();
-    await expect(counter(page)).toHaveText('Mines left: 2');
-    expect(errors).toEqual([]);
-  });
-});
-
 test.describe('not remembered', () => {
   test('AC8: after a reload and after sign-out and sign-in the view is 2D again', async ({
     page,
   }) => {
     await openGame(page);
-    await radio3d(page).check();
+    await choose3d(page);
     await startFixed5x5(page, CORNERS);
     expect(await tilt(page)).not.toBe('none');
 

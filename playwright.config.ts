@@ -13,6 +13,10 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${port}`,
     trace: 'on-first-retry',
+    // Story 009 / ADR 0005: the same software WebGL (SwiftShader) on macOS and ubuntu CI.
+    // Recent Chromium on Linux needs --enable-unsafe-swiftshader for the software fallback.
+    // No effect on 2D tests. Applies to every project (also chromium-3d).
+    launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

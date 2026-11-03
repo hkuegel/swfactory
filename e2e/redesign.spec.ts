@@ -374,7 +374,8 @@ test.describe('layout', () => {
             return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null;
           };
           const gridEl = document.querySelector('[role="grid"]');
-          const scroller = gridEl?.parentElement ?? null;
+          // The grid's parent is the stage (story 009); the scroller is the element with data-view.
+          const scroller = gridEl?.closest('[data-view]') ?? null;
           const form = document.querySelector('form');
           const counter = Array.from(document.querySelectorAll('p')).find((p) =>
             p.textContent?.startsWith('Mines left:'),

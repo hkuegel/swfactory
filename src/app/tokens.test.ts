@@ -2,6 +2,9 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { boardMargins } from '../features/minesweeper/scene3d/geometry.ts';
+import { SCENE_COLOUR_TOKENS, SCENE_LOOK_TOKENS } from '../features/minesweeper/scene3d/palette.ts';
+import { TILE_RADIUS } from '../features/minesweeper/scene3d/sceneLayout.ts';
 
 // Vitest does not process CSS imports (they come back empty), so read the files from disk.
 const SRC = join(import.meta.dirname, '..');
@@ -47,8 +50,15 @@ const css = stripComments(tokensCss);
 const light = declarations(blockOf(css, ':root {'));
 const dark = declarations(blockOf(blockOf(css, '@media (prefers-color-scheme: dark)'), ':root'));
 
+/** Unitless numbers of the 3D scene: parity and range only, no colour or contrast checks. */
+const LOOK_TOKENS: ReadonlySet<string> = new Set(Object.values(SCENE_LOOK_TOKENS));
+
 function isColourToken(name: string): boolean {
-  return /^--(color|cell|google|shadow|n\d)/.test(name) && !/^--(cell-gap)$/.test(name);
+  return (
+    /^--(color|cell|google|shadow|scene|n\d)/.test(name) &&
+    !/^--(cell-gap)$/.test(name) &&
+    !LOOK_TOKENS.has(name)
+  );
 }
 
 function luminance(hex: string): number {
@@ -185,6 +195,15 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ['--google-text', '--google-hover', TEXT],
   ['--google-text', '--google-press', TEXT],
   ['--google-border', '--color-surface', NON_TEXT],
+  // 3D scene (story 009, UX §14.14): unlit glyphs on the token colour of the surface (their halo).
+  ['--color-danger-solid', '--scene-tile-top', TEXT],
+  ['--color-text', '--scene-tile-top', NON_TEXT],
+  ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => [`--n${n}`, '--scene-revealed-top', TEXT] as const),
+  ['--color-danger-solid', '--scene-revealed-top', NON_TEXT],
+  ['--scene-mine-lit', '--scene-revealed-top', NON_TEXT],
+  ['--scene-mine-shade', '--scene-revealed-top', NON_TEXT],
+  ['--color-text', '--scene-revealed-top', NON_TEXT],
+  ['--color-focus', '--scene-focus-halo', NON_TEXT],
 ];
 
 describe('design tokens', () => {
@@ -216,33 +235,46 @@ describe('design tokens', () => {
     expect(failures).toEqual([]);
   });
 
-  it('AC3: the 3D tokens match tilt and depth, and the tilt is at most 35 degrees', () => {
-    const number = (name: string) => {
-      const found = light.get(name);
-      if (found === undefined) throw new Error(`${name} is missing`);
-      return parseFloat(found);
-    };
-    const tilt = number('--board3d-tilt');
-    expect(light.get('--board3d-tilt')).toMatch(/^\d+(\.\d+)?deg$/);
-    expect(tilt).toBeGreaterThan(0);
-    expect(tilt).toBeLessThanOrEqual(35);
+  it('AC1: --board3d-fit matches the inline margins of a square 3D board (story 009)', () => {
+    const fit = parseFloat(light.get('--board3d-fit') ?? '');
+    const width = 9 * 32 + 8 * 2;
+    const expected = 1 + (2 * boardMargins(width, width).inline) / width;
+    expect(fit).toBeGreaterThanOrEqual(expected);
+    expect(fit).toBeLessThanOrEqual(expected + 0.005);
+  });
 
-    // Plane tilted about its centre, perspective distance k times the grid height: the far
-    // (top) edge is scaled by far, the near (bottom) edge by near, the tilted height is cos.
-    const rad = (tilt * Math.PI) / 180;
-    const k = number('--board3d-depth');
-    const far = k / (k + Math.sin(rad) / 2);
-    const near = k / (k - Math.sin(rad) / 2);
-    expect(Math.abs(number('--board3d-top') - ((Math.cos(rad) / 2) * far - 0.5))).toBeLessThan(
-      0.002,
-    );
-    expect(Math.abs(number('--board3d-bottom') - ((Math.cos(rad) / 2) * near - 0.5))).toBeLessThan(
-      0.002,
-    );
-    // The near row sticks out by (near - 1) / 2 of the width on each side; margin is at least that.
-    const side = number('--board3d-side');
-    expect(side).toBeGreaterThanOrEqual((near - 1) / 2);
-    expect(side).toBeLessThanOrEqual((near - 1) / 2 + 0.005);
+  it('AC1: the scene tokens exist in light and dark; look numbers are in range (story 009)', () => {
+    for (const token of Object.values(SCENE_COLOUR_TOKENS)) {
+      expect(light.has(token), `${token} in light`).toBe(true);
+      expect(dark.has(token), `${token} in dark`).toBe(true);
+    }
+    for (const token of LOOK_TOKENS) {
+      for (const tokens of [light, dark]) {
+        const number = Number(tokens.get(token));
+        expect(Number.isFinite(number), token).toBe(true);
+        expect(number).toBeGreaterThanOrEqual(0);
+        expect(number).toBeLessThanOrEqual(2);
+      }
+    }
+    // Digits keep the 007 pairs by construction: the revealed top is the 2D revealed fill.
+    expect(light.get('--scene-revealed-top')).toBe(light.get('--cell-revealed-fill'));
+    expect(dark.get('--scene-revealed-top')).toBe(dark.get('--cell-revealed-fill'));
+  });
+
+  it('AC1: the overlay tint radius follows the scene tile radius (story 009)', () => {
+    const board = stripComments(allCss['/src/features/minesweeper/Board.module.css'] ?? '');
+    const factor = /--radius-tile-3d:\s*calc\(var\(--cell\)\s*\*\s*([\d.]+)\)/.exec(board)?.[1];
+    expect(Number(factor)).toBe(TILE_RADIUS);
+  });
+
+  it('AC1: the scene code has no colour literals (story 009)', () => {
+    const dir = join(SRC, 'features', 'minesweeper', 'scene3d');
+    const literals = readdirSync(dir, { recursive: true, encoding: 'utf8' })
+      .filter((path) => path.endsWith('.ts'))
+      .filter((path) =>
+        /#[0-9a-fA-F]{3,8}\b|\b0x[0-9a-fA-F]+\b/.test(readFileSync(join(dir, path), 'utf8')),
+      );
+    expect(literals).toEqual([]);
   });
 
   it('AC2/AC6: no module bypasses the tokens (colours, font, radius, motion)', () => {

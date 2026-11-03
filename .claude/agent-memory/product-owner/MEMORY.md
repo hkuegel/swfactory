@@ -22,3 +22,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - When closing an open question, grep the story for "see Open questions" and the question's wording, because Out of scope lines keep pointing at the removed question (story 006).
 - When design flags an AC conflict and hak accepts the proposal, add an explicit "Exception:" sentence inside that AC (no new AC, no renumbering) and log one Decision log entry per point; mark the design's open-points item "(resolved, see Decision log)" (story 007).
 - Literal motion ACs ("nothing loops") collide with essential progress feedback (spinner); name the exception in the AC itself, with its reduced-motion form (story 007).
+- When hak's feedback reverses a gate-1 decision of a done story, keep that story done, set `changes:` on the specific ACs, append "(changed by NNN)", and re-ask the reversed decision as Open question 1 (story 009).
+- For "make it impressive" asks, split AC into measurable proxies (pixel luminance ratios, durations with caps, fps floors, flashes/s <= 3, reduced-motion static end states) plus hak's sign-off on screenshots/video; effects must never delay state/result/a11y updates (story 009).
+- Any effect library or lazy-loaded chunk needs a loading, failed-load (timeout) and lost-context AC because of the CLAUDE.md network-timeout rule (story 009).
+- CI browsers use software rendering: fps ACs need a named reference machine as an open question (story 009).

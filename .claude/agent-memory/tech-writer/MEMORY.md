@@ -14,7 +14,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Check the Test report's "Manual check results" before writing setup steps; hak's real setup overrode the design (publishing needs a homepage and privacy URL, so keep "Testing" with test users locally) (story 001).
 - Don't write Google Cloud steps as exact menu names; name the console page URL and the field, and say when a label may differ (story 001).
 - For dev-only features, say where they are absent (build, preview, deploy) and name the build check that enforces it (story 004).
-- Keep Scripts table column widths in sync when a command name gets longer; re-pad the whole table (story 004).
+- Keep Scripts table column widths in sync when a command name gets longer; re-pad the whole table, then check every row with Grep `^\| .{N} \| .{M} \|$` (N, M = column widths) since Prettier can't be run (story 004, 009).
 - Describe controls per cell state from the UX Interactions table: a click on a flagged cell does nothing, flags come off by right-click, long-press or F (story 005).
 - Document keyboard extras only if the Implementation notes say they were built (Home/End were optional in UX and built in story 005).
 - Don't name planned follow-up stories (e.g. best times) in CHANGELOG or README; document only what exists (story 005, reworded in 006).
@@ -26,3 +26,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Name a second Playwright project in README Testing with what it re-runs, and say `npm run test:e2e` runs all projects, because `playwright test` runs every project by default (story 008).
 - Write a mode or view feature as one README paragraph under the game's own heading, with the reset rule (reload, sign-out) stated once, because hak asked for short prose (story 008).
 - Story files run past 400 lines; read the Test report and Review by offset, since the first read is capped and truncates (story 008).
+- Check the Test report's verdict against "Fixed after test" in the Implementation notes before writing; the verdict can say FAIL after the defect was fixed (story 009).
+- If a request says "mention ADR X if a list of ADRs exists", grep the README for such a list first; the layout names only the `docs/adr/` folder, so skip it and say so (story 009).
+- Under a Scripts row for a headed or GPU-only script, say in one sentence that it opens a window, needs a real GPU and is not in `verify` or CI (story 009).

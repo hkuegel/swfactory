@@ -1,10 +1,19 @@
 // Fails if the production bundle in dist/ contains dev-only code (story 004, AC12).
 // Plain Node instead of grep so it behaves the same on macOS and ubuntu CI.
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 
 const DIST = 'dist';
-const FORBIDDEN = ['Sign in as guest', '__fakeGoogle', '__minesweeperMines'];
+const FORBIDDEN = ['Sign in as guest', '__fakeGoogle', '__minesweeperMines', '__board3dProbe'];
+
+// Story 009 / ADR 0005: three.js lives only in a lazy chunk, loaded when "3D" is first chosen.
+// `THREE.WebGLRenderer` is a literal in three's build; it marks the chunk that contains three.
+const THREE_MARKER = 'THREE.WebGLRenderer';
+const SCENE_CHUNK_GZIP_MAX = 180 * 1024; // gate-1 budget of story 009
+// Once the lazy scene entry exists in the source, the scene chunk is mandatory in dist/ (so the
+// checks below can't pass vacuously). Before that (story 009 not implemented yet) they are skipped.
+const SCENE_ENTRY = 'src/features/minesweeper/scene3d/createBoardScene.ts';
 
 function listFiles(dir) {
   return readdirSync(dir).flatMap((name) => {
@@ -40,4 +49,46 @@ if (hits.length > 0) {
   process.exit(1);
 }
 
-console.log(`check-dist: ok (${files.length} files, no dev-only strings)`);
+// three must not be in the entry chunk (index.html's module script and modulepreloads).
+const html = readFileSync(join(DIST, 'index.html'), 'utf8');
+const entryFiles = new Set(
+  [
+    ...html.matchAll(/<script\b[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/g),
+    ...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g),
+  ].map((m) => join(DIST, (m[1] ?? '').replace(/^(\.\/|\/)/, ''))),
+);
+const entryHits = [...entryFiles].filter(
+  (f) => existsSync(f) && readFileSync(f, 'utf8').includes(THREE_MARKER),
+);
+if (entryHits.length > 0) {
+  console.error('check-dist: three.js found in the entry chunk (must be lazy-loaded only):');
+  entryHits.forEach((h) => console.error(`  ${h}`));
+  process.exit(1);
+}
+
+// Lazy scene chunk: must exist (once 009 is implemented) and stay within the gzip budget.
+const sceneChunks = files.filter(
+  (f) => f.endsWith('.js') && !entryFiles.has(f) && readFileSync(f, 'utf8').includes(THREE_MARKER),
+);
+let sceneNote = 'no scene chunk yet';
+if (sceneChunks.length === 0) {
+  if (existsSync(SCENE_ENTRY)) {
+    console.error(
+      `check-dist: ${SCENE_ENTRY} exists but no lazy chunk with three was built; check is vacuous.`,
+    );
+    process.exit(1);
+  }
+} else {
+  const sizes = sceneChunks.map((f) => ({ f, gzip: gzipSync(readFileSync(f)).length }));
+  const over = sizes.filter((s) => s.gzip > SCENE_CHUNK_GZIP_MAX);
+  if (over.length > 0) {
+    console.error(
+      `check-dist: scene chunk over the ${SCENE_CHUNK_GZIP_MAX / 1024} kB gzip budget:`,
+    );
+    over.forEach((s) => console.error(`  ${s.f}: ${(s.gzip / 1024).toFixed(1)} kB gzip`));
+    process.exit(1);
+  }
+  sceneNote = sizes.map((s) => `scene chunk ${(s.gzip / 1024).toFixed(1)} kB gzip`).join(', ');
+}
+
+console.log(`check-dist: ok (${files.length} files, no dev-only strings, ${sceneNote})`);

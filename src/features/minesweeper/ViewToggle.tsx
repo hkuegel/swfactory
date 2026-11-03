@@ -1,12 +1,14 @@
-import { useId } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
 import type { BoardView } from './logic/boardView.ts';
+import { VIEW3D_TEXT, type View3dStatus } from './logic/view3d.ts';
 import styles from './ViewToggle.module.css';
 
 export interface ViewToggleProps {
-  readonly view: BoardView;
+  /** The requested view: the checked radio (story 009). */
+  readonly requested: BoardView;
+  /** 'loading': busy group and loading text; 'unavailable': "3D" disabled with a text (AC6). */
+  readonly status3d: View3dStatus;
   readonly onChange: (view: BoardView) => void;
-  /** false: the "3D" option is disabled and the unavailable text is shown (AC7). */
-  readonly available3d: boolean;
 }
 
 const OPTIONS: readonly { readonly value: BoardView; readonly label: string }[] = [
@@ -15,18 +17,33 @@ const OPTIONS: readonly { readonly value: BoardView; readonly label: string }[] 
 ];
 
 /**
- * The "View" choice (story 008): two native radios styled as a segmented control. Always
- * mounted, never disabled by game state. The change is announced by the focused radio itself,
- * so there is no live region.
+ * The "View" choice (stories 008, 009): two native radios styled as a segmented control. Always
+ * mounted, never disabled by game state. The change is announced by the focused radio itself;
+ * loading and failures are announced by the game's live region (Minesweeper).
  */
-export function ViewToggle({ view, onChange, available3d }: ViewToggleProps) {
+export function ViewToggle({ requested, status3d, onChange }: ViewToggleProps) {
   const labelId = useId();
   const unavailableId = useId();
   const groupName = useId();
+  const inputs = useRef<Partial<Record<BoardView, HTMLInputElement | null>>>({});
+  const available3d = status3d !== 'unavailable';
+
+  // UX §9: a focused "3D" that becomes disabled would drop focus to the body; move it to "2D".
+  // Layout effect: before the browser's focus fixup for the now disabled radio.
+  useLayoutEffect(() => {
+    if (status3d === 'unavailable' && document.activeElement === inputs.current['3d']) {
+      inputs.current['2d']?.focus();
+    }
+  }, [status3d]);
 
   return (
     <div className={styles.view}>
-      <div role="radiogroup" aria-labelledby={labelId} className={styles.group}>
+      <div
+        role="radiogroup"
+        aria-labelledby={labelId}
+        aria-busy={status3d === 'loading' ? true : undefined}
+        className={styles.group}
+      >
         <span id={labelId} className={styles.label}>
           View
         </span>
@@ -36,10 +53,13 @@ export function ViewToggle({ view, onChange, available3d }: ViewToggleProps) {
             return (
               <label key={value} className={styles.segment}>
                 <input
+                  ref={(element) => {
+                    inputs.current[value] = element;
+                  }}
                   type="radio"
                   name={groupName}
                   className={styles.input}
-                  checked={view === value}
+                  checked={requested === value}
                   disabled={unavailable}
                   aria-describedby={unavailable ? unavailableId : undefined}
                   onChange={() => onChange(value)}
@@ -67,9 +87,11 @@ export function ViewToggle({ view, onChange, available3d }: ViewToggleProps) {
           })}
         </div>
       </div>
+      {/* Outside the busy group, so a screen reader does not skip it (UX §11). */}
+      {status3d === 'loading' && <p className={styles.loading}>{VIEW3D_TEXT.loading}</p>}
       {!available3d && (
         <p id={unavailableId} className={styles.unavailable}>
-          3D is not available in this browser.
+          {VIEW3D_TEXT.unavailable}
         </p>
       )}
     </div>

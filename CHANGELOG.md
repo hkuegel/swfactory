@@ -38,6 +38,10 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- The 3D view is now a lit 3D scene: glossy tiles on a dark stone table, soft shadows, a
+  gentle sway, a wave when an area opens and flags planted with a short animation. 3D
+  loads when you choose it. If 3D cannot load or stops, the game continues in 2D with a
+  notice (#009).
 - New modern look for the login screen, the header and the Minesweeper game: rounded
   shapes, one blue accent colour, and light and dark colours that follow your system
   setting. Buttons look the same everywhere, contrast is better, and forced colours and

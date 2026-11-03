@@ -9,6 +9,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 type Pair = readonly [row: number, col: number];
 type MinesWindow = Window & { __minesweeperMines?: Pair[] };
+type ProbeWindow = Window & { __board3dProbe?: { pause(): void } };
 
 const startButton = (page: Page) => page.getByRole('button', { name: 'Start' });
 const grid = (page: Page) => page.getByRole('grid', { name: 'Minesweeper board' });
@@ -62,9 +63,21 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Sign in as guest' }).click();
   await expect(page.getByText('Signed in as')).toBeVisible();
-  // Story 008/AC4: the project `chromium-3d` replays the flows of AC6, AC8, AC9 and AC10 in 3D.
+  // Story 008/AC4 and 009/AC5: the project `chromium-3d` replays the flows of AC6, AC8, AC9 and
+  // AC10 in 3D. The scene loads asynchronously, so wait for it, then freeze its clock: a swaying
+  // cell is never "stable" for Playwright's click and scroll actions.
   if (test.info().project.name === 'chromium-3d') {
     await page.getByRole('radio', { name: '3D' }).check();
+    await expect(page.getByRole('radiogroup', { name: 'View' })).not.toHaveAttribute(
+      'aria-busy',
+      'true',
+      { timeout: 15_000 },
+    );
+    await expect(page.getByText('3D is not available in this browser.')).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => (window as ProbeWindow).__board3dProbe !== undefined))
+      .toBe(true);
+    await page.evaluate(() => (window as ProbeWindow).__board3dProbe?.pause());
   }
 });
 

@@ -36,3 +36,9 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Dark mode: inset shadows in near-black on a near-black well are invisible (1.1:1); give dark its own cue (light 1 px edge) instead of relying on shade, and say shape carries the state (story 008).
 - No `filter: drop-shadow` on hundreds of SVG glyphs; use a `::before` background ellipse (story 008).
 - Perspective/transform math: compute the on-screen size of the smallest cell (width x 0.96, height also x cos tilt) and check the default 9x9 board at 320 px, not only at 375 px (story 008).
+- WebGL scene + DOM overlay: the focus ring sits on pixels that change with light, shadow and the face it crosses; specify a two-tone sandwich (1 px halo outside, 2 px ring, 1 px halo inside), keep the AC-tested `outline` untouched (story 009).
+- Upright 3D objects on a board seen at tilt T shrink to sin(T) of their height (25 deg gives 42 %); lean flags/poles back about 28 deg or they are unreadable (story 009).
+- Unlit glyphs with halos in the token colour need the key light high (about 60 deg) so shadows never cross a halo; calibrate the lit floor to its token (factor about 1.0) so no "sticker" shows (story 009).
+- Light/dark-dependent scene numbers (intensities, shadow strength, gloss) belong in `--scene-*` unitless tokens, not in TypeScript constants; tell the architect to type them separately from colours (story 009).
+- Async load/failed/lost states: visible text plus announcements through the one existing live region (identical strings); keep status text OUTSIDE an `aria-busy` group; move focus to the still-enabled radio when the focused one becomes disabled (story 009).
+- Spinner convention: 20 px ring, 2 px `--color-text-muted`, 0.8 s, static ring at opacity 0.6 under reduced motion (LoginView.module.css); reuse, and flag the loop to the PO (story 009).
