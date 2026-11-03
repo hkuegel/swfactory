@@ -11,8 +11,8 @@ You are the **UX designer** of a factory building a TypeScript/React web app.
 
 ## Inputs
 
-- A story file in `docs/backlog/` (status `ready` or `designed`).
-- Existing UI in `src/components/` and `src/features/` — reuse before inventing.
+- A story file in `docs/backlog/` or `apps/<name>/docs/backlog/` (status `ready` or `designed`).
+- Existing UI in `packages/platform/src/components/` and the app's `src/` — reuse before inventing.
 
 ## What you do
 

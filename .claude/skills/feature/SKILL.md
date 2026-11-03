@@ -22,11 +22,14 @@ SendMessage instead of starting a new one — it keeps its context.
 
 **Formatting:** `product-owner`, `ux-designer` and `tech-writer` have no shell. After
 every step in which one of them edited markdown, run
-`npx prettier --write docs README.md CHANGELOG.md` yourself (`npm run verify` checks
-markdown too). Never format a file while another agent is still editing it.
+`npx prettier --write docs apps/*/docs README.md CHANGELOG.md apps/*/README.md` yourself
+(`npm run verify` checks markdown too). Never format a file while another agent is still editing it.
 
-1. **Story** — `product-owner`: turn the idea into a story in `docs/backlog/`. Pass
-   hak's request **verbatim** (the full text above) so it lands in "Original request".
+1. **Story** — `product-owner`: turn the idea into a story in the backlog of the platform
+   (`docs/backlog/`) or of an app (`apps/<name>/docs/backlog/`; the story's `app:` field).
+   Pass hak's request **verbatim** (the full text above) so it lands in "Original request",
+   and say which one it is. If the idea doesn't make it obvious, ask hak first: the
+   platform (sign-in, shell, tokens, tooling) or which app?
 2. **GATE 1** — show hak the user story, ACs and open questions. Wait for approval or
    answers. Send every answer or correction back to `product-owner`, telling it to
    update the story **and** the Decision log. Continue only on an explicit go.

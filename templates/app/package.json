@@ -1,0 +1,24 @@
+{
+  "name": "@swfactory/__NAME__",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --build && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --build",
+    "lint": "eslint .",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check:dist": "node ../../scripts/check-dist.mjs __NAME__",
+    "verify": "npm run verify -w @swfactory/platform && npm run typecheck && npm run lint && npm run format:check && npm test && npm run build && npm run check:dist"
+  },
+  "dependencies": {
+    "@swfactory/platform": "*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

@@ -1,9 +1,21 @@
 # Software Factory
 
-A TypeScript/React app built by a team of Claude Code agents, each owning one role in
-the development process: product owner, architect, UX designer, developer, tester,
-reviewer, DevOps and tech writer. See [CLAUDE.md](CLAUDE.md) for the process and
-conventions, and [`.claude/agents/`](.claude/agents/) for the role definitions.
+A software factory: TypeScript/React apps built by a team of Claude Code agents, each
+owning one role in the development process: product owner, architect, UX designer,
+developer, tester, reviewer, DevOps and tech writer. See [CLAUDE.md](CLAUDE.md) for the
+process and conventions, and [`.claude/agents/`](.claude/agents/) for the role definitions.
+
+The repo has three parts. They are kept apart
+([ADR 0006](docs/adr/0006-monorepo-npm-workspaces-platform-as-source.md)):
+
+- **The factory** is the way of working: the agents, skills and templates in `.claude/`,
+  `docs/templates/` and `templates/`, plus `CLAUDE.md`. It knows no app.
+- **The platform** (`packages/platform/`) is the code every app shares: Google and guest
+  sign-in, the e2e sign-in fake, the app shell, design tokens, the shared button and helpers.
+  It is consumed as source by the apps and never names or imports an app.
+- **The apps** (`apps/<name>/`) are the products. Each app has its own code, tests,
+  stories and ADRs, and sets its own page heading and title. Today there is one app:
+  [Minesweeper](apps/minesweeper/README.md).
 
 ## Getting started
 
@@ -21,26 +33,37 @@ npx playwright install chromium
 npm run dev
 ```
 
+`npm run dev` starts Minesweeper, the default app. To start another app, use its folder:
+
+```bash
+npm run dev -w apps/<name>
+```
+
+The dev server runs on http://localhost:5173. Every app uses this port, so run one dev
+server at a time.
+
 The app runs without any setup. To sign in with Google, follow
 [Google sign-in setup](#google-sign-in-setup). To try the app without Google, use the
 guest button described in [Sign in as guest](#sign-in-as-guest-local-testing).
 
 ## Sign in as guest (local testing)
 
-The login screen has a **Sign in as guest** button next to **Sign in with Google**. It
-appears only in the dev server (`npm run dev`) and in the e2e tests
+The login screen of every app has a **Sign in as guest** button next to **Sign in with
+Google**. It appears only in the dev server (`npm run dev`) and in the e2e tests
 (`npm run test:e2e`). Use it to reach the signed-in state without a Google account. A
 guest sees the same signed-in screen as a Google user, with "Signed in as Guest". Like a
 Google user, a guest is not kept across page reloads.
 
-The button is not part of production builds. `npm run build`, `npm run preview` and a
-deployed app do not show it. `npm run verify` checks this: it fails if the guest label
-or the e2e fake end up in `dist/`.
+The button is not part of production builds. A built app, `npm run preview -w apps/<name>`
+and a deployed app do not show it. `npm run verify` checks this: it fails if the guest
+label or the e2e fake end up in the `dist/` of any app.
 
 ## Google sign-in setup
 
 The login screen signs users in with Google. To try Google sign-in on your machine, you
 need your own OAuth client ID. The automated tests and the guest button do not need one.
+
+All apps share one client ID. You set it up once.
 
 ### 1. Create the OAuth client
 
@@ -61,8 +84,9 @@ need your own OAuth client ID. The automated tests and the guest button do not n
    http://localhost
    ```
 
-   Origins must match exactly: no path and no trailing slash. If you open the app under
-   another address, add that origin too.
+   Origins must match exactly: no path and no trailing slash. 5173 is the dev port of
+   every app, so one pair of origins serves all of them. If you open an app under another
+   address or port, add that origin too.
 
    Leave **Authorized redirect URIs** empty. They are not needed.
 
@@ -73,7 +97,7 @@ a free trial.
 
 ### 2. Add test users
 
-While the app runs only on your machine, keep the publishing status on **Testing**.
+While the apps run only on your machine, keep the publishing status on **Testing**.
 Only the Google accounts you list as test users can sign in.
 
 1. Open [Audience](https://console.cloud.google.com/auth/audience).
@@ -82,7 +106,7 @@ Only the Google accounts you list as test users can sign in.
 
 ### 3. Add the client ID to your environment
 
-Copy the example file to `.env.local`:
+Copy the example file to `.env.local` in the repo root:
 
 ```bash
 cp .env.example .env.local
@@ -94,14 +118,15 @@ Open `.env.local` and set your client ID:
 VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
 
-Restart `npm run dev` after you change the file. `.env.local` is gitignored, so your
-client ID stays out of git.
+There is one `.env.local`, in the repo root. All apps read it. You don't copy it into an
+app folder. Restart the dev server after you change the file. `.env.local` is gitignored,
+so your client ID stays out of git.
 
 ### Publishing later
 
 Publishing the consent screen ("In production") lets any Google account sign in. Google
-requires a homepage and a privacy-policy URL for that. The app has neither while it runs
-only locally. Publish once the app has a public URL.
+requires a homepage and a privacy-policy URL for that. The apps have neither while they
+run only locally. Publish once an app has a public URL.
 
 ### About the client ID
 
@@ -120,7 +145,7 @@ only locally. Publish once the app has a public URL.
   page. Check that the browser can reach `accounts.google.com`.
 - **The same error appears when the browser blocks popups.** Sign-in opens a Google
   popup. Allow popups for `localhost` and try again.
-- **Google refuses the sign-in for your account.** While the app is in **Testing**, only
+- **Google refuses the sign-in for your account.** While the apps are in **Testing**, only
   the test users can sign in. Add the account under **Audience**, **Test users**.
 - **Google's popup shows an error about the origin.** Check the authorized JavaScript
   origins from step 1 against the address in your browser.
@@ -128,104 +153,90 @@ only locally. Publish once the app has a public URL.
 Sign-in is not kept across page reloads yet. Every reload shows the login screen again.
 This comes with story 003 (`docs/backlog/003-stay-signed-in.md`).
 
-## Playing Minesweeper
+## Creating an app
 
-After you sign in, the page shows a Minesweeper game. Guests can play too.
+In Claude Code, run the skill:
 
-1. Set the rows, columns and mines. The defaults are 9, 9 and 10. Or choose a preset:
-   **Beginner** (9 × 9, 10 mines), **Intermediate** (16 × 16, 40 mines) or **Expert**
-   (16 × 30, 99 mines). A preset only fills in the fields, so you can still change them.
-2. Choose **Start**. A new board appears. You can choose **Start** at any time, also during
-   a game. No confirmation is asked, and the current game is discarded.
+```text
+/new-app <name> [title]
+```
 
-The fields accept these values:
+It copies the skeleton `templates/app/` to `apps/<name>/`, runs `npm install`, and then
+runs `verify` and the e2e tests for the new app. Without Claude Code, run the steps
+yourself:
 
-| Setting | Allowed                 | Default |
-| ------- | ----------------------- | ------- |
-| Rows    | 5 to 30                 | 9       |
-| Columns | 5 to 30                 | 9       |
-| Mines   | 1 to rows × columns − 9 | 10      |
+```bash
+node scripts/new-app.mjs <name> --title "<Title>"
+```
 
-If a value is empty, not a whole number or out of range, the page names the field and says
-what is allowed. No board is created, and a game in progress is kept.
+```bash
+npm install
+```
 
-The first cell you reveal is never a mine. It is empty, so the area around it opens.
+```bash
+npm run verify -w apps/<name>
+```
 
-### Controls
+```bash
+npm run test:e2e -w apps/<name>
+```
 
-| Action        | Mouse       | Touch      | Keyboard       |
-| ------------- | ----------- | ---------- | -------------- |
-| Reveal a cell | Click       | Tap        | Enter or Space |
-| Flag a cell   | Right-click | Long-press | F              |
+The name starts with a lowercase letter and has only lowercase letters, digits and
+hyphens. The title is the page heading and the browser title. It defaults to the
+capitalised name (`my-app` becomes "My App"). It cannot contain quotes, backticks,
+backslashes, angle brackets, `&`, `$` or braces. Use a distinctive name: `check:structure`
+rejects an app name as a whole word in the factory files, so a common word like "todo"
+causes false alarms. The names `app`, `apps`, `platform`, `package`, `packages`,
+`template` and `templates` are reserved. If you delete an app again, `npm install` leaves a
+stale `extraneous` entry for it in `package-lock.json`: restore the file from git (or remove
+the entry) afterwards.
 
-On touch, hold a cell for about half a second to flag it. Dragging scrolls the board and
-does not reveal or flag a cell.
+The new app works at once, without any change to another app:
 
-With the keyboard, press Tab to enter the board. The arrow keys move between cells and stop
-at the edges. Home and End go to the first and last cell of the row. Ctrl+Home and Ctrl+End
-go to the first and last cell of the board.
+- Google sign-in, guest sign-in (dev only) and the e2e sign-in fake,
+- the page shell with your title, and the generic design tokens,
+- the unit, e2e, lint, format and build checks, including `check:dist`.
 
-A flagged cell cannot be revealed. To remove a flag, right-click or long-press the cell
-again, or press F.
-
-**Mines left** shows the number of mines minus the number of flags. It goes negative when
-you place more flags than there are mines.
-
-You win when every cell without a mine is revealed. The remaining mines are then flagged.
-You lose when you reveal a mine. After the game ends, the board no longer accepts clicks,
-taps or flags.
-
-**Timer** shows the whole seconds since your first reveal, next to **Mines left**. It
-shows 0 until you reveal a cell, so flagging a cell does not start it. It stops when you
-win or lose and keeps the final time. **Start** sets it back to 0. The timer has no upper
-limit. When the game ends, screen readers also announce the final time.
-
-### 3D view
-
-The **View** control sits above the game status, with the options **2D** and **3D**. It is
-there before the first **Start**, during a game and after a win or loss. Choose **3D** at
-any time, also in the middle of a game. Nothing is lost: the board, the flags, **Mines left**
-and the timer stay as they are. Mouse, touch, keyboard and screen reader work the same as in
-2D. The view is 2D again after a reload or a sign-out.
-
-The 3D board is a lit scene with glossy tiles on a dark stone table and soft shadows. Hidden
-cells are raised, revealed cells are sunk in, and the camera sways gently. An opened area
-spreads as a wave from the clicked cell, and flags are planted with a short animation. 3D
-loads when you choose it. **Loading 3D…** shows until it is ready, and 2D stays playable
-meanwhile. If your system asks for reduced motion, the board does not sway and shows no
-animations. Each change appears at once as a still picture.
-
-If your browser cannot show 3D, **3D** is shown as unavailable with a short note. If 3D
-cannot load, takes longer than 10 seconds to load, or stops during a game, the view changes
-to 2D with a short message. The game state is kept, and you keep playing in 2D.
-
-Nothing is saved. A reload or a sign-out starts again with the default values and no game.
+After sign-in it shows a placeholder region in `src/Content.tsx`. Replace it with your
+app. Put the app's own design tokens in `src/tokens.css`, its stories in
+`docs/backlog/` and its ADRs in `docs/adr/` inside the app folder. If the app adds dev-only
+code of its own, list the identifying strings in the app's `dist-check.json`. The
+skeleton's README is [`templates/app/README.md`](templates/app/README.md).
 
 ## Working with the factory
 
 Open Claude Code in this folder and use:
 
-| Command                | What happens                                                    |
-| ---------------------- | --------------------------------------------------------------- |
-| `/story <idea>`        | Product owner writes a story with acceptance criteria           |
-| `/feature <idea>`      | Full pipeline: story → design → build → test → review → docs    |
-| `/bug <description>`   | Reproduce with a failing test → fix → verify → review           |
-| `/rebuild [up-to NNN]` | Regenerate the domain code from the backlog, starting at `base` |
+| Command                      | What happens                                                 |
+| ---------------------------- | ------------------------------------------------------------ |
+| `/story <idea>`              | Product owner writes a story with acceptance criteria        |
+| `/feature <idea>`            | Full pipeline: story → design → build → test → review → docs |
+| `/bug <description>`         | Reproduce with a failing test → fix → verify → review        |
+| `/new-app <name> [title]`    | Create an app from the skeleton in `templates/app/`          |
+| `/rebuild <app> [up-to NNN]` | Regenerate one app from its backlog and the current platform |
 
 You approve at two gates: after the story is written (the story is then committed), and
 before the code is committed, where you also decide which retro proposals to apply.
 You can also call any role directly, e.g. "ask the architect how we should handle routing".
 
+At the first gate you also say whether a story is for the platform or for one app.
+
 ### Keeping track and rebuilding
 
-Every feature is a story file in `docs/backlog/` holding your original request, the
-acceptance criteria, a log of your decisions, the designs, the test report and the
-review. The index is `docs/backlog/README.md`.
+Every feature is a story file holding your original request, the acceptance criteria, a
+log of your decisions, the designs, the test report and the review. Stories of the
+platform are in `docs/backlog/`, stories of an app are in `apps/<name>/docs/backlog/`.
+Story numbers are global. The index of all stories is `docs/backlog/README.md`. ADRs
+follow the same split: `docs/adr/` for the platform, `apps/<name>/docs/adr/` for an app.
 
-The git tag `base` marks the baseline: factory, toolchain and the technical login
-(Google and guest sign-in), without domain code. `/rebuild` starts from `base`, replays
-all stories done after it in order on a new branch, and checks the result against the
-original end-to-end tests. `/rebuild from: <tag|commit>` starts somewhere else.
+`/rebuild <app>` regenerates one app. It starts on a new branch from the app skeleton and
+the current platform, replays the app's done stories in id order, skips superseded
+stories, and checks the result against the app's original end-to-end tests. Platform
+stories are not replayed.
+
+The git tag `base` marks the baseline before the split into platform and apps: the
+single-app layout with the technical login (Google and guest sign-in) and no domain code.
+It is no longer the start of a rebuild. Move it only on hak's decision.
 
 ### How the agents learn
 
@@ -239,52 +250,117 @@ and revert what the agents learned.
 ```
 .claude/agents/        role definitions (one subagent per role)
 .claude/agent-memory/  lessons each agent learned, per role
-.claude/skills/        /feature, /story, /bug, /rebuild workflows
-docs/backlog/     user stories — the single source of truth per feature
-docs/adr/         architecture decision records
-docs/templates/   story and ADR templates
-scripts/          small build checks (check-dist.mjs)
-src/              the app (feature folders under src/features/)
-e2e/              Playwright end-to-end tests
+.claude/skills/        /feature, /story, /bug, /new-app, /rebuild workflows
+docs/backlog/          platform stories and the index of all stories
+docs/adr/              platform architecture decision records
+docs/templates/        story and ADR templates
+packages/platform/     the shared platform, imported as @swfactory/platform
+  src/auth/            Google and guest sign-in, e2e sign-in fake
+  src/shell/           app shell (page title and the app as children)
+  src/components/      shared UI components
+  src/lib/             shared helpers
+  src/styles/          generic design tokens (tokens.css) and base.css
+  src/test/            test setup and the shared token rules
+  config/              shared Vite and Playwright configuration for apps
+  e2e/                 sign-in specs (smoke, auth, auth-guest) that every app runs
+  dist-check.json      dev-only strings that no production build may contain
+apps/<name>/           one app
+  src/main.tsx         sign-in provider, app shell with the app's title, the app
+  src/features/        the app's feature folders
+  src/tokens.css       the app's own design tokens
+  e2e/                 the app's Playwright tests
+  docs/                the app's stories and ADRs
+  dist-check.json      the app's own dev-only strings and size budgets (optional)
+templates/app/         the app skeleton that /new-app copies
+scripts/               check-dist.mjs, check-structure.mjs, new-app.mjs
 ```
 
 ## Styling
 
-Colours, corner radii, type sizes and durations come from `src/app/tokens.css`. The
-light values are in `:root`, the dark values in one `prefers-color-scheme: dark` block
-below them (see [ADR 0004](docs/adr/0004-design-tokens-css-custom-properties.md)). Add a
-new colour to both blocks.
+Colours, corner radii, type sizes and durations come from design tokens, in two layers:
+
+- The generic tokens are in `packages/platform/src/styles/tokens.css`. The platform and
+  every app use them. A token is generic if a platform module reads it.
+- App tokens are in `apps/<name>/src/tokens.css`. They extend the generic tokens, for
+  example the cell and scene colours of Minesweeper. An app never has its own copy of a
+  generic token.
+
+In each file the light values are in `:root`, the dark values in one
+`prefers-color-scheme: dark` block below them (see
+[ADR 0004](docs/adr/0004-design-tokens-css-custom-properties.md)). Add a new colour to both
+blocks. An app's `main.tsx` imports the platform's `tokens.css` and `base.css`, then its own
+`tokens.css`.
 
 CSS modules use only these tokens, never a colour literal or a dark-mode block of their
-own. `src/app/tokens.test.ts` checks the contrast of the text and icon pairs in both
-schemes and fails on any value that bypasses the tokens. Run it with `npm test`.
+own. The token test checks the contrast of the text and icon pairs in both schemes and
+fails on any value that bypasses the tokens. It exists once in the platform
+(`packages/platform/src/styles/tokens.test.ts`) and once in each app
+(`apps/<name>/src/tokens.test.ts`), with shared rules. Run it with `npm test`.
 
 ## Scripts
 
-| Script                | Purpose                                             |
-| --------------------- | --------------------------------------------------- |
-| `npm run dev`         | Dev server on http://localhost:5173                 |
-| `npm test`            | Unit and component tests (Vitest)                   |
-| `npm run test:e2e`    | End-to-end tests (Playwright, fake sign-in)         |
-| `npm run verify`      | Typecheck, lint, format, tests, build, dist check   |
-| `npm run check:dist`  | Fail if dev-only code is in `dist/` (after a build) |
-| `npm run format`      | Format all files with Prettier                      |
-| `npm run measure:fps` | Measure the 3D frame rate (headed, real GPU)        |
+Root scripts run over the platform and all apps:
 
-`npm run verify` runs the checks in this order: typecheck, lint, format check, unit
-tests, `vite build`, and `check:dist`. It does not run the e2e tests.
+| Command                   | Purpose                                     |
+| ------------------------- | ------------------------------------------- |
+| `npm run dev`             | Dev server of Minesweeper (port 5173)       |
+| `npm run build`           | Production build of every app               |
+| `npm run typecheck`       | Typecheck every workspace                   |
+| `npm run lint`            | Lint the whole repo (ESLint)                |
+| `npm run format`          | Format all files with Prettier              |
+| `npm test`                | Unit tests of every workspace (Vitest)      |
+| `npm run test:e2e`        | End-to-end tests of every app (Playwright)  |
+| `npm run check:dist`      | Fail if dev-only code is in an app's dist/  |
+| `npm run check:structure` | Structure and link guard                    |
+| `npm run check:template`  | Unit tests and typecheck of `templates/app` |
+| `npm run verify`          | Run all checks except e2e (order below)     |
 
-`npm run measure:fps` opens a Chromium window and needs a real GPU. It is not part of
-`npm run verify` or CI. The script is `scripts/measure-fps.mjs`.
+`npm run verify` runs the checks in this order: typecheck, lint, format check, structure
+check, skeleton check (`check:template`), unit tests, build, and `check:dist`. It does not run the e2e tests. It fails if the
+platform or any app fails.
+
+To work on one app, add `-w apps/<name>`:
+
+```bash
+npm run dev -w apps/<name>          # dev server on port 5173
+npm run verify -w apps/<name>       # the platform's checks plus this app's checks
+npm run test:e2e -w apps/<name>     # this app's e2e plus the platform's sign-in specs
+npm run check:dist -w apps/<name>   # dev-only strings in this app's dist/ (after a build)
+npm run preview -w apps/<name>      # serve this app's production build
+npm test -w apps/<name>             # this app's unit tests
+```
+
+To check the platform alone, use `npm run verify -w @swfactory/platform`. An app can add
+scripts of its own. The Minesweeper scripts are in its
+[README](apps/minesweeper/README.md).
+
+`npm run check:dist` reads the forbidden strings from `packages/platform/dist-check.json`
+(the guest label and the e2e fake) and from the app's own `dist-check.json`, and scans the
+build output of each app in `apps/`. It needs a build first. A new app is covered with no
+change to the check. The app's `dist-check.json` can also declare size budgets for lazy
+chunks.
+
+`npm run check:structure` fails when:
+
+- an app name appears as a whole word in `CLAUDE.md`, the agents, skills, templates or the
+  platform, or the platform imports an app,
+- a relative link in the Markdown files is dead,
+- a story is missing from `docs/backlog/README.md`, is listed twice, or has an id that
+  another story already uses.
 
 ## Testing
 
-- `npm test` runs the unit and component tests.
-- `npm run test:e2e` runs the Playwright tests. It starts the app in mode `e2e` on port
-  5174, with a fake Google sign-in. The tests never contact real Google and need no
-  client ID.
-- The Playwright tests run in two projects. `chromium` runs all tests. `chromium-3d` re-runs
-  the Minesweeper game tests with the 3D view chosen. `npm run test:e2e` runs both.
+- `npm test` runs the unit and component tests of the platform and every app.
+- `npm run test:e2e` runs the Playwright tests of every app, one app after another. Each
+  app starts in mode `e2e` on port 5174, with a fake Google sign-in. The tests never
+  contact real Google and need no client ID.
+- Every app runs the platform's sign-in specs (`packages/platform/e2e`: `smoke`, `auth`,
+  `auth-guest`) against itself, in the Playwright project `platform`. The app's
+  `playwright.config.ts` says which page title and which content to expect after sign-in.
+  The project `chromium` runs the app's own specs. An app can add projects, like the
+  `chromium-3d` project of Minesweeper.
+- A dev server of another app on port 5174 makes the sign-in specs fail on the page title.
+  Stop it and run the tests again.
 
 To check sign-in with a real Google account, run `npm run dev` on port 5173 and sign in
 in the browser. Do not use the e2e tests for this.

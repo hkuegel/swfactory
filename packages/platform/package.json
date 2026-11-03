@@ -1,0 +1,27 @@
+{
+  "name": "@swfactory/platform",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared platform code of the software factory: sign-in, app shell, design tokens, helpers. Consumed as source by the apps (ADR 0006).",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/styles/tokens.css",
+    "./base.css": "./src/styles/base.css",
+    "./lib/*": "./src/lib/*.ts",
+    "./test/*": "./src/test/*.ts",
+    "./config/vite": "./config/vite.ts",
+    "./config/playwright": "./config/playwright.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "scripts": {
+    "typecheck": "tsc --build",
+    "lint": "eslint .",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore",
+    "test": "vitest run",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm test"
+  }
+}

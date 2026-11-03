@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-01
+- **Revised:** 2026-11-03 (story 011): paths `src/features/auth/…` are now `packages/platform/src/auth/…` (ADR 0006).
 - **Story:** docs/backlog/001-login.md
 
 ## Context

@@ -7,6 +7,13 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- `/new-app <name> [title]` creates a new app from a skeleton. The app starts with Google
+  sign-in, guest sign-in (dev only), the e2e sign-in fake, the design tokens and the verify
+  and e2e checks, and shows its own content after sign-in (#011).
+- `npm run check:structure` fails on app names in factory files or the platform, dead
+  Markdown links and stories missing from the backlog index. It runs in `npm run verify`
+  (#011).
+- Minesweeper has its own README with the game rules, the 3D view and how to run it (#011).
 - Switch the Minesweeper board between 2D and 3D with the View control, also during a game.
   The game, flags, counter and timer stay as they are. The 3D board is tilted, and hidden
   cells look raised. The view is 2D again after a reload or sign-out (#008).
@@ -38,6 +45,20 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- The repo is split into the factory, a shared platform (`packages/platform/`) and apps
+  (`apps/<name>/`), using npm workspaces. Sign-in, the app shell and the design tokens live
+  once in the platform. Minesweeper moves to `apps/minesweeper/` with its stories, ADR and
+  e2e tests. The game does not change (#011).
+- The page heading and the browser title are now "Minesweeper" instead of "Software
+  Factory". Each app sets its own (#011).
+- `npm run verify`, `npm run test:e2e` and `npm run check:dist` cover the platform and every
+  app. Add `-w apps/<name>` to check one app and the platform it uses (#011).
+- `npm run check:dist` reads the dev-only strings from `dist-check.json` files: one in the
+  platform, which covers every app, and an optional one per app (#011).
+- `/rebuild` takes an app name and regenerates that app from the app skeleton and the current
+  platform. The `base` tag marks the baseline before the split (#011).
+- `npm run measure:fps` moves to the Minesweeper app: `npm run measure:fps -w apps/minesweeper`
+  (#011).
 - The 3D view is now a lit 3D scene: glossy tiles on a dark stone table, soft shadows, a
   gentle sway, a wave when an area opens and flags planted with a short animation. 3D
   loads when you choose it. If 3D cannot load or stops, the game continues in 2D with a

@@ -2,7 +2,8 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-02
-- **Story:** docs/backlog/007-minesweeper-redesign.md (also used by 008)
+- **Revised:** 2026-11-03 (story 011): generic tokens are `packages/platform/src/styles/tokens.css`, `src/index.css` is `packages/platform/src/styles/base.css`, the Button is `packages/platform/src/components/Button.tsx`; an app adds its own tokens in `apps/<name>/src/tokens.css`. The token test rules are shared (`@swfactory/platform/test/tokenRules`) and run for the platform and every app (ADR 0006).
+- **Story:** apps/minesweeper/docs/backlog/007-minesweeper-redesign.md (also used by 008)
 
 ## Context
 

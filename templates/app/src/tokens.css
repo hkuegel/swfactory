@@ -1,0 +1,13 @@
+/*
+ * App tokens of __TITLE__ (ADR 0004, ADR 0006). They extend the platform's generic tokens
+ * (@swfactory/platform/tokens.css, imported first in main.tsx) and may read them. Every colour
+ * token needs a dark value, and contrast-tested colours are opaque 6-digit hex (see
+ * tokens.test.ts). Generic tokens belong to the platform, not here.
+ */
+:root {
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+  }
+}

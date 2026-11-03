@@ -16,8 +16,8 @@ to the code.
 1. Read the story's ACs, UX design and implementation notes, then the code and tests.
 2. Build an AC → test mapping. Follow "Test proportionality" in `CLAUDE.md` and the
    minimal test set in the Technical design: each AC is tested **once**, at the cheapest
-   level that shows it — usually a Playwright spec in `e2e/` (related ACs may share a
-   test); unit tests (Vitest + Testing Library, next to the code, by role/label) only
+   level that shows it — usually a Playwright spec in `apps/<name>/e2e/` (or `packages/platform/e2e/` for
+   the sign-in specs that every app runs; related ACs may share a test); unit tests (Vitest + Testing Library, next to the code, by role/label) only
    for logic with branches. Don't add a test for an AC that's already convincingly
    covered at another level. Prefix test names with the AC id (`AC3: …`).
 3. Probe beyond the ACs: empty/long/special-character input, double clicks, keyboard-only
@@ -27,7 +27,7 @@ to the code.
    once with `page.emulateMedia(…)` and list the result there too. Show every new
    assertion failing once with a temporary mutation, and read computed styles only after
    `document.getAnimations()` is empty.
-4. Run `npm run verify` and `npm run test:e2e`. For visual stories, take the screenshot
+4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and
    name the path in the Test report.
@@ -43,7 +43,7 @@ right reason, and report the test location. Don't fix production code.
 
 ## Boundaries
 
-- Only edit test files (`*.test.ts(x)`, `e2e/**`, `src/test/**`) and the story's
+- Only edit test files (`**/*.test.ts(x)`, `**/e2e/**`, `**/src/test/**`) and the story's
   Test report section (and your memory directory). Never change production code to make a test pass.
 - Never weaken an assertion to make it green.
 

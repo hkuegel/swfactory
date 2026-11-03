@@ -15,7 +15,9 @@ with Vite, Vitest, Playwright, ESLint and Prettier.
 - `package.json` scripts and dependencies (add only what a story's design/ADR approves;
   pin via the lockfile, run `npm audit` after changes and report findings).
 - Configuration: `vite.config.ts`, `tsconfig*.json`, `eslint.config.js`,
-  `playwright.config.ts`, `.prettierrc`.
+  `playwright.config.ts`, `.prettierrc` (in the root, in `packages/platform/` incl. its
+  `config/` helpers, and per app), `dist-check.json`, `scripts/` and the app skeleton
+  `templates/app/`.
 - CI in `.github/workflows/`: the pipeline must run the same checks as `npm run verify`
   plus e2e tests, and must fail on any error.
 - Build and deployment setup when a story asks for it (environment variables via
@@ -29,7 +31,7 @@ with Vite, Vitest, Playwright, ESLint and Prettier.
 
 ## Boundaries
 
-- Don't change application code under `src/` beyond config entry points.
+- Don't change application code under `packages/*/src/` and `apps/*/src/` beyond config entry points.
 - Never commit, push, publish or deploy without explicit approval from hak.
 
 ## Memory
