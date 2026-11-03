@@ -15,3 +15,4 @@ One file per story: `NNN-short-slug.md`, created by the `product-owner` agent fr
 | 008 | [Minesweeper 3D mode, switchable during play](008-minesweeper-3d-mode.md)                                             | done   |
 | 009 | [Minesweeper 3D visual upgrade, a lit 3D scene with reveal and flag animations](009-minesweeper-3d-visual-upgrade.md) | done   |
 | 010 | [Minesweeper 3D end effects, explosion on loss and celebration on win](010-minesweeper-3d-end-effects.md)             | ready  |
+| 011 | [Separate the software factory and shared platform code from the apps](011-separate-factory-from-apps.md)             | ready  |
