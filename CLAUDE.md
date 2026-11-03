@@ -123,11 +123,16 @@ e2e/              Playwright specs
   tab order — e.g. an auth test asserts that focus left the auth controls, not which game
   control it landed on. No counted Tab sequences and no raw coordinates of elements that
   may move: focus by role or Tab until the target has focus, and call
-  `scrollIntoViewIfNeeded()` before raw input.
+  `scrollIntoViewIfNeeded()` before raw input. Views with continuous motion are paused via
+  their dev-only probe (or reduced motion) before any `click()`; click by coordinates only
+  when the live motion itself is under test.
 - **Time and randomness** never inside reducers: pass `now` or a seed in the action. e2e
   tests control time with Playwright `page.clock`; a dev-only hook only if that doesn't
   work.
 - No `any`, no non-null `!` without a comment explaining why.
+- **Render loops:** inline styles written from a render loop are also written when the
+  loop doesn't run (forced colours, reduced motion, inactive scene) and on every
+  re-attach.
 - Optional props that receive CSS-module classes or refs are typed `prop?: T | undefined`
   (required under `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`).
 - **Network timeouts:** every network call that keeps the UI in a progress state needs a
@@ -149,7 +154,8 @@ e2e/              Playwright specs
   enforces this over the CSS, with the contrast pairs the modules actually paint. Values
   derived from tokens are `calc()` over the token, never a hand-rounded number. Variant
   selectors (e.g. `[data-view]`) wrap their scoping part in `:where()`, so forced-colours
-  and other override blocks still win.
+  and other override blocks still win. In rendered scenes (canvas, WebGL), contrast is
+  checked on rendered pixels in e2e; passing token pairs are necessary, not sufficient.
 - **Config:** `VITE_*` values are public (inlined into the bundle) — never put secrets
   there. Per-developer values go in `.env.local` (gitignored), documented in `.env.example`.
 

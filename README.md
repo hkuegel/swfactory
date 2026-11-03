@@ -185,10 +185,19 @@ limit. When the game ends, screen readers also announce the final time.
 The **View** control sits above the game status, with the options **2D** and **3D**. It is
 there before the first **Start**, during a game and after a win or loss. Choose **3D** at
 any time, also in the middle of a game. Nothing is lost: the board, the flags, **Mines left**
-and the timer stay as they are. In 3D the board is tilted, and hidden cells look raised.
-Mouse, touch, keyboard and screen reader work the same as in 2D. If your browser cannot show
-3D, **3D** is shown as unavailable with a short note, and you can keep playing in 2D. The view
-is 2D again after a reload or a sign-out.
+and the timer stay as they are. Mouse, touch, keyboard and screen reader work the same as in
+2D. The view is 2D again after a reload or a sign-out.
+
+The 3D board is a lit scene with glossy tiles on a dark stone table and soft shadows. Hidden
+cells are raised, revealed cells are sunk in, and the camera sways gently. An opened area
+spreads as a wave from the clicked cell, and flags are planted with a short animation. 3D
+loads when you choose it. **Loading 3D…** shows until it is ready, and 2D stays playable
+meanwhile. If your system asks for reduced motion, the board does not sway and shows no
+animations. Each change appears at once as a still picture.
+
+If your browser cannot show 3D, **3D** is shown as unavailable with a short note. If 3D
+cannot load, takes longer than 10 seconds to load, or stops during a game, the view changes
+to 2D with a short message. The game state is kept, and you keep playing in 2D.
 
 Nothing is saved. A reload or a sign-out starts again with the default values and no game.
 
@@ -252,17 +261,21 @@ schemes and fails on any value that bypasses the tokens. Run it with `npm test`.
 
 ## Scripts
 
-| Script               | Purpose                                             |
-| -------------------- | --------------------------------------------------- |
-| `npm run dev`        | Dev server on http://localhost:5173                 |
-| `npm test`           | Unit and component tests (Vitest)                   |
-| `npm run test:e2e`   | End-to-end tests (Playwright, fake sign-in)         |
-| `npm run verify`     | Typecheck, lint, format, tests, build, dist check   |
-| `npm run check:dist` | Fail if dev-only code is in `dist/` (after a build) |
-| `npm run format`     | Format all files with Prettier                      |
+| Script                | Purpose                                             |
+| --------------------- | --------------------------------------------------- |
+| `npm run dev`         | Dev server on http://localhost:5173                 |
+| `npm test`            | Unit and component tests (Vitest)                   |
+| `npm run test:e2e`    | End-to-end tests (Playwright, fake sign-in)         |
+| `npm run verify`      | Typecheck, lint, format, tests, build, dist check   |
+| `npm run check:dist`  | Fail if dev-only code is in `dist/` (after a build) |
+| `npm run format`      | Format all files with Prettier                      |
+| `npm run measure:fps` | Measure the 3D frame rate (headed, real GPU)        |
 
 `npm run verify` runs the checks in this order: typecheck, lint, format check, unit
 tests, `vite build`, and `check:dist`. It does not run the e2e tests.
+
+`npm run measure:fps` opens a Chromium window and needs a real GPU. It is not part of
+`npm run verify` or CI. The script is `scripts/measure-fps.mjs`.
 
 ## Testing
 

@@ -23,3 +23,12 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Derive geometry constants (margins, fluid-size divisors) from tilt/depth tokens in a unit test instead of trig in CSS, because Vite's CSS transform vs dev server could differ unseen (story 008).
 - To re-run existing e2e flows in a variant, use a second Playwright project with `grep` + a `test.info().project.name` check in beforeEach rather than copying test bodies (story 008).
 - jsdom has no `CSS.supports`: capability checks must be evaluated at mount (not module load) and be false-safe, so e2e can fake them with addInitScript (story 008).
+- For a WebGL scene under an accessible DOM grid, derive the overlay CSS transform and the camera from one pure geometry module and move the camera, not the world, so the shadow map stays valid during camera motion (story 009).
+- A time-varying transform on a scroll child changes scrollable overflow every frame: size its compensation margins for the whole motion range per board, or scrollbars flicker and the left edge is clipped (story 009).
+- Prefer a content-sized canvas that scrolls with the overlay over a sticky viewport canvas: compositor scroll vs main-thread re-render makes tiles swim under the overlay (story 009).
+- Perf or play scripts can't use `vite preview`: production has no guest sign-in or fixed mines, so run them on the dev server in mode e2e and call the numbers conservative (story 009).
+- Headless Chromium (Playwright 1.64, macOS) gets WebGL2 via SwiftShader at 7–25 fps; plan e2e timing checks on a probe's manual clock, never wall clock or page.clock rAF stepping (story 009).
+- Main-chunk code may import only types and three-free modules from a lazy chunk; share error identity by name constant, since importing a class value pulls the lazy module in (story 009).
+- `npm install pkg @types/pkg` puts the types in dependencies; install `@types/*` with `-D` separately (story 009).
+- hak's dev machine is the reference machine (MacBook Pro M2 Max): headed Playwright on it gives real GPU numbers in a spike (story 009).
+- When a scene reads its look from tokens, type the palette as colours plus a numeric look record from the start and give unitless tokens parity-only checks, because UX needs per-scheme light numbers (story 009).

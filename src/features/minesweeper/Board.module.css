@@ -29,8 +29,8 @@
 }
 
 /*
- * Cells use only background, border, inset box-shadow, outline and SVG glyphs (no outer shadow,
- * filter or clip-path), so the look survives a tilted board in story 008.
+ * Cells use only background, border, inset box-shadow, outline and SVG glyphs (no filter or
+ * clip-path), so the look survives a tilted board (stories 008, 009).
  */
 .cell {
   display: grid;
@@ -164,85 +164,105 @@
 }
 
 /*
- * 3D view (story 008): the same DOM, the grid tilted back with weak perspective and a little
- * relief from shadows. No layers (no preserve-3d, translateZ, will-change), no filter or
- * clip-path, nothing on outline or overflow of .cell, and no transition on transform or layout
- * (the switch is instant). Every selector that restyles a cell has its scroller part inside
- * :where(), so it has the specificity of the 2D rule: the 2D hover/active rules stay stronger
- * and the forced-colours block below wins by order.
+ * 3D view (story 009, ADR 0005): a lit three.js scene on a canvas behind the grid; the grid is
+ * a transparent overlay whose inline transform and margins the scene sets (scene3d/geometry.ts),
+ * so every hit box lies on its drawn tile. The stage wraps the grid in both views so a switch
+ * never remounts it; in 2D it adds no box. Every selector that restyles a cell has its scroller
+ * part inside :where(), so the forced-colours block below still wins.
  */
-.scroller[data-view='3d'] .grid {
-  --grid-h: calc(var(--rows) * var(--cell) + (var(--rows) - 1) * var(--cell-gap));
-  --grid-w: calc(var(--cols) * var(--cell) + (var(--cols) - 1) * var(--cell-gap));
+.stage {
+  display: contents;
+}
 
-  /* A transform changes no layout, so the margins shrink the layout box to the projected one
-     and give the near row (a little wider than the grid) room on both sides. */
-  margin: calc(var(--grid-h) * var(--board3d-top)) calc(var(--grid-w) * var(--board3d-side))
-    calc(var(--grid-h) * var(--board3d-bottom));
-  transform: perspective(calc(var(--grid-h) * var(--board3d-depth))) rotateX(var(--board3d-tilt));
-  transform-origin: 50% 50%;
-  box-shadow: var(--shadow-board-3d);
+.scroller:where([data-view='3d']) {
+  background-color: var(--scene-table);
+}
+
+:where(.scroller[data-view='3d']) .stage {
+  position: relative;
+  display: flow-root;
+  width: max-content;
+  padding: var(--board3d-rim);
+}
+
+.canvasHost {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:where(.scroller[data-view='3d']) .grid {
+  /* Painted after the absolutely positioned canvas host. */
+  position: relative;
+  /* Tint corners follow the rounded tiles: TILE_RADIUS in scene3d/sceneLayout.ts (UX §3.3;
+     tokens.test.ts keeps the two equal). */
+  --radius-tile-3d: calc(var(--cell) * 0.09);
 }
 
 @media (max-width: 599.98px) {
-  .scroller[data-view='3d'] .grid {
-    /* As in 2D, with a higher floor (the far row stays at least 24 px wide on screen) and the
-       margins above counted in (the grid plus both side margins must fit). */
+  :where(.scroller[data-view='3d']) .grid {
+    /* As in 2D, with a higher floor (the far row stays at least 24 px wide on screen), the rim
+       and the inline margins of the projected board (--board3d-fit, on the whole grid width
+       incl. gaps) counted in. */
     --cell: clamp(
       var(--board3d-cell-min),
       calc(
-        (100vw - var(--board-chrome) - (var(--cols) - 1) * var(--cell-gap)) / var(--cols) /
-          (1 + 2 * var(--board3d-side))
+        (
+            (100vw - var(--board-chrome) - 2 * var(--board3d-rim)) / var(--board3d-fit) -
+              (var(--cols) - 1) * var(--cell-gap)
+          ) /
+          var(--cols)
       ),
       40px
     );
   }
 }
 
-:where(.scroller[data-view='3d']) .cell {
-  position: relative;
+/*
+ * The overlay: transparent cells (names and glyphs stay in the accessibility tree), plus the
+ * focus ring with a two-tone halo and hover/pressed tints (UX §6). Not under forced colours,
+ * where the canvas is hidden and the cells keep their 2D look.
+ */
+@media not (forced-colors: active) {
+  :where(.scroller[data-view='3d']) .cell {
+    border-color: transparent;
+    background-color: transparent;
+    box-shadow: var(--overlay-halo, none);
+    color: transparent;
+    transition-duration: 0s;
+  }
+
+  :where(.scroller[data-view='3d']) .glyph {
+    opacity: 0;
+  }
+
+  /* The pixels under the ring change with light and shadow: a halo on both sides keeps 3:1. */
+  :where(.scroller[data-view='3d']) .cell:focus-visible {
+    --overlay-halo: 0 0 0 1px var(--scene-focus-halo), inset 0 0 0 3px var(--scene-focus-halo);
+  }
+
+  :where(.scroller[data-view='3d']) .grid:not([aria-readonly='true']) :is(.hidden, .flagged):active,
+  :where(.scroller[data-view='3d'])
+    .grid:not([aria-readonly='true'])
+    :is(.hidden, .flagged).pressed {
+    border-radius: var(--radius-tile-3d);
+    background-color: var(--scene-pressed-tint);
+    box-shadow: var(--overlay-halo, none);
+  }
 }
 
-/* Raised tiles: a thicker lip. */
-:where(.scroller[data-view='3d']) :is(.hidden, .flagged) {
-  box-shadow:
-    inset 0 1px 0 var(--cell-tile-highlight),
-    inset 0 calc(-1 * var(--tile-lip-3d)) 0 var(--cell-tile-lip);
-}
+@media (not (forced-colors: active)) and (hover: hover) {
+  :where(.scroller[data-view='3d']) .grid:not([aria-readonly='true']) :is(.hidden, .flagged):hover {
+    border-radius: var(--radius-tile-3d);
+    background-color: var(--scene-hover-tint);
+    transition: background-color var(--duration) var(--ease);
+  }
 
-/* Lowered cells: a shade inside the top edge and a light bottom edge. Inset shadows only. */
-:where(.scroller[data-view='3d']) :is(.empty, .number, .mine, .mineExploded, .flagWrong) {
-  box-shadow:
-    inset 0 var(--recess-depth-3d) 3px var(--cell-pressed-shade),
-    inset 0 -1px 0 var(--cell-recess-light);
-}
-
-/* Flags and mines are small objects: lifted a pixel, with a ground ellipse (a background of a
-   pseudo-element, not a filter, so 700 glyphs create no offscreen surfaces). */
-:where(.scroller[data-view='3d']) :is(.flagged, .mine) .glyph {
-  position: relative;
-  transform: translateY(calc(-1 * var(--glyph-lift-3d)));
-}
-
-:where(.scroller[data-view='3d']) :is(.flagged, .mine)::before {
-  content: '';
-  position: absolute;
-  height: 3px;
-  border-radius: 50%;
-  background-color: var(--shadow-glyph-3d);
-  pointer-events: none;
-}
-
-:where(.scroller[data-view='3d']) .flagged::before {
-  bottom: calc(var(--tile-lip-3d) + 3px);
-  left: 22%;
-  width: 34%;
-}
-
-:where(.scroller[data-view='3d']) .mine::before {
-  bottom: 12%;
-  left: 27%;
-  width: 46%;
+  :where(.scroller[data-view='3d'])
+    .grid:not([aria-readonly='true'])
+    :is(.hidden, .flagged):is(:hover:active, :hover.pressed) {
+    background-color: var(--scene-pressed-tint);
+  }
 }
 
 /* Windows high contrast: borders, glyphs and focus stay distinguishable (UX §8). */
@@ -300,8 +320,8 @@
     outline-color: Highlight;
   }
 
-  /* 3D: no relief without shadows; the shapes stay. */
-  :where(.scroller[data-view='3d']) :is(.flagged, .mine)::before {
+  /* 3D: the canvas ignores system colours; the tilted grid shows the shapes above. */
+  .canvasHost {
     display: none;
   }
 }
