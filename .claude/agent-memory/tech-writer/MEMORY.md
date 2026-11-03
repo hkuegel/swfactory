@@ -29,3 +29,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Check the Test report's verdict against "Fixed after test" in the Implementation notes before writing; the verdict can say FAIL after the defect was fixed (story 009).
 - If a request says "mention ADR X if a list of ADRs exists", grep the README for such a list first; the layout names only the `docs/adr/` folder, so skip it and say so (story 009).
 - Under a Scripts row for a headed or GPU-only script, say in one sentence that it opens a window, needs a real GPU and is not in `verify` or CI (story 009).
+- Use a code block, not a table, for per-app command lists (`-w apps/<name>`): no padding to keep in sync with Prettier; keep tables for short root lists and verify widths with Grep (story 011).
+- In a monorepo, take script names and ports from each workspace's `package.json`, `playwright.config.ts` and `dist-check.json`, not from the story text; e.g. `measure:fps` uses its own port 5175 (story 011).
+- When docs move into an app README, keep moved game text verbatim, fix only paths and heading levels, and add developer notes from the app's ADR and `dist-check.json` (story 011).
+- Don't document `ready` or `draft` stories as features: omit them from the app README story list even if they have a file (story 011, 010).

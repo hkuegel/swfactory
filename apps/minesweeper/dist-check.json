@@ -1,0 +1,10 @@
+{
+  "forbidden": ["__minesweeperMines", "__board3dProbe"],
+  "lazyChunks": [
+    {
+      "marker": "THREE.WebGLRenderer",
+      "entry": "src/features/minesweeper/scene3d/createBoardScene.ts",
+      "gzipMaxKb": 180
+    }
+  ]
+}

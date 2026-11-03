@@ -3,6 +3,7 @@
 - **Status:** accepted
 - **Date:** 2026-11-01
 - **Revised:** 2026-11-01 for option C: the fake is in-memory only (no simulated Google session in `sessionStorage`).
+- **Revised:** 2026-11-03 (story 011): the auth code is `packages/platform/src/auth/…`; `createAuthClient()` is called once in each app's `src/main.tsx` (ADR 0006).
 - **Story:** docs/backlog/001-login.md
 
 ## Context

@@ -52,3 +52,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Headed gate-2 stills/video: throwaway `scripts/zz-*.mjs` with `chromium.launch({headless:false})` and own vite on a spare port; `recordVideo` has no pointer, inject a fixed-position dot via `addInitScript`; trim with `/opt/homebrew/bin/ffmpeg -ss ... -t 29.9` and pad ~1.5 s before the scripted start (video clock lags) (story 009).
 - Clicks outside the viewport do nothing in a scripted video (board below the fold): scroll first; a fixed layout must have exactly the preset's mine count; a layout whose mines are all in one block wins on the first cascade (story 009).
 - macOS has no `timeout`/GNU `sed -i`; use `sed -i ''` or python for edits (story 009).
+- Monorepo (story 011): run workspace probes from the root with `-w apps/<name>`; prove "only this app" by grepping the log for the other app's name. Plant failing tests prettier-formatted, else `format:check` fails first and the probe proves nothing.
+- Count e2e before/after a restructure: `git archive main | tar -x -C scratch`, symlink node_modules, `npx playwright test --list`, diff sorted titles with file:line stripped (story 011).
+- `rsync` a repo copy for scratch runs with `--exclude /apps/*/dist` anchored; an unanchored `--exclude dist` strips `node_modules/**/dist` and breaks every package (story 011).
+- Throwaway app probes (`new-app.mjs zz…`): save `package-lock.json` first; npm leaves an `extraneous` `apps/<name>` entry after `rm -rf` + `npm install`, restore the saved lockfile (story 011).
+- Dev-server probe of a non-e2e mode: `.mjs` in scratchpad with `createRequire('<repo>/package.json')('@playwright/test')`, guest button, then `pkill -f vite` (story 011).

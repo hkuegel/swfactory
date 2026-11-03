@@ -3,6 +3,7 @@ id: NNN
 title: Short title
 status: draft # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
+app: platform # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<name>/docs/backlog)
 branch: feature/NNN-slug
 supersedes: [] # stories this one fully replaces, e.g. [004]
 changes: [] # stories whose behaviour this one modifies, e.g. [004/AC2, 007]

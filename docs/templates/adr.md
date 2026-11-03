@@ -2,7 +2,7 @@
 
 - **Status:** proposed | accepted | superseded by NNNN
 - **Date:** YYYY-MM-DD
-- **Story:** docs/backlog/NNN-slug.md (if any)
+- **Story:** docs/backlog/NNN-slug.md or apps/<name>/docs/backlog/NNN-slug.md (if any)
 
 ## Context
 

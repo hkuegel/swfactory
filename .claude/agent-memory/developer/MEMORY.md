@@ -43,3 +43,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Wrapping a component's root child in a new element (e.g. a stage around the grid) breaks e2e helpers that use `el.parentElement`/`locator('..')`, also in other stories' specs: grep `e2e/` for `parentElement` and `'..'` and report them (story 009).
 - Every inline style a render loop writes (transform, size) must also be written where layout is measured (attach/update/resize), because the loop doesn't run in forced colours, reduced motion or before the first rAF — reviewer major (story 009).
 - A pixel/size floor tied to an AC must be tested at the strictest geometry (far edge, extreme aspect ratio, full sway) with the floor read from tokens.css, not a softer proxy like the centre line (story 009).
+- In a workspace, `prettier --check .` reads only the cwd's `.prettierignore`: use `--ignore-path ../../.prettierignore`, else `dist/` and `test-results/` fail the check (story 011).
+- `/// <reference path>` in a platform barrel fails `@typescript-eslint/triple-slash-reference`: include the `vite-env.d.ts` in the app's `tsconfig.app.json` instead (story 011).
+- Test-only helper modules that use `node:fs` need `/// <reference types="node" />` at the top, since the app tsconfig has no node types; export them through the `./test/*` exports entry (story 011).
+- A signed-in marker for shared e2e specs must be visible right after sign-in (Minesweeper: the `Start` button, not the board grid, which appears after Start) (story 011).
+- Do the moves with `git mv` in one shell chain and double-check temp names: a typo'd target dir creates junk that needs another `git mv` back (story 011).
