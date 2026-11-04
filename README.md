@@ -346,7 +346,9 @@ chunks.
   platform, or the platform imports an app,
 - a relative link in the Markdown files is dead,
 - a story is missing from `docs/backlog/README.md`, is listed twice, or has an id that
-  another story already uses.
+  another story already uses,
+- a story's status in `docs/backlog/README.md` differs from the `status:` in its
+  frontmatter.
 
 ## Testing
 

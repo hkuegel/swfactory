@@ -16,5 +16,5 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 007 | minesweeper | [Minesweeper redesign: nicer look of the 2D UI](../../apps/minesweeper/docs/backlog/007-minesweeper-redesign.md)                                          | done   |
 | 008 | minesweeper | [Minesweeper 3D mode, switchable during play](../../apps/minesweeper/docs/backlog/008-minesweeper-3d-mode.md)                                             | done   |
 | 009 | minesweeper | [Minesweeper 3D visual upgrade, a lit 3D scene with reveal and flag animations](../../apps/minesweeper/docs/backlog/009-minesweeper-3d-visual-upgrade.md) | done   |
-| 010 | minesweeper | [Minesweeper 3D end effects, explosion on loss and celebration on win](../../apps/minesweeper/docs/backlog/010-minesweeper-3d-end-effects.md)             | ready  |
+| 010 | minesweeper | [Minesweeper 3D end effects, explosion on loss and celebration on win](../../apps/minesweeper/docs/backlog/010-minesweeper-3d-end-effects.md)             | done   |
 | 011 | platform    | [Separate the software factory and shared platform code from the apps](011-separate-factory-from-apps.md)                                                 | done   |

@@ -3,7 +3,8 @@
 //      nothing from an app. `.claude/agent-memory/**` is exempt (memories keep story numbers).
 //   2. Every relative markdown link in the docs, READMEs, CHANGELOG and CLAUDE.md resolves.
 //   3. Every story file of every backlog is listed exactly once in docs/backlog/README.md, and
-//      story ids are unique across all backlogs.
+//      story ids are unique across all backlogs, and the status in the index equals the
+//      story's frontmatter `status:`.
 // A common word as app name (e.g. "todo") causes false positives in rule 1: pick a distinctive
 // name, or add an exemption below in the same change.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -137,6 +138,17 @@ if (existsSync(indexPath)) {
 } else {
   report(indexPath, 0, 'backlog index not found');
 }
+// Status per story as written in the index table (last cell of the row that links the story).
+const indexStatus = new Map();
+if (existsSync(indexPath)) {
+  for (const row of readFileSync(indexPath, 'utf8').split('\n')) {
+    const link = /\]\(\s*<?([^)\s>#]+\.md)/.exec(row)?.[1];
+    const cells = row.split('|').map((c) => c.trim());
+    if (link && row.trim().startsWith('|')) {
+      indexStatus.set(resolve(dirname(indexPath), decodeURI(link)), cells[cells.length - 2]);
+    }
+  }
+}
 const ids = new Map();
 for (const story of stories) {
   const id = /^(\d{3})-/.exec(story.split('/').pop())[1];
@@ -144,6 +156,15 @@ for (const story of stories) {
   const count = listed.get(story) ?? 0;
   if (count !== 1) {
     report(indexPath, 0, `story ${rel(story)} is listed ${count} times (must be exactly once)`);
+  }
+  const fmStatus = /^status:\s*([a-z-]+)/m.exec(readFileSync(story, 'utf8'))?.[1];
+  const idxStatus = indexStatus.get(story);
+  if (idxStatus !== undefined && fmStatus !== idxStatus) {
+    report(
+      indexPath,
+      0,
+      `story ${rel(story)}: index status "${idxStatus}" differs from frontmatter "${fmStatus}"`,
+    );
   }
   const frontmatterId = /^id:\s*(\d+)/m.exec(readFileSync(story, 'utf8'))?.[1];
   if (frontmatterId !== undefined && frontmatterId.padStart(3, '0') !== id) {

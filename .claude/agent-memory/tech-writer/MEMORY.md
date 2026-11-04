@@ -33,3 +33,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - In a monorepo, take script names and ports from each workspace's `package.json`, `playwright.config.ts` and `dist-check.json`, not from the story text; e.g. `measure:fps` uses its own port 5175 (story 011).
 - When docs move into an app README, keep moved game text verbatim, fix only paths and heading levels, and add developer notes from the app's ADR and `dist-check.json` (story 011).
 - Don't document `ready` or `draft` stories as features: omit them from the app README story list even if they have a file (story 011, 010).
+- When a story adds a dev-only string to `dist-check.json`, add it to the app README's dist-check note too, because that list is copied by hand (story 010).
+- Describe a check's failure rule from the script's exit code and floor constants, not from the story text (story 010, measure-fps exits 1 on a missed floor).
+- Insert a new CHANGELOG "Added" line above older lines of the same section, newest story first, because the list is kept in that order (story 010).
+- Keep the root `docs/backlog/README.md` status column in mind: it can lag the story's status (010 showed "designed" while in-review); report it, don't edit it outside the brief (story 010).

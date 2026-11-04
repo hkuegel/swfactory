@@ -50,6 +50,8 @@ one-line reason and, if not feasible, the options. Don't write a design yet.
   if you deviate, say why.
 - Prefer platform and React built-ins over new libraries.
 - Design for testability: pure logic in `lib/` or hooks, components thin.
+- Clock-based animations get no frame-gap watchdog (it cuts the animation off on slow
+  frames); a hidden tab is handled with `visibilitychange`.
 
 ## Boundaries
 

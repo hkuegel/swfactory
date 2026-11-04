@@ -27,3 +27,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Any effect library or lazy-loaded chunk needs a loading, failed-load (timeout) and lost-context AC because of the CLAUDE.md network-timeout rule (story 009).
 - For repo-restructuring chores, ACs are checkable by search/inspection ("no hits for app names in factory files", "package imports nothing from an app"); a "behaves exactly as before" AC must name its permitted exception (e.g. heading) up front, and grep older stories to see whether the changed text sits in ACs or only in design sections (story 011).
 - CI browsers use software rendering: fps ACs need a named reference machine as an open question (story 009).
+- When a retro or gate-2 change rewords ACs, the story's UX design may still describe the old behaviour; name the stale UX rows in the reply so the tech-writer/ux-designer can fix them, do not edit the UX section yourself (story 010).
+- Gate-2 log lines may say "status done" while the frontmatter is to stay untouched; keep the frontmatter as instructed and flag the mismatch to the orchestrator (story 010).

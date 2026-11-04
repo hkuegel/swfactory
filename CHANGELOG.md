@@ -14,6 +14,9 @@ All notable changes to this project are documented here, following
   Markdown links and stories missing from the backlog index. It runs in `npm run verify`
   (#011).
 - Minesweeper has its own README with the game rules, the 3D view and how to run it (#011).
+- The 3D view shows an explosion at the mine when you lose, and confetti over the board when
+  you win. Start stops the effect at once. Reduced motion and forced colours show no effect
+  (#010).
 - Switch the Minesweeper board between 2D and 3D with the View control, also during a game.
   The game, flags, counter and timer stay as they are. The 3D board is tilted, and hidden
   cells look raised. The view is 2D again after a reload or sign-out (#008).

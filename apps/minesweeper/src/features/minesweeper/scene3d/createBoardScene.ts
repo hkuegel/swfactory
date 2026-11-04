@@ -19,6 +19,8 @@ import {
 import { cellView, type CellView } from '../logic/cellView.ts';
 import type { GameState } from '../logic/types.ts';
 import { createEffectHost } from './effects.ts';
+import { createEndEffects } from './endEffects.ts';
+import { visibleWindow } from './endPlan.ts';
 import { createEnvironment } from './environment.ts';
 import {
   cameraFrustum,
@@ -29,7 +31,7 @@ import {
   swayAt,
   type StageLayout,
 } from './geometry.ts';
-import { createSceneMeshes } from './meshes.ts';
+import { createSceneMeshes, SLASH_ROTATION } from './meshes.ts';
 import { createProbe } from './probe.ts';
 import { createQualityGovernor } from './quality.ts';
 import {
@@ -54,18 +56,28 @@ import {
   FLAG_AT_REST,
   flagPose,
   hasEnded,
+  hopRise,
+  isDecoration,
+  markerPose,
   planTransitions,
   retarget,
   revealPose,
+  shudderLift,
+  slashScale,
   type BoardSnapshot,
   type CellAnim,
+  type DecorationAnim,
   type FlagPose,
+  type PoseAnim,
 } from './timeline.ts';
 import {
   SCENE3D_UNAVAILABLE,
   type Board3dProbe,
+  type BoardGeometry,
   type BoardSceneController,
+  type CellWindow,
   type CreateBoardSceneOptions,
+  type FxState,
   type ScenePalette,
   type TransitionHook,
 } from './types.ts';
@@ -87,8 +99,10 @@ const MIN_FRAME_MS = 1000 / 60 - 4;
 const SHADOW_MAP = { full: 2048, reduced: 1024 } as const;
 const SHADOW_BIAS = -0.0004;
 const SHADOW_NORMAL_BIAS = 0.02; // cell units
+const NO_SHAKE = { x: 0, y: 0 } as const;
 
 const isCovered = (view: CellView) => view.kind === 'hidden' || view.kind === 'flagged';
+const isEnded = (game: GameState | null) => game?.phase === 'won' || game?.phase === 'lost';
 
 /**
  * The lazy entry of the 3D view (story 009, ADR 0005): the only target of `import()`. Builds the
@@ -133,6 +147,9 @@ function buildController(
   const meshes = createSceneMeshes(renderer.capabilities.getMaxAnisotropy());
   const effects = createEffectHost();
   meshes.root.add(effects.root); // effects work in cell units too
+  // Story 010: built before the compile below, so the first game end compiles nothing.
+  const endEffects = createEndEffects(effects, renderer);
+  const allHooks: readonly TransitionHook[] = [endEffects.hook, ...hooks];
 
   const scene = new Scene();
   scene.add(meshes.root);
@@ -186,7 +203,10 @@ function buildController(
   const sceneNow = () => (paused ? manualNow : performance.now());
   const swayOn = () => !reducedMotion && active && !swayHeld;
   const currentSway = (now: number) => (swayOn() ? swayAt(now - swayEpoch) : 0);
-  const animating = (now: number) => anims.some((anim) => !hasEnded(anim, now)) || effects.running;
+  /** Cells move: instances and the shadow map need rewriting. */
+  const boardMoving = (now: number) => anims.some((anim) => !hasEnded(anim, now));
+  /** Anything moves: the loop must run (effects-only frames skip instances and shadows). */
+  const animating = (now: number) => boardMoving(now) || effects.running;
 
   function applyPalette(next: ScenePalette) {
     palette = next;
@@ -204,6 +224,7 @@ function buildController(
     fill.groundColor.set(colours.fillGround);
     fill.intensity = look.fillIntensity * Math.PI;
     renderer.setClearColor(new Color(colours.table));
+    endEffects.applyPalette(next);
     dirty = true;
     renderer.shadowMap.needsUpdate = true;
   }
@@ -294,9 +315,19 @@ function buildController(
     return sway;
   }
 
-  function updateCamera(sway: number) {
+  const shakeMatrix = new Matrix4();
+  /** Sway, plus the shake of story 010 as a translation in camera space (the world stays). */
+  function updateCamera(
+    sway: number,
+    shake: { readonly x: number; readonly y: number } = NO_SHAKE,
+  ) {
     if (!layout) return;
     camera.matrix.fromArray(cameraWorldMatrix(layout.gridHeight, sway));
+    if (shake.x !== 0 || shake.y !== 0) {
+      camera.matrix.multiply(
+        shakeMatrix.makeTranslation(shake.x * layout.cell, shake.y * layout.cell, 0),
+      );
+    }
     camera.matrixWorld.copy(camera.matrix);
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
     camera.matrixWorldNeedsUpdate = true;
@@ -313,10 +344,14 @@ function buildController(
   const lean = new Quaternion().setFromEuler(new Euler((-FLAG_LEAN_DEG * Math.PI) / 180, 0, 0));
   const poleAxis = new Vector3(0, 0, 1).applyQuaternion(lean);
   const counts = new Map<InstancedMesh, number>();
-  const running = new Map<number, CellAnim>();
+  const running = new Map<number, PoseAnim>();
+  const decorations = new Map<number, DecorationAnim>();
   const instancedMeshes: InstancedMesh[] = [];
   meshes.root.traverse((object) => {
-    if (object instanceof InstancedMesh) instancedMeshes.push(object);
+    // The board's own meshes only: the effect batches (story 010) manage their counts.
+    if (object instanceof InstancedMesh && object.parent !== effects.root) {
+      instancedMeshes.push(object);
+    }
   });
   const identity = new Quaternion();
 
@@ -332,9 +367,11 @@ function buildController(
     return matrix.compose(position.set(x, y, z), q, scale.set(s, s, s));
   }
 
-  function putFlag(x: number, y: number, top: number, pose: FlagPose, halo: string) {
+  function putFlag(x: number, y: number, top: number, pose: FlagPose, halo: string, hop = 0) {
     if (pose.scale <= 0.001) return;
-    position.set(x, y + FLAG_BASE_OFFSET, top + pose.rise).addScaledVector(poleAxis, pose.drop);
+    position
+      .set(x, y + FLAG_BASE_OFFSET, top + pose.rise + hop)
+      .addScaledVector(poleAxis, pose.drop);
     matrix.compose(position, lean, scale.set(pose.scale, pose.scale, pose.scale));
     put(meshes.poles, matrix);
     put(meshes.poleHalos, matrix, halo);
@@ -344,6 +381,15 @@ function buildController(
     put(meshes.clothHalos, matrix, halo);
   }
 
+  /** A slash at (x, y), scaled along its length (story 010: it draws on). */
+  function slashAt(x: number, y: number, length: number) {
+    return matrix.compose(
+      position.set(x, y, REVEALED_TOP + SLASH_HEIGHT),
+      SLASH_ROTATION,
+      scale.set(length, 1, 1),
+    );
+  }
+
   function writeInstances(now: number) {
     counts.clear();
     if (game && layout) {
@@ -351,9 +397,14 @@ function buildController(
       const step = 1 + layout.gap / layout.cell;
       const halfW = ((cols - 1) * step) / 2;
       const halfH = ((rows - 1) * step) / 2;
-      const ended = game.phase === 'won' || game.phase === 'lost';
+      const ended = isEnded(game);
       running.clear();
-      for (const anim of anims) if (!hasEnded(anim, now)) running.set(anim.index, anim);
+      decorations.clear();
+      for (const anim of anims) {
+        if (hasEnded(anim, now)) continue;
+        if (isDecoration(anim)) decorations.set(anim.index, anim);
+        else running.set(anim.index, anim);
+      }
       const { colours } = palette;
 
       for (let index = 0; index < rows * cols; index++) {
@@ -361,15 +412,19 @@ function buildController(
         const y = halfH - Math.floor(index / cols) * step;
         const view = cellView(game, index);
         const anim = running.get(index);
+        const decoration = decorations.get(index);
         const sink = index === pressed && isCovered(view) && !ended ? PRESSED_SINK : 0;
+        const shudder = decoration?.kind === 'shudder' ? shudderLift(decoration, now) : 0;
 
         if (view.kind === 'hidden' || view.kind === 'flagged') {
-          put(meshes.hiddenTiles, compose(x, y, HIDDEN_CENTRE - sink, identity, 1));
+          const lift = shudder - sink;
+          put(meshes.hiddenTiles, compose(x, y, HIDDEN_CENTRE + lift, identity, 1));
           if (view.kind === 'flagged') {
             const pose = anim?.kind === 'plant' ? flagPose(anim, now) : FLAG_AT_REST;
-            putFlag(x, y, HIDDEN_TOP - sink, pose, colours.tileTop);
+            const hop = decoration?.kind === 'hop' ? hopRise(decoration, now) : 0;
+            putFlag(x, y, HIDDEN_TOP + lift, pose, colours.tileTop, hop);
           } else if (anim?.kind === 'unplant') {
-            putFlag(x, y, HIDDEN_TOP - sink, flagPose(anim, now), colours.tileTop);
+            putFlag(x, y, HIDDEN_TOP + lift, flagPose(anim, now), colours.tileTop);
           }
           continue;
         }
@@ -377,7 +432,8 @@ function buildController(
         const top = view.kind === 'mineExploded' ? colours.explodedTop : colours.revealedTop;
         if (anim?.kind === 'reveal') {
           const pose = revealPose(anim, now);
-          const z = HIDDEN_CENTRE + (REVEALED_CENTRE - HIDDEN_CENTRE) * pose.sink + pose.lift;
+          const z =
+            HIDDEN_CENTRE + (REVEALED_CENTRE - HIDDEN_CENTRE) * pose.sink + pose.lift + shudder;
           rotation.setFromEuler(euler.set((pose.angleDeg * Math.PI) / 180, 0, 0));
           const tile = compose(x, y, z, rotation, 1);
           if (pose.swapped) put(meshes.revealedTiles, tile, top);
@@ -395,6 +451,20 @@ function buildController(
             const digit = meshes.digits[view.count - 1];
             if (digit) put(digit, matrix.multiply(local));
           }
+          if (view.kind === 'mine' && pose.glyphScale > 0) {
+            // Story 010: a chain mine appears with the flip (as a digit does).
+            const turn = anim.flip ? pose.angleDeg - 180 : 0;
+            rotation.setFromEuler(euler.set((turn * Math.PI) / 180, 0, 0));
+            matrix.compose(position.set(x, y, z), rotation, scale.set(1, 1, 1));
+            local.compose(
+              position.set(0, 0, TILE_THICKNESS / 2 + MINE_HEIGHT),
+              identity,
+              scale.set(pose.glyphScale, pose.glyphScale, pose.glyphScale),
+            );
+            matrix.multiply(local);
+            put(meshes.mines, matrix);
+            put(meshes.mineHalos, matrix);
+          }
           continue;
         }
 
@@ -409,15 +479,33 @@ function buildController(
             put(meshes.mines, compose(x, y, REVEALED_TOP + MINE_HEIGHT, identity, 1));
             put(meshes.mineHalos, matrix);
             break;
-          case 'mineExploded':
-            put(meshes.explodedMarks, compose(x, y, REVEALED_TOP + DECAL_LIFT, identity, 1));
-            put(meshes.explodedMines, compose(x, y, REVEALED_TOP + MINE_HEIGHT, identity, 1));
+          case 'mineExploded': {
+            // Story 010: the marker pops in out of the fire (scale 0 before).
+            const marker =
+              decoration?.kind === 'marker' ? markerPose(decoration, now) : { disc: 1, mine: 1 };
+            if (marker.disc > 0.001) {
+              put(
+                meshes.explodedMarks,
+                compose(x, y, REVEALED_TOP + DECAL_LIFT, identity, marker.disc),
+              );
+            }
+            if (marker.mine > 0.001) {
+              put(
+                meshes.explodedMines,
+                compose(x, y, REVEALED_TOP + MINE_HEIGHT, identity, marker.mine),
+              );
+            }
             break;
-          case 'flagWrong':
+          }
+          case 'flagWrong': {
             putFlag(x, y, REVEALED_TOP, FLAG_AT_REST, colours.revealedTop);
-            put(meshes.slashHalos, compose(x, y, REVEALED_TOP + SLASH_HEIGHT, identity, 1));
-            put(meshes.slashes, matrix);
+            const length = decoration?.kind === 'slash' ? slashScale(decoration, now) : 1;
+            if (length > 0.001) {
+              put(meshes.slashHalos, slashAt(x, y, length));
+              put(meshes.slashes, matrix);
+            }
             break;
+          }
           case 'empty':
             break;
         }
@@ -443,9 +531,11 @@ function buildController(
   function renderFrame(now: number) {
     if (!grid || !layout || !active || disposed || contextLost) return;
     needsRender = false;
+    // Effects first: they add the shake the camera needs (story 010).
+    effects.update(now, quality.level);
     const sway = writeOverlay(now);
-    updateCamera(sway);
-    const moving = animating(now);
+    updateCamera(sway, effects.shake);
+    const moving = boardMoving(now);
     if (dirty || moving || wasMoving) {
       const staticChange = dirty && !moving;
       writeInstances(now);
@@ -459,9 +549,30 @@ function buildController(
     wasMoving = moving;
     if (anims.length > 0 && !moving) anims = [];
     else if (anims.length > 0) anims = anims.filter((anim) => !hasEnded(anim, now));
-    effects.update(now);
     renderer.render(scene, camera);
     frames++;
+  }
+
+  const endAnimating = () => effects.running || (isEnded(game) && anims.length > 0);
+
+  /**
+   * UX G3, §7: a hidden tab ends a running end effect, so it never replays on return. There is
+   * no frame-gap rule: effects are closed-form in the scene time, so a late frame already shows
+   * the right picture and they end at lossEndMs / winEndMs by themselves (review round 1).
+   */
+  const onVisibility = () => {
+    if (document.hidden && endAnimating()) {
+      finishEffects();
+      requestRender();
+    }
+  };
+
+  /** Ends every end effect and cell animation at once: the static final board (UX §7). */
+  function finishEffects() {
+    effects.clear();
+    anims = [];
+    dirty = true;
+    renderer.shadowMap.needsUpdate = true;
   }
 
   const wantsLoop = (now: number) =>
@@ -509,6 +620,72 @@ function buildController(
 
   // Compile every program now, so the first board frame does not hitch.
   renderer.compile(scene, camera);
+  endEffects.rest();
+  // After everything that can throw: a failed build must not leave a document listener behind.
+  document.addEventListener('visibilitychange', onVisibility);
+
+  /** Board geometry for the transition hooks (story 010); the visible window is read once, on demand. */
+  function boardGeometry(
+    next: GameState,
+  ): BoardGeometry & { readonly isVisible: (index: number) => boolean } {
+    const { rows, cols } = next.config;
+    const cellPx = layout?.cell ?? 1;
+    const step = layout ? 1 + layout.gap / layout.cell : 1;
+    const cellCentre = (index: number) =>
+      [
+        (index % cols) * step - ((cols - 1) * step) / 2,
+        ((rows - 1) * step) / 2 - Math.floor(index / cols) * step,
+      ] as const;
+    let window: CellWindow | null = null;
+    const readWindow = (): CellWindow => {
+      const whole = { left: -Infinity, right: Infinity, bottom: -Infinity, top: Infinity };
+      if (!layout || !stage) return whole;
+      const box = canvas.getBoundingClientRect();
+      const scroller = stage.parentElement ?? stage;
+      const outer = scroller.getBoundingClientRect();
+      const left = Math.max(box.left, outer.left + scroller.clientLeft, 0);
+      const top = Math.max(box.top, outer.top + scroller.clientTop, 0);
+      const right = Math.min(
+        box.right,
+        outer.left + scroller.clientLeft + scroller.clientWidth,
+        innerWidth,
+      );
+      const bottom = Math.min(
+        box.bottom,
+        outer.top + scroller.clientTop + scroller.clientHeight,
+        innerHeight,
+      );
+      // Canvas CSS px equal stage px (the canvas is sized to the stage layout).
+      return visibleWindow({
+        rows,
+        cols,
+        step,
+        cellPx,
+        rimPx: parseFloat(getComputedStyle(stage).paddingLeft) || 0,
+        centreX: layout.centreX,
+        centreY: layout.centreY,
+        view: {
+          left: left - box.left,
+          top: top - box.top,
+          right: right - box.left,
+          bottom: bottom - box.top,
+        },
+      });
+    };
+    const visible = () => (window ??= readWindow());
+    return {
+      rows,
+      cols,
+      cellPx,
+      cellCentre,
+      visibleWindow: visible,
+      isVisible(index) {
+        const [x, y] = cellCentre(index);
+        const w = visible();
+        return x >= w.left && x <= w.right && y >= w.bottom && y <= w.top;
+      },
+    };
+  }
 
   function topOf(index: number): number {
     if (!game) return HIDDEN_TOP;
@@ -571,6 +748,45 @@ function buildController(
     frames: () => frames,
     level: () => quality.level,
     renderer: readRenderer,
+    fxState(): FxState {
+      const now = sceneNow();
+      return {
+        running: effects.running,
+        animating: anims.filter((anim) => !hasEnded(anim, now)).length,
+        ...endEffects.state(),
+      };
+    },
+    luminance(rect?: { x: number; y: number; width: number; height: number }): number {
+      renderFrame(sceneNow());
+      const gl = renderer.getContext();
+      const box = canvas.getBoundingClientRect();
+      const sx = canvas.width / box.width;
+      const sy = canvas.height / box.height;
+      const clampX = (v: number) => Math.min(canvas.width, Math.max(0, Math.round(v)));
+      const clampY = (v: number) => Math.min(canvas.height, Math.max(0, Math.round(v)));
+      const x0 = rect ? clampX((rect.x - box.left) * sx) : 0;
+      const x1 = rect ? clampX((rect.x + rect.width - box.left) * sx) : canvas.width;
+      const top = rect ? clampY((rect.y - box.top) * sy) : 0;
+      const bottom = rect ? clampY((rect.y + rect.height - box.top) * sy) : canvas.height;
+      const width = x1 - x0;
+      const height = bottom - top;
+      if (width <= 0 || height <= 0) return NaN;
+      const buffer = new Uint8Array(width * height * 4);
+      gl.readPixels(x0, canvas.height - bottom, width, height, gl.RGBA, gl.UNSIGNED_BYTE, buffer);
+      // sRGB byte → linear; built here so it is dropped with the probe in production.
+      const LINEAR = Array.from({ length: 256 }, (_, i) => {
+        const c = i / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      let sum = 0;
+      for (let i = 0; i < buffer.length; i += 4) {
+        sum +=
+          0.2126 * (LINEAR[buffer[i] ?? 0] ?? 0) +
+          0.7152 * (LINEAR[buffer[i + 1] ?? 0] ?? 0) +
+          0.0722 * (LINEAR[buffer[i + 2] ?? 0] ?? 0);
+      }
+      return sum / (width * height);
+    },
   };
   let probe: Board3dProbe | null = null;
   if (import.meta.env.DEV && import.meta.env.MODE === 'e2e') {
@@ -606,7 +822,7 @@ function buildController(
         grid.style.transform = '';
         grid.style.margin = '';
       }
-      effects.clear();
+      finishEffects();
       host = null;
       grid = null;
       stage = null;
@@ -624,24 +840,39 @@ function buildController(
         gameId: nextGame.id,
         phase: nextGame.phase,
         kinds: nextGame.cells.map((_, index) => cellView(nextGame, index).kind),
+        explodedIndex: nextGame.explodedIndex,
       };
       const now = sceneNow();
       const newGame = prevGame === null || prevGame.id !== nextGame.id;
-      if (newGame) {
-        effects.clear();
-        anims = [];
-      }
+      if (newGame) finishEffects();
+      const board = boardGeometry(nextGame);
+      const ends = !newGame && !isEnded(prevGame) && isEnded(nextGame);
       const planned = planTransitions(snapshot, next, origin, nextGame.config.cols, now, {
-        reducedMotion,
+        reducedMotion: reducedMotion || !active,
         level: quality.level,
+        isVisible: ends && nextGame.phase === 'won' ? board.isVisible : null,
       });
-      const ends =
-        (next.phase === 'won' || next.phase === 'lost') &&
-        snapshot !== null &&
-        snapshot.phase !== next.phase;
-      anims = ends ? [] : retarget(anims, planned, changedCells(snapshot, next), now);
-      for (const hook of hooks)
-        hook({ prev: prevGame, next: nextGame, origin, reducedMotion }, effects);
+      anims = retarget(anims, planned, changedCells(snapshot, next), now);
+      for (const hook of allHooks) {
+        try {
+          hook(
+            {
+              prev: prevGame,
+              next: nextGame,
+              origin,
+              reducedMotion,
+              active,
+              now,
+              level: quality.level,
+              board,
+            },
+            effects,
+          );
+        } catch (error) {
+          // Decoration only: the board stays static (story 010, UX §7).
+          console.error('3D end effect could not start', error);
+        }
+      }
       game = nextGame;
       snapshot = next;
       if (newGame || prevGame.config !== nextGame.config) measure();
@@ -657,13 +888,14 @@ function buildController(
     },
 
     setPalette(next) {
+      finishEffects(); // UX §7: no re-colouring of live particles
       applyPalette(next);
       requestRender();
     },
 
     setMotion(motion) {
       reducedMotion = motion.reducedMotion;
-      if (reducedMotion) anims = [];
+      if (reducedMotion || !motion.active) finishEffects();
       active = motion.active;
       if (!active) stopLoop();
       writeOverlay(sceneNow());
@@ -674,9 +906,11 @@ function buildController(
     dispose() {
       if (disposed) return;
       canvas.removeEventListener('webglcontextlost', onContextLost);
+      document.removeEventListener('visibilitychange', onVisibility);
       controller.detach();
       disposed = true;
       effects.clear();
+      endEffects.dispose();
       meshes.dispose();
       environment?.dispose();
       renderer.dispose();

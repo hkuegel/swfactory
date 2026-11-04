@@ -19,4 +19,12 @@ For an imperative controller that React attaches and detaches (three.js scene, s
 - Grep the loop for allocations: array literals in helpers, `filter` / `slice` / `sort` per callback.
 - Count canvases after N games plus N context losses (`page.locator('canvas').count()`). It was 1 in 009, which was correct.
 
+Story 010 additions (end effects on the same controller):
+
+- **Real loop vs probe:** the e2e probe pauses the clock, so rAF-only logic (gap watchdogs, first-frame cost) is never exercised. Run a scratch script without `pause()`, poll `fxState` every 40 ms and read when `running` drops. A "jump to end after a gap > N ms" rule counts the slow first effect frame itself (instance rewrite + shadow pass: about 350 ms on SwiftShader), so the effect is cut after 2 frames. A tester check "idle after Ns" is vacuous for "plays".
+- **GPU leak probe:** patch `WebGL2RenderingContext.prototype.create*/delete*` in `addInitScript`, count live Buffer/Texture/Program/Framebuffer/VertexArray after game 1 vs game 8 (loss, win, scheme change, 2D round trip). Also proves "no shader compile at the first end": program count stays constant. Count `visibilitychange` add/remove the same way.
+- **Dev-only helpers outside the guard:** module-level tables/statements used only by the probe (e.g. a LINEAR lookup built with `Array.from`) survive tree-shaking; grep `dist/assets/*.js` for their body, `check-dist` only sees identifying strings.
+- Listeners registered in `buildController` before `renderer.compile` leak if the build throws: they should be registered after the last throwing step.
+- Per-frame helpers returning arrays/objects (`screenToScene`, envelope functions) are the usual allocation leak despite an "allocation-free" doc comment; grep helper return types.
+
 Related: [[ui-a11y-probes]], [[build-guard-checks]]

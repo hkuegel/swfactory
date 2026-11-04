@@ -28,6 +28,17 @@ export const SCENE_COLOUR_TOKENS: Readonly<Record<SceneColour, string>> = {
   n6: '--n6',
   n7: '--n7',
   n8: '--n8',
+  fxFlash: '--scene-fx-flash',
+  fxFireCore: '--scene-fx-fire-core',
+  fxFireMid: '--scene-fx-fire-mid',
+  fxFireEdge: '--scene-fx-fire-edge',
+  fxSmoke: '--scene-fx-smoke',
+  confetti1: '--scene-confetti-1',
+  confetti2: '--scene-confetti-2',
+  confetti3: '--scene-confetti-3',
+  confetti4: '--scene-confetti-4',
+  confetti5: '--scene-confetti-5',
+  confetti6: '--scene-confetti-6',
 };
 
 /** Unitless look numbers: parity and range checks only, never colour or contrast checks. */
@@ -37,6 +48,9 @@ export const SCENE_LOOK_TOKENS: Readonly<Record<keyof SceneLook, string>> = {
   shadowStrength: '--scene-shadow-strength',
   gloss: '--scene-gloss',
   envIntensity: '--scene-env-intensity',
+  fxFlashAlpha: '--scene-fx-flash-alpha',
+  fxSmokeAlpha: '--scene-fx-smoke-alpha',
+  fxLightIntensity: '--scene-fx-light-intensity',
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
