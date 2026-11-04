@@ -45,3 +45,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - When the UX agent edits the same story in parallel, change only my section with Edit; a scripted read-modify-write of the whole file can clobber their edits (story 010).
 - When a review removes a mechanism, sweep the whole design for its name, threshold constant, label, risk line, plan step and alignment-table row, not just the cited bullet: story 010 review round 1 left six stale spots (story 010).
 - In a markdown table, match a cell's text without its padding in Edit, then run prettier --write: the padded row does not match as one string (story 010).
+- For process/factory stories, mind that check-structure rule 1 forbids app names in `.claude/agents|skills`, `docs/templates`, CLAUDE.md; and that `.claude/agents/*.md` is loaded as agent definitions, so a non-agent file there needs a one-time loader check (story 012).
+- Scripts have no test setup: specify planted-violation dry runs in a scratchpad copy (ROOT = script's parent dir) instead of committed tests (story 012).

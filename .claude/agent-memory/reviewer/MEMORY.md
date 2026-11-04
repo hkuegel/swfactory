@@ -9,3 +9,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Run `npx prettier --check` on the story after writing the Review: nested lists need blank lines or `verify` fails (009)
 - [Test proportionality](test-proportionality.md) — hak finds suites test-heavy: flag same-AC/same-code-path duplicates as nits, ask for tests only for real uncovered risk (004); the design's test set can itself duplicate (006); size-mismatched pixel diffs pass vacuously (008)
 - [Monorepo checks](monorepo-checks.md) — Skeleton isn't run by verify, fixture defaults are vacuous, probe new-app from scratchpad, avoid `git add -N` (story 011)
+- Process/script stories (012): probe check-structure-style parsers on a scratchpad copy with fenced examples, bold cells and odd formats; raw-text searches (not `stripCode`d) find headings inside code fences. Don't add sections that belong to the orchestrator (Explanation) to the story.

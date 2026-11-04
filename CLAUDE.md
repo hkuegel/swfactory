@@ -38,7 +38,7 @@ the story's Implementation notes.
 idea ─▶ product-owner ─▶ [GATE 1: hak approves story → story committed on main]
      ─▶ architect (+ ux-designer if UI) ─▶ developer ─▶ tester
      ─▶ reviewer ──CHANGES_REQUESTED──▶ developer (max 3 rounds, then escalate to hak)
-              └─APPROVED─▶ tech-writer ─▶ retro ─▶ [GATE 2: hak approves retro proposals + commit]
+              └─APPROVED─▶ tech-writer ─▶ explanation ─▶ retro ─▶ [GATE 2: hak approves retro proposals + commit]
 ```
 
 Story status (frontmatter `status:`) moves through:
@@ -96,6 +96,12 @@ The backlog must be enough to rebuild the app without any chat history:
   `app: platform | <name>`). Numbers are global across all backlogs; the root
   `docs/backlog/README.md` lists every story. Acceptance criteria are numbered
   `AC1, AC2, …` in Given/When/Then form; tests reference them in their names (e.g. `it('AC2: shows an error when …')`).
+- **Story record:** from story 013 on, a done story has a `### Cost` table in its
+  Retrospective (one row per agent run, orchestrator row "not measured" or "estimate"), a
+  Review section that lists every item of the versioned `.claude/agents/reviewer-checklist.md`
+  with its result, and a non-empty "Explanation" section (at most 15 lines of at most 120 characters, plain language;
+  shown in German at gate 2). `npm run check:structure` enforces the Cost table and the
+  Explanation for `status: done` stories with an id above 012.
 - **ADRs:** `docs/adr/NNNN-title.md` (platform) or `apps/<name>/docs/adr/NNNN-title.md`
   (an app; numbers global) from `docs/templates/adr.md`, for any decision
   that's costly to reverse (new dependency, state management, API contract, …).

@@ -5,6 +5,9 @@
 //   3. Every story file of every backlog is listed exactly once in docs/backlog/README.md, and
 //      story ids are unique across all backlogs, and the status in the index equals the
 //      story's frontmatter `status:`.
+//   4. A story with `status: done` and an id above 012 has the sections Review, Explanation and
+//      Retrospective in this order, a non-empty Explanation of at most 15 lines of at most 120 characters, and a `### Cost`
+//      table in the Retrospective (story 012).
 // A common word as app name (e.g. "todo") causes false positives in rule 1: pick a distinctive
 // name, or add an exemption below in the same change.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -173,6 +176,176 @@ for (const story of stories) {
 }
 for (const [id, files] of ids) {
   if (files.length > 1) problems.push(`story id ${id} is used more than once: ${files.join(', ')}`);
+}
+
+// --- Rule 4: record of a done story (cost table, explanation) -----------------------------------
+const COST_HEADER = ['role', 'round', 'model', 'tokens', 'tool uses', 'duration'];
+const MAX_EXPLANATION_LINES = 15;
+const MAX_EXPLANATION_LINE_LENGTH = 120;
+
+/** Cells of a markdown table row. */
+const cellsOf = (row) =>
+  row
+    .trim()
+    .replace(/^\||\|$/g, '')
+    .split('|')
+    .map((c) => c.trim());
+
+/** Rule 4 problems of one done story as `[line, message]` pairs. */
+function checkStoryRecord(raw) {
+  const out = [];
+  const lineAt = (offset) => raw.slice(0, offset).split('\n').length;
+  const stripped = stripCode(raw); // same length as `raw`: offsets are shared
+  const heading = (name) => new RegExp(`^## ${name}[ \\t]*$`, 'm').exec(stripped);
+  const [review, explanation, retro] = ['Review', 'Explanation', 'Retrospective'].map(heading);
+  if (
+    !review ||
+    !explanation ||
+    !retro ||
+    !(review.index < explanation.index) ||
+    !(explanation.index < retro.index)
+  ) {
+    out.push([
+      0,
+      'missing or misplaced section: need "## Review", "## Explanation", "## Retrospective" in this order',
+    ]);
+    return out;
+  }
+  const body = (from, to) => raw.slice(from.index + from[0].length, to ? to.index : raw.length);
+  const nextHeading = (from) => {
+    const rest = stripped.slice(from.index + from[0].length);
+    const next = /^## /m.exec(rest);
+    return next ? { index: from.index + from[0].length + next.index } : undefined;
+  };
+  const explanationLines = body(explanation, retro)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l !== '' && !/^_orchestrator:.*_$/.test(l));
+  const explanationLine = lineAt(explanation.index);
+  if (explanationLines.length === 0) out.push([explanationLine, 'empty Explanation section']);
+  if (explanationLines.length > MAX_EXPLANATION_LINES) {
+    out.push([
+      explanationLine,
+      `Explanation longer than ${MAX_EXPLANATION_LINES} lines (${explanationLines.length})`,
+    ]);
+  }
+
+  for (const line of explanationLines) {
+    if (line.length > MAX_EXPLANATION_LINE_LENGTH) {
+      out.push([
+        explanationLine,
+        `Explanation line longer than ${MAX_EXPLANATION_LINE_LENGTH} characters (${line.length}): "${line.slice(0, 30)}…"`,
+      ]);
+    }
+  }
+
+  const retroBody = body(retro, nextHeading(retro));
+  const retroStart = retro.index + retro[0].length;
+  const lines = retroBody.split('\n');
+  // Structure is found in the code-stripped text (same line indices), so a fenced example is ignored.
+  const strippedLines = stripped
+    .slice(retroStart, nextHeading(retro)?.index ?? raw.length)
+    .split('\n');
+  const costAt = strippedLines.findIndex((l) => l.trim() === '### Cost');
+  if (costAt < 0) {
+    out.push([lineAt(retro.index), 'Retrospective has no "### Cost" heading']);
+    return out;
+  }
+  const lineOfRow = (i) => lineAt(retroStart) + i;
+  const tableStart = strippedLines.findIndex((l, i) => i > costAt && l.trim().startsWith('|'));
+  if (tableStart < 0) {
+    out.push([lineOfRow(costAt), 'no cost table after "### Cost"']);
+    return out;
+  }
+  const rows = [];
+  for (let i = tableStart; i < lines.length && strippedLines[i].trim().startsWith('|'); i++) {
+    rows.push([i, cellsOf(lines[i])]);
+  }
+  const header = rows[0][1].map((c) => c.toLowerCase());
+  if (header.join('|') !== COST_HEADER.join('|')) {
+    out.push([lineOfRow(tableStart), `cost table header must be: ${COST_HEADER.join(' | ')}`]);
+    return out;
+  }
+  const data = rows.slice(2); // skip header and separator
+  const label = (c) => (c[0] ?? '').replace(/[*_]/g, '').trim();
+  const isTotal = ([, c]) => /^total/i.test(label(c));
+  const isOrchestrator = ([, c]) => /^orchestrator \(main session\)/i.test(label(c));
+  const runs = data.filter((r) => !isTotal(r) && !isOrchestrator(r));
+  const totals = data.filter(isTotal);
+  const orchestrators = data.filter(isOrchestrator);
+  if (runs.length === 0) out.push([lineOfRow(tableStart), 'cost table has no agent run row']);
+  for (const [i, c] of runs) {
+    if (c.length !== 6 || c.some((cell) => cell === '')) {
+      out.push([lineOfRow(i), 'cost row needs six non-empty cells']);
+    } else if (!(
+      /^(\d+|n\/a)$/.test(c[3]) &&
+      /^(\d+|n\/a)$/.test(c[4]) &&
+      /^(\d+:\d{2}(:\d{2})?|n\/a)$/.test(c[5])
+    )) {
+      out.push([
+        lineOfRow(i),
+        'cost row: Tokens and Tool uses are integers, Duration is m:ss, or n/a',
+      ]);
+    }
+  }
+  if (totals.length !== 1) {
+    out.push([
+      lineOfRow(tableStart),
+      `cost table needs exactly one row labelled "total (measured)" (found ${totals.length})`,
+    ]);
+  } else {
+    const toSeconds = (cell) =>
+      /^\d+(:\d{2}){1,2}$/.test(cell)
+        ? cell.split(':').reduce((s, part) => s * 60 + parseInt(part, 10), 0)
+        : undefined;
+    const toNumber = (cell) => (/^\d+$/.test(cell) ? parseInt(cell, 10) : undefined);
+    const columns = [
+      [3, 'Tokens', toNumber],
+      [4, 'Tool uses', toNumber],
+      [5, 'Duration', toSeconds],
+    ];
+    for (const [index, name, parse] of columns) {
+      const values = runs.map(([, c]) => parse(c[index] ?? '')).filter((v) => v !== undefined);
+      const sum = values.reduce((s, v) => s + v, 0);
+      const cell = totals[0][1][index] ?? '';
+      // The cell is the figure alone (Tokens may continue with a note after a space).
+      const figure = index === 3 ? (/^(\S+)(\s|$)/.exec(cell)?.[1] ?? '') : cell;
+      const ok = values.length === 0 ? figure === 'n/a' : parse(figure) === sum;
+      if (!ok) {
+        out.push([
+          lineOfRow(totals[0][0]),
+          `total ${name} "${cell}" is not the sum of the run rows (${values.length === 0 ? 'n/a' : sum})`,
+        ]);
+      }
+    }
+    if (orchestrators.length === 1 && orchestrators[0][0] < totals[0][0]) {
+      out.push([lineOfRow(orchestrators[0][0]), 'orchestrator row must come after the total row']);
+    }
+  }
+  if (orchestrators.length !== 1) {
+    out.push([
+      lineOfRow(tableStart),
+      `cost table needs exactly one row labelled "orchestrator (main session)" (found ${orchestrators.length})`,
+    ]);
+  } else {
+    const cell = orchestrators[0][1][3] ?? '';
+    if (!(cell === 'not measured' || cell.startsWith('estimate'))) {
+      out.push([
+        lineOfRow(orchestrators[0][0]),
+        'orchestrator Tokens must be "not measured" or start with "estimate"',
+      ]);
+    }
+  }
+  return out;
+}
+
+for (const story of stories) {
+  const raw = readFileSync(story, 'utf8');
+  const status = /^status:\s*([a-z-]+)/m.exec(raw)?.[1];
+  const id = parseInt(/^(\d{3})-/.exec(story.split('/').pop())[1], 10);
+  if (status !== 'done' || id <= 12) continue;
+  for (const [line, message] of checkStoryRecord(raw)) report(story, line, message);
 }
 
 if (problems.length > 0) {

@@ -7,6 +7,12 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- Reviews follow a fixed checklist, `.claude/agents/reviewer-checklist.md`. Every item is
+  marked pass, fail or n.a. in the story's Review section (#012).
+- Each retro records the agent costs of the story: tokens, tool uses and duration per agent
+  run, with a total. The orchestrator's own usage is marked "not measured" (#012).
+- Gate 2 starts with a short explanation in German: how the solution works, the main risks
+  and what was not verified. The English text is in the story's "Explanation" section (#012).
 - `/new-app <name> [title]` creates a new app from a skeleton. The app starts with Google
   sign-in, guest sign-in (dev only), the e2e sign-in fake, the design tokens and the verify
   and e2e checks, and shows its own content after sign-in (#011).
@@ -48,6 +54,10 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- `npm run check:structure` checks each done story from 013 on for the cost table and the
+  "Explanation" section. Stories 001 to 012 are not checked (#012).
+- Gate 2 shows the German explanation first, before the acceptance table, test results and
+  screenshots (#012).
 - The repo is split into the factory, a shared platform (`packages/platform/`) and apps
   (`apps/<name>/`), using npm workspaces. Sign-in, the app shell and the design tokens live
   once in the platform. Minesweeper moves to `apps/minesweeper/` with its stories, ADR and

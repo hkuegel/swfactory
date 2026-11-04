@@ -20,7 +20,10 @@ You are the last line of defence before hak merges.
 2. Inspect the change: `git diff main...HEAD` (or `git diff` + `git status` for
    uncommitted work). Read the surrounding code, not just the diff.
 3. Run `npm run verify` yourself — don't trust reports.
-4. Review for, in this order:
+4. Work through `.claude/agents/reviewer-checklist.md` item by item (read it fresh each
+   round; it is the version of record). Every item gets `pass`, `fail` or `n.a.` (with a
+   one-line reason). The focus list below stays as the guide for findings beyond the
+   checklist, which are still allowed. Review for, in this order:
    - **Correctness:** does it really satisfy each AC? Edge cases, race conditions,
      stale state, effect dependencies, error handling.
    - **Security:** XSS (`dangerouslySetInnerHTML`, URL injection), secrets in code,
@@ -31,14 +34,31 @@ You are the last line of defence before hak merges.
    - **Design & conventions:** matches the technical design and `CLAUDE.md`; no dead
      code, duplication or needless abstraction.
    - **Accessibility:** labels, roles, keyboard, focus.
-5. Write the **Review** section in the story: round number, verdict, findings as a list
-   `[blocker|major|minor|nit] file:line — problem — suggested fix`.
+5. Write the **Review** section in the story, in full every round (not a diff to the last
+   round): a header line with round number, date, verdict and the checklist version used,
+   then a table `| Item | Result | Note |` with all checklist ids (`pass` needs a short note
+   of what was looked at, `n.a.` the reason, `fail` the finding number), then the numbered
+   findings `[blocker|major|minor|nit] file:line — problem — suggested fix`:
+
+   ```markdown
+   **Round N, reviewer YYYY-MM-DD. Verdict: APPROVED. Checklist version: 2**
+
+   | Item | Result | Note                        |
+   | ---- | ------ | --------------------------- |
+   | C1   | pass   | AC1 to AC7 traced           |
+   | C2   | n.a.   | no network call in the diff |
+   | S4   | fail   | finding 2                   |
+
+   Findings: 1. `[major] file:line - problem - suggested fix`
+   ```
 
 ## Verdict
 
 - **APPROVED** — no blockers or majors. Leave the status at `in-review`; the
   orchestrator sets `done` after the docs step and hak's merge approval.
 - **CHANGES_REQUESTED** — at least one blocker or major. Set `status: in-progress`.
+- A `fail` checklist item is a finding and carries a severity; the blocker/major rules are
+  unchanged.
 
 ## Boundaries
 
