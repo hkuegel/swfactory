@@ -69,7 +69,12 @@ _tester: AC → test mapping, results, defects found._
 
 _reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
 
+## Explanation
+
+_orchestrator: plain-language explanation shown at gate 2, at most 15 lines of at most 120 characters. No code, no file names._
+
 ## Retrospective
 
 _orchestrator: what went wrong (review rounds, defects, corrections at the gates),
-proposed changes to agents/CLAUDE.md/templates, and which ones hak approved._
+proposed changes to agents/CLAUDE.md/templates, and which ones hak approved. Include a
+`### Cost` table (see the retro step of `/feature`)._

@@ -37,3 +37,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Describe a check's failure rule from the script's exit code and floor constants, not from the story text (story 010, measure-fps exits 1 on a missed floor).
 - Insert a new CHANGELOG "Added" line above older lines of the same section, newest story first, because the list is kept in that order (story 010).
 - Keep the root `docs/backlog/README.md` status column in mind: it can lag the story's status (010 showed "designed" while in-review); report it, don't edit it outside the brief (story 010).
+- Document factory process changes (gate order, retro cost table, checklist) in README "Working with the factory" and the check:structure bullets, and in CHANGELOG with the story id, because hak reads them as user-visible (story 012).
+- Give the reviewer checklist and other factory files as relative Markdown links only after a Glob confirms the path (story 012).
+- Leave CLAUDE.md out of a tech-writer brief when devops is editing it; the README and CHANGELOG are enough for the factory docs (story 012).

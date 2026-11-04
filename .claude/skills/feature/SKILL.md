@@ -18,7 +18,11 @@ CLAUDE.md" item the agents return — you need them in the retro.
 **Model economy:** pass `model: haiku` for regression runs of the `tester` and for
 small doc edits (Decision log entries, status changes, index rows). For follow-ups
 within the same story (review fixes, answers to questions), resume the agent with
-SendMessage instead of starting a new one — it keeps its context.
+SendMessage instead of starting a new one — it keeps its context. But when the remaining
+work is small and self-contained, prefer a fresh agent: its cost is then measurable (a
+resumed run's tokens are always `n/a`; its tool uses and duration are kept).
+After every agent completion, note role, round, model, tokens, tool uses and duration
+for the cost table (retro step).
 
 **Formatting:** `product-owner`, `ux-designer` and `tech-writer` have no shell. After
 every step in which one of them edited markdown, run
@@ -55,7 +59,11 @@ every step in which one of them edited markdown, run
    then `tester` (regression), then `reviewer` again. After 3 rounds without approval,
    stop and escalate to hak with a summary of the disagreement.
 7. **Docs** — `tech-writer`: CHANGELOG/README.
-8. **Retro** — write the story's "Retrospective" section yourself:
+8. **Explanation** — write the story's "Explanation" section yourself (English, at most
+   15 lines of at most 120 characters: how it works, what changed, main risks, what was not verified; plain
+   language, no code or file names) from the story, the test report and the diff
+   (`git diff main...HEAD --stat`).
+9. **Retro** — write the story's "Retrospective" section yourself:
    - what went wrong: review rounds and their findings, test defects, corrections
      hak made at the gates, steps that had to be repeated;
    - root cause per problem (unclear AC? missing convention? agent ignored a rule?);
@@ -63,13 +71,33 @@ every step in which one of them edited markdown, run
      to `CLAUDE.md`, or to a template — plus the agents' "Suggested for CLAUDE.md" items;
    - glance at `.claude/agent-memory/*/MEMORY.md` diffs from this story and flag
      lessons that look wrong or belong in `CLAUDE.md` instead;
-   - if nothing went wrong, say so in one line and propose nothing.
-9. **GATE 2** — present to hak: story path, branch, files changed, AC/test table,
-   review verdict, the retro proposals, and every open manual check (real devices,
-   real third-party services) that no agent could run. Ask which proposals to apply,
-   whether hak runs or waives each manual check, and whether to commit. Record the
-   manual-check results in the Test report. For visual stories, check that
-   `screenshots/NNN/` exists and show hak the key states for sign-off. Apply only approved proposals (record the outcome in the Retrospective
-   section), set the story `status: done`, update the backlog index, then commit on the
-   story branch — code, story, memory and agent changes together. Never push or merge
-   without a separate go.
+   - if nothing went wrong, say so in one line and propose nothing;
+   - append a `### Cost` table, one row per agent run in chronological order, with
+     exactly this header: `| Role | Round | Model | Tokens | Tool uses | Duration |`.
+     Role = agent name; Round = ordinal of that agent's run in this story (a run resumed
+     with SendMessage, or resumed after a usage-limit interruption, is a new row with the
+     next number); Model = the model the run used (the `model:` override of the Agent
+     call, else the agent file's); Tokens = the `subagent_tokens` figure of the completion
+     data as an integer without separators; Tool uses = its tool-use count; Duration =
+     `m:ss` (`h:mm:ss` over an hour). Copy the figures from the running list you kept;
+     never reconstruct them afterwards. If a figure is missing, or it is unclear whether
+     a resumed run's figure is cumulative, write `n/a` in that cell (a resumed run's tokens
+     are always `n/a`; keep its tool uses and duration); never infer or
+     estimate a subagent row. Then one row `total (measured)`: the sum of the integer
+     cells per column (n/a cells skipped; Duration is agent time, not wall-clock). Last,
+     after the total and never summed, the row `orchestrator (main session)`: Tokens
+     `not measured` (or `estimate: ~NNNN` when a figure exists), Tool uses and Duration
+     `n/a`, Model = the main session's model or `n/a`. The text under the table may note
+     when one role stands out; there are no thresholds or budgets.
+10. **GATE 2** — present to hak first the same explanation as in the story's
+    "Explanation", in German (a translation, same content, at most 15 lines of at most 120 characters), before the
+    AC table; apply hak's corrections to the English Explanation at once. Then present:
+    story path, branch, files changed, AC/test table, review verdict, the retro
+    proposals, and every open manual check (real devices, real third-party services)
+    that no agent could run. Ask which proposals to apply, whether hak runs or waives
+    each manual check, and whether to commit. Record the manual-check results in the
+    Test report. For visual stories, check that `screenshots/NNN/` exists and show hak
+    the key states for sign-off. Apply only approved proposals (record the outcome in
+    the Retrospective section), set the story `status: done`, update the backlog index,
+    then commit on the story branch — code, story, memory and agent changes together.
+    Never push or merge without a separate go.

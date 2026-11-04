@@ -48,6 +48,8 @@ one-line reason and, if not feasible, the options. Don't write a design yet.
   "framework" for one use case.
 - Follow the existing layout (`src/features/<name>/` etc. inside the platform or the app) and existing patterns;
   if you deviate, say why.
+- When a design adds a check or validation script, list its near misses to probe in the
+  test set: loose matches, unchecked columns, code fences or quoting, formatting variants.
 - Prefer platform and React built-ins over new libraries.
 - Design for testability: pure logic in `lib/` or hooks, components thin.
 - Clock-based animations get no frame-gap watchdog (it cuts the animation off on slow

@@ -18,4 +18,4 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 009 | minesweeper | [Minesweeper 3D visual upgrade, a lit 3D scene with reveal and flag animations](../../apps/minesweeper/docs/backlog/009-minesweeper-3d-visual-upgrade.md) | done   |
 | 010 | minesweeper | [Minesweeper 3D end effects, explosion on loss and celebration on win](../../apps/minesweeper/docs/backlog/010-minesweeper-3d-end-effects.md)             | done   |
 | 011 | platform    | [Separate the software factory and shared platform code from the apps](011-separate-factory-from-apps.md)                                                 | done   |
-| 012 | platform    | [Factory process: cost per story, reviewer checklist, plain-language explanation at gate 2](012-cost-checklist-explanation.md)                            | ready  |
+| 012 | platform    | [Factory process: cost per story, reviewer checklist, plain-language explanation at gate 2](012-cost-checklist-explanation.md)                            | done   |

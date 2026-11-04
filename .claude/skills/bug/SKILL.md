@@ -30,9 +30,20 @@ which one of them edited markdown, run
 4. **Verify** — `tester`: re-run, add regression tests for related edge cases.
 5. **Review** — `reviewer`; loop back to `developer` on CHANGES_REQUESTED (max 3 rounds).
 6. **Docs** — `tech-writer`: CHANGELOG entry under "Fixed".
-7. **Retro** — in the story's "Retrospective": why did the bug get through? Which
+7. **Explanation** — write the story's "Explanation" section yourself (English, at most
+   15 lines of at most 120 characters: what was wrong, what the fix changes, main risk, what was not verified;
+   plain language, no code or file names) from the story, the test report and the diff.
+8. **Retro** — in the story's "Retrospective": why did the bug get through? Which
    story, AC, test or review step should have caught it? Propose concrete edits to
-   agents, `CLAUDE.md` or templates so it can't happen again.
-8. **GATE** — present the result and the retro proposals to hak. Apply only approved
+   agents, `CLAUDE.md` or templates so it can't happen again. Append a `### Cost`
+   table: the same table as in the `/feature` retro step (one row per agent run, a
+   `total (measured)` row, an `orchestrator (main session)` row; `n/a` for missing
+   figures; a resumed run's tokens are always `n/a`, tool uses and duration are kept;
+   prefer a fresh agent over resuming one when the remaining work is small and
+   self-contained). Note role, round, model, tokens, tool uses and duration after every agent
+   completion.
+9. **GATE** — present first the same explanation as in the story's "Explanation", in
+   German (same content, at most 15 lines of at most 120 characters), then the result and the retro proposals to
+   hak. Apply hak's corrections to the English Explanation at once. Apply only approved
    proposals, set `status: done`, and ask before committing. Never push or merge
    without a separate go.

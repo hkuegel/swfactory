@@ -219,6 +219,17 @@ You approve at two gates: after the story is written (the story is then committe
 before the code is committed, where you also decide which retro proposals to apply.
 You can also call any role directly, e.g. "ask the architect how we should handle routing".
 
+At the second gate, the first item is a short explanation in German: how the solution
+works, the main risks and what was not verified. The English text is in the story's
+"Explanation" section.
+
+Each retro records what the agents cost. The story's "Retrospective" has a cost table
+with the tokens, tool uses and duration of every agent run. Your own main session is
+marked "not measured".
+
+Reviews work through a fixed checklist, [`.claude/agents/reviewer-checklist.md`](.claude/agents/reviewer-checklist.md).
+Every item gets pass, fail or n.a. in the story's "Review" section.
+
 At the first gate you also say whether a story is for the platform or for one app.
 
 ### Keeping track and rebuilding
@@ -348,7 +359,9 @@ chunks.
 - a story is missing from `docs/backlog/README.md`, is listed twice, or has an id that
   another story already uses,
 - a story's status in `docs/backlog/README.md` differs from the `status:` in its
-  frontmatter.
+  frontmatter,
+- a story with `status: done` and an id from 013 on lacks the cost table in its
+  Retrospective or the "Explanation" section. Stories 001 to 012 are not checked.
 
 ## Testing
 
