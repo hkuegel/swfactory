@@ -1,6 +1,7 @@
 // Types of the 3D scene (story 009, ADR 0005). Main-chunk code imports them with `import type`;
 // the only value export is SCENE3D_UNAVAILABLE. three-free.
 import type { GameState } from '../logic/types.ts';
+import type { QualityLevel } from './timeline.ts';
 
 /** What Board needs. Non-null only while the 3D scene is ready and shown. */
 export interface BoardSceneHandle {
@@ -54,6 +55,9 @@ export interface SceneLook {
   readonly shadowStrength: number; // --scene-shadow-strength → light.shadow.intensity
   readonly gloss: number; // --scene-gloss → clearcoat of hidden tiles
   readonly envIntensity: number; // --scene-env-intensity → hidden tiles only
+  readonly fxFlashAlpha: number; // --scene-fx-flash-alpha: peak opacity of the loss bloom (story 010)
+  readonly fxSmokeAlpha: number; // --scene-fx-smoke-alpha: peak opacity of the smoke
+  readonly fxLightIntensity: number; // --scene-fx-light-intensity: flash point light (× π); 0 = none
 }
 
 export type SceneColour =
@@ -79,12 +83,33 @@ export type SceneColour =
   | 'n5'
   | 'n6'
   | 'n7'
-  | 'n8';
+  | 'n8'
+  // Story 010 end effects
+  | 'fxFlash' // --scene-fx-flash
+  | 'fxFireCore' // --scene-fx-fire-core
+  | 'fxFireMid' // --scene-fx-fire-mid
+  | 'fxFireEdge' // --scene-fx-fire-edge
+  | 'fxSmoke' // --scene-fx-smoke
+  | 'confetti1' // --scene-confetti-1 … 6
+  | 'confetti2'
+  | 'confetti3'
+  | 'confetti4'
+  | 'confetti5'
+  | 'confetti6';
 
-/** Seam for story 010. */
+/** Per-frame context the effect host gives every effect (story 010). */
+export interface EffectFrame {
+  /** Governor level of this frame: counts follow it mid-effect. */
+  readonly level: QualityLevel;
+  /** Out-parameter, zeroed by the host before each round: effects add their camera push (cells, screen axes). */
+  readonly shake: { x: number; y: number };
+}
+
+/** Seam of story 009, used by story 010. */
 export interface SceneEffect {
-  /** Advances the effect; returns false when it has ended (it is then disposed). */
-  update(nowMs: number): boolean;
+  /** Advances the effect; returns false when it has ended (it is then disposed). Allocation-free. */
+  update(nowMs: number, frame: EffectFrame): boolean;
+  /** Releases its slots in the shared meshes (count back to 0). */
   dispose(): void;
 }
 
@@ -96,14 +121,59 @@ export interface EffectHost {
   clear(): void;
 }
 
+/** Board part the player can see, in scene cells (x right, y towards the far row). */
+export interface CellWindow {
+  readonly left: number;
+  readonly right: number;
+  /** Near side. */
+  readonly bottom: number;
+  /** Far side. */
+  readonly top: number;
+}
+
+export interface BoardGeometry {
+  readonly rows: number;
+  readonly cols: number;
+  /** The DOM cell width in CSS px (1 scene unit). */
+  readonly cellPx: number;
+  /** Scene position of a cell's centre (the formula of writeInstances). */
+  cellCentre(index: number): readonly [x: number, y: number];
+  /** The scroller's visible part (UX §12), clamped to the board plus rim. Reads the DOM: call on demand. */
+  visibleWindow(): CellWindow;
+}
+
 export interface SceneTransition {
+  /** null after every attach(): no effect may start (story 010 AC3). */
   readonly prev: GameState | null;
   readonly next: GameState;
   readonly origin: number | null;
   readonly reducedMotion: boolean;
+  /** false: canvas hidden (forced colours), nothing may start. */
+  readonly active: boolean;
+  /** Scene clock at update(): effect time 0. */
+  readonly now: number;
+  /** Governor level at the click. */
+  readonly level: QualityLevel;
+  readonly board: BoardGeometry;
 }
 
 export type TransitionHook = (transition: SceneTransition, effects: EffectHost) => void;
+
+/** Dev-only probe view of the end effects (story 010). */
+export interface FxState {
+  /** Any end effect alive. */
+  readonly running: boolean;
+  /** Running cell animations (reveal, chain, marker, slash, shudder, hop). */
+  readonly animating: number;
+  /** Instances drawn by the effect meshes at the last frame. */
+  readonly particles: number;
+  /** |camera push| at the last frame, cells. */
+  readonly shake: number;
+  /** Bloom opacity at the last frame, 0..1. */
+  readonly flash: number;
+  /** Chain mines not yet flipped at the last frame. */
+  readonly minesPending: number;
+}
 
 /**
  * Dev-only e2e probe (`window.__board3dProbe`, installed only when
@@ -129,4 +199,8 @@ export interface Board3dProbe {
   readonly level: number;
   /** The WebGL renderer string (fps script: must be a GPU, not SwiftShader). */
   readonly renderer: string;
+  /** End effects at the last frame (story 010). */
+  readonly fxState: FxState;
+  /** Renders a frame and returns the mean relative luminance 0..1 of the canvas or a viewport-px rect. */
+  luminance(rect?: { x: number; y: number; width: number; height: number }): number;
 }

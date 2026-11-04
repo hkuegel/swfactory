@@ -175,13 +175,18 @@ function bakeMineColours(geometry: BufferGeometry, lit: string, shade: string): 
   else geometry.setAttribute('color', colours);
 }
 
-/** A flat bar parallel to the screen (rotated back by the tilt), diagonal from lower left to upper right. */
+/**
+ * A flat bar along x; the instance turns it diagonal (lower left to upper right) and parallel to
+ * the screen (SLASH_ROTATION), so a scale along x draws it on (story 010).
+ */
 function slashGeometry(length: number, thickness: number, back: number): BufferGeometry {
-  return new PlaneGeometry(length, thickness)
-    .rotateZ(Math.PI / 4)
-    .translate(0, 0, -back)
-    .rotateX((SLASH_TILT_DEG * Math.PI) / 180);
+  return new PlaneGeometry(length, thickness).translate(0, 0, -back);
 }
+
+/** Rotation of a slash instance: 45° in its plane, then rotated back by the tilt. */
+export const SLASH_ROTATION = new Quaternion()
+  .setFromAxisAngle(new Vector3(1, 0, 0), (SLASH_TILT_DEG * Math.PI) / 180)
+  .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), Math.PI / 4));
 
 /** Deterministic pseudo-random numbers in [0, 1) (mulberry32), so screenshots are reproducible. */
 function seeded(seed: number): () => number {

@@ -35,6 +35,23 @@
   --scene-shadow-strength: 0.55;
   --scene-gloss: 0.55;
   --scene-env-intensity: 0.3;
+  /* End effects (story 010, UX §6): fire is the same in both schemes; the flash, smoke and
+     confetti differ. Decoration only, no contrast pairs. Numbers: peak opacities and the flash
+     light intensity (× π; 0 = no light, the lit tiles would clip). */
+  --scene-fx-flash: #ffb43a;
+  --scene-fx-fire-core: #ffd54a;
+  --scene-fx-fire-mid: #ff7a1a;
+  --scene-fx-fire-edge: #d93a0b;
+  --scene-fx-smoke: #4a4540;
+  --scene-confetti-1: #2f7bf0;
+  --scene-confetti-2: #2fa24f;
+  --scene-confetti-3: #e5392f;
+  --scene-confetti-4: #9b4fe0;
+  --scene-confetti-5: #c98a00;
+  --scene-confetti-6: #e0449b;
+  --scene-fx-flash-alpha: 0.85;
+  --scene-fx-smoke-alpha: 0.4;
+  --scene-fx-light-intensity: 0;
 
   /* Digits 1 to 8 on a revealed cell */
   --n1: #0b57d0;
@@ -107,6 +124,20 @@
     --scene-shadow-strength: 0.75;
     --scene-gloss: 0.5;
     --scene-env-intensity: 0.06;
+    --scene-fx-flash: #fff1c2;
+    --scene-fx-fire-core: #ffd54a;
+    --scene-fx-fire-mid: #ff7a1a;
+    --scene-fx-fire-edge: #d93a0b;
+    --scene-fx-smoke: #a8a39c;
+    --scene-confetti-1: #8ab4f8;
+    --scene-confetti-2: #81c995;
+    --scene-confetti-3: #f28b82;
+    --scene-confetti-4: #c58af9;
+    --scene-confetti-5: #ffd54a;
+    --scene-confetti-6: #f48fb1;
+    --scene-fx-flash-alpha: 0.7;
+    --scene-fx-smoke-alpha: 0.35;
+    --scene-fx-light-intensity: 1.5;
 
     --n1: #8ab4f8;
     --n2: #81c995;

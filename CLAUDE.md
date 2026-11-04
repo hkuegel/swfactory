@@ -104,6 +104,9 @@ The backlog must be enough to rebuild the app without any chat history:
   `git mv`; they never stage, unstage, commit or reset.
 - **Definition of Done:** all ACs covered by passing tests, `npm run verify` green,
   reviewer verdict APPROVED, README/CHANGELOG updated where user-visible.
+- **Measurement scripts:** a script that measures or checks something (fps, sizes, …)
+  first verifies that its scenario is non-vacuous (e.g. the game keeps running, something
+  animates) before it reports a number.
 
 ## Tech stack
 
@@ -152,6 +155,9 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   otherwise they're listed in the Test report as "checked, OK". The architect names the
   minimal test set in the Technical design. e2e specs assert an AC's intent, never
   design values (exact colours, pixel sizes) — those live in the tokens and their test.
+  Counters and state prove that code ran, not that pixels changed: every check of a visual
+  effect includes at least one pixel or frame comparison, and logic that depends on real
+  frame timing gets one real-loop test that proves the effect plays, not only that it ends.
 - **Independent tests:** tests of one feature don't depend on another feature's layout or
   tab order — e.g. an auth test asserts that focus left the auth controls, not which game
   control it landed on. No counted Tab sequences and no raw coordinates of elements that
@@ -183,7 +189,10 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   - their identifying strings are added to `dist-check.json` (`forbidden`) of the
     workspace that owns the code (`packages/platform/` for platform code, else the app) in
     the same change; `npm run verify` fails if they appear in an app's `dist/`
-    (`scripts/check-dist.mjs`). The platform's strings cover every app, new ones included.
+    (`scripts/check-dist.mjs`). The platform's strings cover every app, new ones included;
+  - helpers used only by dev-only code (lookup tables, counters) live inside the guarded
+    function, never at module level, because they survive tree-shaking and `check-dist`
+    can't see them.
 - **Styling:** colours, radii, type sizes and durations come from the generic tokens in
   `packages/platform/src/styles/tokens.css` and the app's own `apps/<name>/src/tokens.css`
   (ADR 0004, 0006); a token belongs to the platform iff a platform module reads it. No
@@ -217,7 +226,7 @@ npm test            # vitest (single run), every workspace
 npm run test:e2e    # playwright for every app: app in mode e2e on port 5174 with the fake sign-in, never real Google
 npm run test:e2e -w apps/<name>     # one app's specs plus the platform's sign-in specs
 npm run check:dist  # dev-only strings and budgets in every app's dist/ (after build)
-npm run check:structure  # no app names in factory files/platform, no dead markdown links, every story listed once
+npm run check:structure  # no app names in factory files/platform, no dead markdown links, every story listed once, index status = story status
 npm run check:template   # unit tests + typecheck of the app skeleton templates/app (not a workspace)
 npm run verify      # typecheck + lint + prettier check (incl. markdown) + structure + skeleton + unit tests + build + dist check
 npm run verify -w apps/<name>       # that app plus the platform it uses

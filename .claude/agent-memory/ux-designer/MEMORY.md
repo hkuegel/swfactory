@@ -41,4 +41,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Unlit glyphs with halos in the token colour need the key light high (about 60 deg) so shadows never cross a halo; calibrate the lit floor to its token (factor about 1.0) so no "sticker" shows (story 009).
 - Light/dark-dependent scene numbers (intensities, shadow strength, gloss) belong in `--scene-*` unitless tokens, not in TypeScript constants; tell the architect to type them separately from colours (story 009).
 - Async load/failed/lost states: visible text plus announcements through the one existing live region (identical strings); keep status text OUTSIDE an `aria-busy` group; move focus to the still-enabled radio when the focused one becomes disabled (story 009).
+- End effects (explosion, confetti): flash, shake, colour and scaling rules in [end-effects-design-rules](feedback_end_effects.md) (story 010).
+- When a review round removes a mechanism, grep the whole UX section (tables, principles, §15 points) for its keywords and fix every hit, not only the obvious row (story 010 review round 1).
+- After a gate-2 AC rewording, edit only the UX sentences that state the old behaviour, tag each "(updated at gate 2)", and leave other sections (e.g. Technical "Alignment with UX") to the architect (story 010 gate 2).
 - Spinner convention: 20 px ring, 2 px `--color-text-muted`, 0.8 s, static ring at opacity 0.6 under reduced motion (LoginView.module.css); reuse, and flag the loop to the PO (story 009).

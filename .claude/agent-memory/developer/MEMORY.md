@@ -48,3 +48,11 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Test-only helper modules that use `node:fs` need `/// <reference types="node" />` at the top, since the app tsconfig has no node types; export them through the `./test/*` exports entry (story 011).
 - A signed-in marker for shared e2e specs must be visible right after sign-in (Minesweeper: the `Start` button, not the board grid, which appears after Start) (story 011).
 - Do the moves with `git mv` in one shell chain and double-check temp names: a typo'd target dir creates junk that needs another `git mv` back (story 011).
+- Look at a rendered still before calibrating any effect: probe counters (`fxState.particles`) were non-zero while nothing was drawn (counts reset by another loop, culled faces, objects hidden at compile time) (story 010).
+- three's `renderer.compile` only walks visible objects: keep pre-warmed meshes visible for the compile and hide them right after it, else the first use compiles (story 010).
+- Hand-built index buffers must wind counter-clockwise seen from the camera, or the faces are back-face culled with no error (the shock ring was invisible) (story 010).
+- Additive blending clips to white on light surfaces: pick additive vs normal blending from the palette (surface luminance) so fire and flashes read in both schemes (story 010).
+- Don't add a frame-gap watchdog to clock-based (closed-form) animations: slow frames on SwiftShader/phones (500+ ms each) kill them; end them on `visibilitychange` for hidden tabs instead (story 010, review round 1).
+- A single bad `measure:fps` row (latency 170–300 ms) can be machine load: re-run the old script from `git show HEAD:` and the new one 2× before chasing a regression (story 010).
+- Keep probe-only helpers (lookup tables, counters) inside the guarded probe functions: a module-level `const` used only by the probe stays in `dist/` and check-dist can't see it (story 010 review).
+- Per-frame code paths must be allocation-free when a type says so: out-parameters for helpers that return objects/tuples, index loops instead of `forEach`/`filter`/`reduce`, closures built once per effect; reviewers count them (story 010 review).

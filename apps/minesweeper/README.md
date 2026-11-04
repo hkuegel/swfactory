@@ -48,9 +48,12 @@ The e2e tests use software WebGL (SwiftShader), so they need no GPU.
 npm run measure:fps -w apps/minesweeper
 ```
 
-`measure:fps` measures the frame rate and the input latency of the 3D board. It opens a
-Chromium window and needs a real GPU. It is not part of `verify` or CI. It starts its own
-dev server on port 5175. The script is `scripts/measure-fps.mjs`.
+`measure:fps` measures the frame rate of the 3D board during a cascade, a loss (explosion) and a
+win (confetti). It does this on a 16 × 30 and a 30 × 30 board. On the 30 × 30 board it also
+measures the input latency. It opens a Chromium window and needs a real GPU. It fails if a
+floor is missed: at least 50 fps on 16 × 30, at least 30 fps on 30 × 30, and a latency of at
+most 100 ms. It is not part of `verify` or CI. It starts its own dev server on port 5175. The
+script is `scripts/measure-fps.mjs`.
 
 ## Playing Minesweeper
 
@@ -116,8 +119,24 @@ The 3D board is a lit scene with glossy tiles on a dark stone table and soft sha
 cells are raised, revealed cells are sunk in, and the camera sways gently. An opened area
 spreads as a wave from the clicked cell, and flags are planted with a short animation. 3D
 loads when you choose it. **Loading 3D…** shows until it is ready, and 2D stays playable
-meanwhile. If your system asks for reduced motion, the board does not sway and shows no
-animations. Each change appears at once as a still picture.
+meanwhile. If your system asks for reduced motion, the board does not sway, and no animation or
+effect plays. Each change appears at once as a still picture.
+
+When you reveal a mine, an explosion goes off at that mine, with a flash and a short camera
+shake. The other mines are then revealed one after another, starting with the ones nearest the
+mine you hit. A flag on a safe cell gets a slash. The effect ends within 2.5 seconds and leaves
+the final board in place.
+
+When you reveal the last safe cell, confetti falls over the board and the flags hop one after
+another. The effect ends within 4 seconds and does not repeat. The board stays readable, and
+**Start**, the presets and **View** keep working.
+
+The message and the timer change at the click, as in 2D. They do not wait for the effect.
+**Start** stops an effect at once. A preset alone does not stop it, so choose **Start** after
+you pick a preset. Switching to 3D after a game has ended shows the final board without the
+effect. With forced colours, no effect plays either. With reduced motion, the final board
+appears at once as a still picture: after a loss, the mines and the exploded mine; after a
+win, a flag on every mine. There is no sound.
 
 If your browser cannot show 3D, **3D** is shown as unavailable with a short note. If 3D
 cannot load, takes longer than 10 seconds to load, or stops during a game, the view changes
@@ -137,7 +156,7 @@ Nothing is saved. A reload or a sign-out starts again with the default values an
   platform's generic tokens. `src/tokens.test.ts` checks the scene tokens and the
   contrast pairs of the board.
 - `dist-check.json` declares the dev-only strings of this app (`__minesweeperMines`,
-  `__board3dProbe`) and the size budget of the 3D chunk (180 kB gzip). `npm run check:dist`
+  `__board3dProbe`, `fxState`) and the size budget of the 3D chunk (180 kB gzip). `npm run check:dist`
   fails if the strings appear in `dist/`, if three.js ends up in the entry chunk, or if
   the 3D chunk is over budget.
 
@@ -150,6 +169,7 @@ The stories of this app are in `docs/backlog/`:
 - [007 – Redesign of the 2D UI](docs/backlog/007-minesweeper-redesign.md)
 - [008 – 3D mode, switchable during play](docs/backlog/008-minesweeper-3d-mode.md)
 - [009 – 3D visual upgrade](docs/backlog/009-minesweeper-3d-visual-upgrade.md)
+- [010 – 3D end effects: explosion on loss, confetti on win](docs/backlog/010-minesweeper-3d-end-effects.md)
 
 The index of all stories, platform and apps, is
 [`docs/backlog/README.md`](../../docs/backlog/README.md) in the repo root. The decision

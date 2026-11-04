@@ -315,7 +315,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByText(LOST)).toBeVisible();
       await page.mouse.move(0, 0);
       await hold(page, true);
-      await advance(page, 2000);
+      await advance(page, 2600); // past the loss effect of story 010 (at most 2.5 s)
       const mine = index(9, 4, 4); // revealed mine, not the exploded one
       const floor = (await spots(page, [[index(9, 7, 5), 0.3, 0.2, 0]]))[0] as Rgb;
       await hold(page, false);

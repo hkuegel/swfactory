@@ -37,3 +37,11 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Don't use TS project references between a source-consumed package and apps (TS6307/composite): give each workspace its own non-composite tsconfig; the app program follows imports into the package (story 011).
 - When extracting shared code, grep specs and tests for app-specific assertions (headings, buttons) first: shared e2e specs need app-supplied Playwright options (title, signed-in probe), and an app title can collide with an in-app heading name (story 011).
 - Order a restructuring so every step is green: scaffold (no removals), extract shared code while the old app still runs, then flip the toolchain in one commit; keep old check scripts working from the new cwd until their redesign step (story 011).
+- Before extending a measurement or e2e script, replay its fixture with a small flood fill in the scratchpad: 009's fps layout A won on the first click, so the "cascade" it measured was static (story 010).
+- Make scene effects closed-form functions of elapsed time with a seeded RNG, not integrated state: the probe's manual clock, a hidden tab, a late first frame and "jump to end" then all work with no special cases (story 010).
+- Pre-build every effect mesh, texture and light before `renderer.compile`: a light or material added at the click recompiles shaders; a point light stays in the scene at intensity 0 (story 010).
+- In a render loop separate "board cells move" (instance rewrite + shadow pass) from "effects run" (loop alive only); one flag for both makes particle-only frames pay the full board cost (story 010).
+- Camera shake only on the camera, not on the DOM overlay: any per-frame overlay translation changes the scroll bounds that the margins were sized for (story 010).
+- When the UX agent edits the same story in parallel, change only my section with Edit; a scripted read-modify-write of the whole file can clobber their edits (story 010).
+- When a review removes a mechanism, sweep the whole design for its name, threshold constant, label, risk line, plan step and alignment-table row, not just the cited bullet: story 010 review round 1 left six stale spots (story 010).
+- In a markdown table, match a cell's text without its padding in Edit, then run prettier --write: the padded row does not match as one string (story 010).

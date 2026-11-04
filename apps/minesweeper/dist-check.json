@@ -1,5 +1,5 @@
 {
-  "forbidden": ["__minesweeperMines", "__board3dProbe"],
+  "forbidden": ["__minesweeperMines", "__board3dProbe", "fxState"],
   "lazyChunks": [
     {
       "marker": "THREE.WebGLRenderer",
