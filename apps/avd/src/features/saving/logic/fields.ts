@@ -1,5 +1,6 @@
-/** The six inputs of the saving calculator, in the order of the form. */
-export type FieldId = 'age' | 'payoutAge' | 'monthly' | 'children' | 'returnPct' | 'costsPct';
+/** The seven inputs of the saving calculator, in the order of the form. */
+export type FieldId =
+  'age' | 'payoutAge' | 'monthly' | 'children' | 'returnPct' | 'costsPct' | 'taxRatePct';
 
 /** The raw text of every field, exactly as typed. */
 export type RawInputs = Readonly<Record<FieldId, string>>;
@@ -22,9 +23,10 @@ export const FIELD_IDS: readonly FieldId[] = [
   'children',
   'returnPct',
   'costsPct',
+  'taxRatePct',
 ];
 
-/** Single source of the ranges and defaults (story 013, Context: allowed input ranges). */
+/** Single source of the ranges and defaults (story 013 Context; tax rate: story 014). */
 export const FIELD_SPECS: Readonly<Record<FieldId, FieldSpec>> = {
   age: { min: 18, max: 69, decimals: 0, defaultValue: '40' },
   payoutAge: { min: 65, max: 70, decimals: 0, defaultValue: '65' },
@@ -32,6 +34,7 @@ export const FIELD_SPECS: Readonly<Record<FieldId, FieldSpec>> = {
   children: { min: 0, max: 10, decimals: 0, defaultValue: '0' },
   returnPct: { min: -1000, max: 2000, decimals: 2, defaultValue: '5' },
   costsPct: { min: 0, max: 100, decimals: 2, defaultValue: '0,5' },
+  taxRatePct: { min: 0, max: 5000, decimals: 2, defaultValue: '30' },
 };
 
 export const DEFAULT_INPUTS: RawInputs = {
@@ -41,4 +44,5 @@ export const DEFAULT_INPUTS: RawInputs = {
   children: FIELD_SPECS.children.defaultValue,
   returnPct: FIELD_SPECS.returnPct.defaultValue,
   costsPct: FIELD_SPECS.costsPct.defaultValue,
+  taxRatePct: FIELD_SPECS.taxRatePct.defaultValue,
 };

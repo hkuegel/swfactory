@@ -71,3 +71,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - avd app (story 013): figures are `dt`/`dd` pairs; locate with `dt` exact-regex + `xpath=following-sibling::dd`, euro text with `\s€` (U+00A0); the "payout = age" error needs age >= 65 because the payout range error wins first; AC with a debounce: `page.clock.install` then `open()` again (reload), `pauseAt`, `runFor`.
 - Chart series check: screenshot the `role=img` chart, decode in page, count pixels near each `--chart-*` token; a bare "screenshot changed" test survives a mutant that drops one series (story 013).
 - Review fixes that change an HTML attribute (inputMode, aria) need a one-line e2e assertion, or no test notices a regression; check the fix is pinned before calling a regression run PASS (story 013 regression round 1).
+- Rate/amount e2e oracles: compute expected totals from the page's own defaults (age 40 = 25 saving years, 9,99 EUR x 12 x 8 = 959,04) before writing them; two of my first asserts were wrong arithmetic, not defects (story 014).
+- Lead-in text may contain figure words ("nicht im Endwert"): test "not part of group X" via `dt` labels, not `getByText` (story 014).
+- Mutation survivors on exact-cent AC values (floor vs round) are expected; name the unit test that covers them instead of adding e2e (story 014).

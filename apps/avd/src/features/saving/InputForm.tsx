@@ -23,7 +23,7 @@ function preventSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
 }
 
-/** The six labelled text inputs with hint and error (AC1, AC6, AC7). */
+/** The seven labelled text inputs with hint and error (013/014 AC1, AC6, AC7). */
 export function InputForm({ values, errors, onChange }: InputFormProps) {
   const id = useId();
   const headingId = `${id}-heading`;

@@ -1,5 +1,5 @@
 import type { Inputs } from './parseInputs.ts';
-import { zulage, type Zulage } from './zulage.ts';
+import { zulage, zulageOfYear, type Zulage } from './zulage.ts';
 
 export interface YearRow {
   /** 1-based saving year. */
@@ -37,7 +37,6 @@ export function project(inputs: Inputs): Projection {
   const { age, payoutAge, monthlyCents, children, returnBp, costsBp } = inputs;
   const savingYears = payoutAge - age;
   const z = zulage(MONTHS * monthlyCents, children, age);
-  const zulageOf = (year: number): number => z.perYearCents + (year === 1 ? z.bonusCents : 0);
   const netRate = (1 + returnBp / BP) * (1 - costsBp / BP) - 1;
   const monthlyGrowth = (1 + netRate) ** (1 / MONTHS);
 
@@ -48,13 +47,13 @@ export function project(inputs: Inputs): Projection {
     for (let month = 1; month <= MONTHS; month++) {
       balance = balance * monthlyGrowth + monthlyCents;
       if (month === 1 && year >= 2) {
-        balance += zulageOf(year - 1);
-        zulagenCents += zulageOf(year - 1);
+        balance += zulageOfYear(z, year - 1);
+        zulagenCents += zulageOfYear(z, year - 1);
       }
     }
     if (year === savingYears) {
-      balance += zulageOf(year);
-      zulagenCents += zulageOf(year);
+      balance += zulageOfYear(z, year);
+      zulagenCents += zulageOfYear(z, year);
     }
     const contributionsCents = year * MONTHS * monthlyCents;
     const balanceCents = Math.round(balance);

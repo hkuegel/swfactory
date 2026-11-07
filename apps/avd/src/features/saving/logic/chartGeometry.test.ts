@@ -9,6 +9,7 @@ const INPUTS = {
   children: 1,
   returnBp: 500,
   costsBp: 50,
+  taxRateBp: 3000,
 };
 
 describe('chartGeometry', () => {

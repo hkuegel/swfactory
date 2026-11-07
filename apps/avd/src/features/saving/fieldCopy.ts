@@ -11,7 +11,7 @@ export interface FieldCopy {
   readonly range: string;
 }
 
-/** Exact texts of the UX design (story 013, UX §2). */
+/** Exact texts of the UX design (story 013, UX §2; tax rate: story 014, UX §2). */
 export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
   age: {
     label: 'Alter heute',
@@ -48,6 +48,12 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
     suffix: '%',
     hint: '0,00 bis 1,00 % pro Jahr (Obergrenze beim Standarddepot), höchstens 2 Nachkommastellen.',
     range: '0,00 bis 1,00 % (höchstens 2 Nachkommastellen)',
+  },
+  taxRatePct: {
+    label: 'Grenzsteuersatz',
+    suffix: '%',
+    hint: 'Ein kombinierter Satz einschließlich Soli und Kirchensteuer, 0 bis 50 %, höchstens 2 Nachkommastellen.',
+    range: '0,00 bis 50,00 % (höchstens 2 Nachkommastellen)',
   },
 };
 

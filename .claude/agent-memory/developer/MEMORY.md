@@ -4,7 +4,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 
 - Type optional pass-through props as `prop?: T | undefined` (className, refs) because CSS-module classes are `string | undefined` under `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` and tsc fails otherwise (story 001).
 - Don't use `Promise.withResolvers` (ES2024; tsconfig lib is ES2023); use `src/lib/createDeferred.ts` (story 001).
-- Run `npx tsc --build` after every new component, not only after tests: vitest passes even with type errors (story 001).
+- Run `npm run typecheck` (root has no tsconfig, so plain `npx tsc --build` there fails) after every new component, not only after tests: vitest passes even with type errors (stories 001, 014).
 - When grepping `dist` for a code path behind a `VITE_*` var, build once with the var set: unset vars are inlined as `undefined` and Vite drops the whole branch (story 001).
 - Test `import.meta.env` guards with `vi.stubEnv('MODE', 'e2e')` / `vi.stubEnv('DEV', false)` + `vi.unstubAllEnvs()` in afterEach (story 001).
 - For ad-hoc browser checks, start `npx vite --mode e2e --port 5174` in the background and run `node --input-type=module -e "import { chromium } from '@playwright/test' …"` from the repo root; macOS has no `timeout` command; kill it (`lsof -tiTCP:5174`) before `npx playwright test`, which starts its own server on 5174 (stories 001, 005).
@@ -60,3 +60,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Element `screenshot()` crops to the element's box, so overflow looks clipped there: check real overflow with `getBoundingClientRect()` against `innerWidth` before "fixing" it (story 013).
 - SVG chart styling under the token test: colours via CSS classes (also on `<pattern>` children), only `fill="url(#id)"` as attribute; `forced-color-adjust: none` + system colours on the svg so solid/stripe/hollow cues survive (story 013).
 - When a design gives rules for the first and the last row, test N = 1 where both apply; the rule that keeps the end value correct wins (story 013).
+- Before adding a contrast pair to an app's `tokens.test.ts`, grep `packages/platform/src/styles/tokens.test.ts`: generic pairs (e.g. muted text on `--color-surface-subtle`) are already tested there (story 014).
+- When a story adds a table column or field, grep e2e for positional lookups (`td').last()`, `nth(`, exact header lists, `$`-anchored live text) and switch them to header-index lookups (story 014).

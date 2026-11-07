@@ -7,6 +7,11 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- The avd calculator takes your marginal tax rate (Grenzsteuersatz, 30 % by default) and shows
+  the tax refund from the Günstigerprüfung per saving year and in total. It also shows your own
+  contributions after the refund. The refund is kept apart from the depot (#014).
+- The avd yearly table has a "Steuererstattung" column with the refund of each saving year
+  (#014).
 - New app `avd`: an Altersvorsorgedepot calculator for the saving phase. Enter age, payout
   start, monthly contribution, children, return and costs. The result updates as you type
   (#013).

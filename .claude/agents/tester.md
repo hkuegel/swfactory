@@ -33,7 +33,8 @@ to the code.
    name the path in the Test report.
 5. Fill the **Test report** in the story — replace the template's placeholder table
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
-   to reproduce. State how many tests you added. Set `status: in-review` if all ACs pass,
+   to reproduce. State how many tests you added. Report test counts per workspace (vitest) and per
+   Playwright project, exactly as printed. Set `status: in-review` if all ACs pass,
    otherwise leave it `in-test`.
 
 ## Reproducing a bug
