@@ -25,6 +25,14 @@ describe('refundCents', () => {
 });
 
 describe('taxRefund', () => {
+  it('AC2: for a checked projection the yearly refunds equal the schedule refunds', () => {
+    const inputs: Inputs = { ...BASE, monthlyCents: 10_000, taxRateBp: 3700 };
+    const projection = project(inputs, { reinvestRefund: true });
+    const refund = taxRefund(inputs, projection);
+    expect(projection.schedule.some((y) => y.reinvestedCents > 0)).toBe(true);
+    expect(refund.byYearCents).toEqual(projection.schedule.map((y) => y.refundCents));
+  });
+
   it('AC2: the total is the sum of the rounded yearly amounts and net = own − total', () => {
     const refund = refundOf(BASE);
     expect(refund.byYearCents).toEqual(Array<number>(8).fill(4451));

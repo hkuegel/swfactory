@@ -48,3 +48,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Show a figure that is not part of a total in its own README paragraph, and say in the same sentence that it is not part of the depot or the end value (story 014).
 - Write a legal formula as a code block with the variables defined in a sentence before it, then the model simplifications as bullets, each with "not checked against the law text" where it applies (story 014).
 - Write new CHANGELOG lines in "Added" for a feature of an app added in the same Unreleased cycle, and say which section was chosen in the report, because the convention is not written down (story 014).
+- When a feature makes an old README claim false ("the rate can't change a depot figure", "not paid into the depot"), grep the app README for "can't", "only", "not included" and fix each one (story 015).
+- Give a conditional figure (shown only while a box is ticked) its count word with the condition ("four depot figures, or five while ...") and its own bullet (story 015).
+- Document a per-year range by its format and sub-line, not by a sample max; the max is set by the last year and a sample goes stale (story 015).
+- When a feature changes an older Unreleased CHANGELOG line's claim, qualify that line ("unless you reinvest it") instead of leaving a contradiction (story 015).
+- Document only the UX copy that was built: scope drops decided by the orchestrator are in Implementation notes, so check there before writing a row (story 015, "Ausgezahlt statt angelegt").

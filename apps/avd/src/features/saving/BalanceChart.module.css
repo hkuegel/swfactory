@@ -121,7 +121,8 @@
   text-align: center;
 }
 
-/* Series: solid / stripes / hollow / dashed hollow, so identity never relies on colour. */
+/* Series: solid / stripes / heavy framed stripes (015) / hollow / dashed hollow, so identity
+   never relies on colour. */
 .contributions {
   fill: var(--chart-contributions);
   stroke: var(--color-surface);
@@ -139,6 +140,15 @@
 
 .stripeGap {
   fill: var(--color-surface);
+}
+
+.reinvested {
+  stroke: var(--chart-reinvested);
+  stroke-width: 2px;
+}
+
+.heavyStripe {
+  fill: var(--chart-reinvested);
 }
 
 .returns {
@@ -206,6 +216,14 @@
 
   .stripeGap {
     fill: Canvas;
+  }
+
+  .reinvested {
+    stroke: CanvasText;
+  }
+
+  .heavyStripe {
+    fill: CanvasText;
   }
 
   .returns,

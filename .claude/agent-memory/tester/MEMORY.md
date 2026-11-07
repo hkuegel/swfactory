@@ -74,3 +74,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Rate/amount e2e oracles: compute expected totals from the page's own defaults (age 40 = 25 saving years, 9,99 EUR x 12 x 8 = 959,04) before writing them; two of my first asserts were wrong arithmetic, not defects (story 014).
 - Lead-in text may contain figure words ("nicht im Endwert"): test "not part of group X" via `dt` labels, not `getByText` (story 014).
 - Mutation survivors on exact-cent AC values (floor vs round) are expected; name the unit test that covers them instead of adding e2e (story 014).
+- Chart/screenshot round-trip equality (check then uncheck): identical HTML can still give ~1000 pixels off by <= 1/255 (measured by reviewer; helper tolerance 2/255); use `differingPixels` from avd.helpers.ts, never `Buffer.equals` (story 015).
+- Page-text snapshots that include the visually hidden `aria-live` region change with every edit; select `dl, p:not([aria-live])` when comparing before/after (story 015).
+- Choose inputs that actually move the oracle: monthly 200 EUR hits the 1.800 EUR deduction cap so refund/reinvested stay 3.099,60; use 100 EUR for "update on input change" (story 015).
+- A pixel check on a framed+striped series survives a mutant dropping only the stripes; mutate by omitting the segment (story 015).

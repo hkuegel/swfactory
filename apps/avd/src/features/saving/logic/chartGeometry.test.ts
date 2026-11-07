@@ -25,6 +25,24 @@ describe('chartGeometry', () => {
     });
   });
 
+  it('015 AC4: the reinvested refund is stacked between Zulagen and returns', () => {
+    // Without a child and at 42 % the refund is positive (with the child it is 0 at 30 %).
+    const { years } = project(
+      { ...INPUTS, children: 0, taxRateBp: 4200 },
+      { reinvestRefund: true },
+    );
+    const { bars, ticks } = chartGeometry(years);
+    const top = ticks.at(-1)?.cents ?? 0;
+    bars.forEach((bar, i) => {
+      expect(bar.segments.at(-1)?.to).toBeCloseTo((years[i]?.balanceCents ?? 0) / top, 12);
+      expect(bar.segments.map((s) => s.series)).toEqual(
+        i === 0
+          ? ['contributions', 'returns']
+          : ['contributions', 'zulagen', 'reinvested', 'returns'],
+      );
+    });
+  });
+
   it('AC5: negative returns become a loss segment from the balance up to the paid-in sum', () => {
     const { years } = project({ ...INPUTS, returnBp: -1000 });
     const last = years.at(-1);
@@ -53,6 +71,7 @@ describe('chartGeometry', () => {
           age: 40,
           contributionsCents: balanceCents,
           zulagenCents: 0,
+          reinvestedCents: 0,
           returnsCents: 0,
           balanceCents,
         },

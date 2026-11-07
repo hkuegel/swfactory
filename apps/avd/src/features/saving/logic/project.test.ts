@@ -32,6 +32,8 @@ const ORACLE_CASES: readonly (readonly [string, Inputs])[] = [
   ['52 saving years', { ...BASE, age: 18, payoutAge: 70 }],
   ['return -10 %', { ...BASE, returnBp: -1000, costsBp: 100 }],
   ['children and bonus', { ...BASE, age: 22, children: 3, monthlyCents: 3_000 }],
+  // The cases above have no refund (children, 30 %); this one reinvests when checked (015).
+  ['42 %, no child', { ...BASE, children: 0, taxRateBp: 4200 }],
 ];
 
 describe('project', () => {
@@ -41,15 +43,29 @@ describe('project', () => {
     );
   });
 
-  it.each(ORACLE_CASES)('AC4/AC5: rows add up and follow the row semantics (%s)', (_, inputs) => {
-    const { years, total } = project(inputs);
+  it.each(
+    ORACLE_CASES.flatMap(([name, inputs]) => [
+      [`${name}, unchecked`, inputs, false] as const,
+      [`${name}, reinvested (015)`, inputs, true] as const,
+    ]),
+  )('AC4/AC5: rows add up and follow the row semantics (%s)', (_, inputs, reinvestRefund) => {
+    const { years, total } = project(inputs, { reinvestRefund });
     expect(years).toHaveLength(inputs.payoutAge - inputs.age);
     // Row 1 has nothing credited yet, unless it is also the last row (final Zulage at payout).
     if (years.length > 1) expect(years[0]?.zulagenCents).toBe(0);
+    expect(years[0]?.reinvestedCents).toBe(0);
     expect(years.at(-1)).toBe(total);
     for (const row of years) {
-      expect(row.contributionsCents + row.zulagenCents + row.returnsCents).toBe(row.balanceCents);
+      expect(
+        row.contributionsCents + row.zulagenCents + row.reinvestedCents + row.returnsCents,
+      ).toBe(row.balanceCents);
       expect(row.age).toBe(inputs.age + row.year - 1);
+      if (!reinvestRefund) expect(row.reinvestedCents).toBe(0);
+    }
+    if (reinvestRefund) {
+      const unchecked = project(inputs).total.balanceCents;
+      if (total.reinvestedCents > 0) expect(total.balanceCents).toBeGreaterThan(unchecked);
+      else expect(total.balanceCents).toBe(unchecked);
     }
   });
 

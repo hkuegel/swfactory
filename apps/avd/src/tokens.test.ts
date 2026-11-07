@@ -30,6 +30,8 @@ const PAIRS: readonly Pair[] = [
   ['--chart-zulagen', '--color-surface', NON_TEXT],
   ['--chart-returns', '--color-surface', NON_TEXT],
   ['--chart-loss', '--color-surface', NON_TEXT],
+  // Stripes and frame of the reinvested tax refund (story 015, UX §8).
+  ['--chart-reinvested', '--color-surface', NON_TEXT],
 ];
 
 describe('Altersvorsorgedepot design tokens', () => {

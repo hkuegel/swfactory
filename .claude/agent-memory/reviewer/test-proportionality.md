@@ -16,4 +16,6 @@ Cross-spec coupling: auth.spec pins the game's first tab stop, so every setup ch
 
 Screenshot or pixel-diff "A differs from B" assertions: check whether the images can differ in size. A helper that returns MAX on a size mismatch makes the assertion pass no matter what (story 008: the 3D scroller has another size). The "equals" direction is the one that carries weight.
 
+Pixel tolerances: probe the same round trip and print the max per-channel difference before accepting a tolerance. Story 015 used 8/255 for noise that measured 1/255. Also look for tests that write into React-owned DOM (e.g. `textContent = ''` on a live region) and check whether the write is needed at all.
+
 Related: [[async-adapter-checks]]

@@ -1,6 +1,8 @@
 import type { FieldId } from './logic/fields.ts';
 import type { FieldError, FieldErrors } from './logic/parseInputs.ts';
 import { FIELD_IDS } from './logic/fields.ts';
+import { formatWholeEuro } from './logic/format.ts';
+import { CONTRIBUTION_CAP_CENTS } from './logic/schedule.ts';
 
 export interface FieldCopy {
   readonly label: string;
@@ -56,6 +58,12 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
     range: '0,00 bis 50,00 % (höchstens 2 Nachkommastellen)',
   },
 };
+
+/** The reinvest checkbox (story 015, UX §2); not a text field, so not a `FieldId`. */
+export const REINVEST_COPY = {
+  label: 'Steuererstattung wieder anlegen',
+  hint: `Angehakt: Die Erstattung eines Sparjahres wird am 1. Januar des Folgejahres ins Depot eingezahlt, höchstens bis ${formatWholeEuro(CONTRIBUTION_CAP_CENTS)} Beitrag pro Jahr. Nicht angehakt: Sie bleibt bei der steuerpflichtigen Person.`,
+} as const;
 
 /** The field's error text; always names the field and its allowed range (AC6). */
 export function errorMessage(field: FieldId, error: FieldError): string {

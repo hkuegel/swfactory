@@ -4,7 +4,9 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   ageInput,
   cellByHeader,
+  cents,
   chart,
+  chartSeriesPixels,
   childrenInput,
   costsInput,
   euro,
@@ -28,57 +30,6 @@ test.beforeEach(async ({ page }) => {
 /** The "Kontostand am Jahresende" cell of a table row, by its header text (not by position). */
 const balanceCell = (page: Page, row: Locator) =>
   cellByHeader(page, row, 'Kontostand am Jahresende');
-
-/** Cents of a displayed amount such as "-4.478,79 €" (parses the page text, not the model). */
-function cents(text: string | null): number {
-  const match = /^(-?)([\d.]+),(\d{2})\s€/.exec((text ?? '').trim());
-  if (match === null) throw new Error(`not an amount: ${String(text)}`);
-  const value = Number((match[2] ?? '').replace(/\./g, '')) * 100 + Number(match[3]);
-  return match[1] === '-' ? -value : value;
-}
-
-/** Counts chart pixels within a small tolerance of each series token colour. */
-async function chartSeriesPixels(page: Page) {
-  const png = (await chart(page).screenshot({ animations: 'disabled' })).toString('base64');
-  return page.evaluate(async (data) => {
-    const style = getComputedStyle(document.documentElement);
-    const rgb = (name: string) => {
-      const probe = document.createElement('span');
-      probe.style.color = style.getPropertyValue(name);
-      document.body.append(probe);
-      const m = /rgba?\((\d+), (\d+), (\d+)/.exec(getComputedStyle(probe).color);
-      probe.remove();
-      return [Number(m?.[1]), Number(m?.[2]), Number(m?.[3])];
-    };
-    const image = new Image();
-    image.src = `data:image/png;base64,${data}`;
-    await image.decode();
-    const canvas = document.createElement('canvas');
-    canvas.width = image.width;
-    canvas.height = image.height;
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) throw new Error('no 2d context');
-    ctx.drawImage(image, 0, 0);
-    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const count = (target: number[]) => {
-      let n = 0;
-      for (let i = 0; i < pixels.length; i += 4) {
-        if (
-          Math.abs((pixels[i] ?? 0) - (target[0] ?? 0)) < 12 &&
-          Math.abs((pixels[i + 1] ?? 0) - (target[1] ?? 0)) < 12 &&
-          Math.abs((pixels[i + 2] ?? 0) - (target[2] ?? 0)) < 12
-        )
-          n += 1;
-      }
-      return n;
-    };
-    return {
-      contributions: count(rgb('--chart-contributions')),
-      zulagen: count(rgb('--chart-zulagen')),
-      returns: count(rgb('--chart-returns')),
-    };
-  }, png);
-}
 
 test('AC1: the title, six labelled inputs with their defaults and a result are shown on load', async ({
   page,

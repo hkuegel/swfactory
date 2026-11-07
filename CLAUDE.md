@@ -71,10 +71,13 @@ explicit decision.
 The backlog must be enough to rebuild the app without any chat history:
 
 - **Original request** — hak's words, verbatim, in every story.
-- **Decision log** — every answer and correction from hak, appended, never edited.
+- **Decision log** — every answer and correction from hak, and every scope decision of
+  the orchestrator (e.g. dropping a designed element), appended at once, never edited.
 - **Links** — `supersedes:` / `superseded-by:` when a story replaces another,
   `changes: [NNN/ACx]` when it modifies parts of one. A rebuild replays an app's done
-  stories in id order and skips `superseded` ones.
+  stories in id order and skips `superseded` ones. When a story adds an option that changes
+  earlier behaviour only while enabled, `changes:` lists every earlier AC that is false in
+  the enabled state, and those ACs are annotated "holds while <option> is off".
 - **Commit early** — the approved story is committed on `main` at gate 1, before any code.
 - **Tests as oracle** — e2e tests named after ACs verify that a rebuild behaves the same.
 
@@ -165,6 +168,11 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   Counters and state prove that code ran, not that pixels changed: every check of a visual
   effect includes at least one pixel or frame comparison, and logic that depends on real
   frame timing gets one real-loop test that proves the effect plays, not only that it ends.
+  A pixel-diff tolerance is backed by the measured maximum noise (stated in a comment).
+  Tests never write into DOM the app renders (e.g. live regions); they reset state through
+  the UI or the clock. When existing cases are rerun for a new option, or a rule is
+  mutation-checked, at least one case must actually move the result (a strict difference);
+  inputs at a cap hide changes.
 - **Independent tests:** tests of one feature don't depend on another feature's layout or
   tab order — e.g. an auth test asserts that focus left the auth controls, not which game
   control it landed on. No counted Tab sequences and no raw coordinates of elements that

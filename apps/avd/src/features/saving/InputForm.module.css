@@ -1,5 +1,6 @@
 /* Seven fields: one column below 600 px, two columns from there (story 013, UX §7); the
-   seventh (tax rate, story 014) sits alone in the left cell of row 4. */
+   seventh (tax rate, story 014) sits in the left cell of row 4, the reinvest checkbox (story
+   015) in the right one. */
 .form {
   margin: 0;
 }
