@@ -5,9 +5,22 @@
  * tokens.test.ts). Generic tokens belong to the platform, not here.
  */
 :root {
+  /* Chart series (story 013, UX §8): 3:1 against --color-surface; pale fills are decorative. */
+  --chart-contributions: #1d4ed8;
+  --chart-zulagen: #b45309;
+  --chart-returns: #1a7030;
+  --chart-returns-fill: #e8f5ea;
+  --chart-loss: #b3261e;
+  --chart-loss-fill: #fdecea;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --chart-contributions: #8ab4f8;
+    --chart-zulagen: #f6ad55;
+    --chart-returns: #81c995;
+    --chart-returns-fill: #16291b;
+    --chart-loss: #f28b82;
+    --chart-loss-fill: #3a1b1a;
   }
 }

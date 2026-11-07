@@ -7,6 +7,14 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- New app `avd`: an Altersvorsorgedepot calculator for the saving phase. Enter age, payout
+  start, monthly contribution, children, return and costs. The result updates as you type
+  (#013).
+- The calculator shows the value at payout start, split into your own contributions, the
+  state Zulagen and the returns. A yearly table and a chart show the balance per year (#013).
+- The calculator applies the Zulage rules of the adopted law: Grundzulage, Kinderzulage and
+  the one-time Berufseinsteigerbonus. Its figures are model calculations, not investment or
+  tax advice (#013).
 - Reviews follow a fixed checklist, `.claude/agents/reviewer-checklist.md`. Every item is
   marked pass, fail or n.a. in the story's Review section (#012).
 - Each retro records the agent costs of the story: tokens, tool uses and duration per agent

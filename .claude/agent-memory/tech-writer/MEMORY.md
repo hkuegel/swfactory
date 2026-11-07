@@ -40,3 +40,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Document factory process changes (gate order, retro cost table, checklist) in README "Working with the factory" and the check:structure bullets, and in CHANGELOG with the story id, because hak reads them as user-visible (story 012).
 - Give the reviewer checklist and other factory files as relative Markdown links only after a Glob confirms the path (story 012).
 - Leave CLAUDE.md out of a tech-writer brief when devops is editing it; the README and CHANGELOG are enough for the factory docs (story 012).
+- Describe legal rules as the app applies them, with the source and a "check against the law text" note; never call them binding or legally classified (story 013, org instruction).
+- When a new app appears, update the root README line that counts the apps ("Today there are N apps"); it is not generated (story 013).
+- For a new app README, take the rules and the default values from the story's Context and the ADR, and state the rounding rule in developer notes, not in the user section (story 013).

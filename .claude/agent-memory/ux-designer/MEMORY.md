@@ -44,4 +44,9 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - End effects (explosion, confetti): flash, shake, colour and scaling rules in [end-effects-design-rules](feedback_end_effects.md) (story 010).
 - When a review round removes a mechanism, grep the whole UX section (tables, principles, §15 points) for its keywords and fix every hit, not only the obvious row (story 010 review round 1).
 - After a gate-2 AC rewording, edit only the UX sentences that state the old behaviour, tag each "(updated at gate 2)", and leave other sections (e.g. Technical "Alignment with UX") to the architect (story 010 gate 2).
+- Choose German labels so no label is a substring of another (getByLabel is substring by default); name the form "Eingaben" and use that word nowhere else so it works as signedInContent probe (story 013).
+- Calculator with live results: live region mounted empty, filled only after the first edit, text debounced about 700 ms (visible UI immediate); field errors via aria-describedby, no role=alert (story 013).
 - Spinner convention: 20 px ring, 2 px `--color-text-muted`, 0.8 s, static ring at opacity 0.6 under reduced motion (LoginView.module.css); reuse, and flag the loop to the PO (story 009).
+- SVG charts with preserveAspectRatio="none": use horizontal stripes/hollow/dashed outlines for series identity (diagonals shear); bar slots min 8 so one bar is not stretched (story 013).
+- After editing wide markdown tables in a story, ask the orchestrator to run `npx prettier --write` on the story, because I have no shell to run it myself (story 013).
+- Calculator inputs that allow negatives: use inputMode="text", not "decimal", because iOS shows no minus key for decimal (story 013 review).

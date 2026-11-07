@@ -10,6 +10,7 @@ import {
   readCss,
   readPlatformScheme,
   undefinedVarProblems,
+  NON_TEXT,
   withBase,
   type Pair,
 } from '@swfactory/platform/test/tokenRules';
@@ -22,7 +23,14 @@ const merged = withBase(readPlatformScheme(), app);
 const allCss = readCss(SRC);
 
 /** Contrast pairs that involve an app token: [foreground, background, minimum ratio]. */
-const PAIRS: readonly Pair[] = [];
+const PAIRS: readonly Pair[] = [
+  // Chart series against the panel (story 013, UX §8); the pale fills are decorative, the
+  // outline or stripe carries the series, and segments are separated by --color-surface.
+  ['--chart-contributions', '--color-surface', NON_TEXT],
+  ['--chart-zulagen', '--color-surface', NON_TEXT],
+  ['--chart-returns', '--color-surface', NON_TEXT],
+  ['--chart-loss', '--color-surface', NON_TEXT],
+];
 
 describe('Altersvorsorgedepot design tokens', () => {
   it('light and dark define the same colour tokens', () => {
