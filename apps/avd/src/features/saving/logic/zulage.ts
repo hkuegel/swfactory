@@ -8,8 +8,8 @@ export interface Zulage {
   readonly bonusCents: number;
 }
 
-/** Below this own contribution per year there is no Zulage at all. */
-const MIN_CONTRIBUTION_CENTS = 12_000;
+/** Below this own contribution per year there is no Zulage at all (and no tax benefit, story 014). */
+export const MIN_CONTRIBUTION_CENTS = 12_000;
 /** Grundzulage: 50 % up to here … */
 const GRUND_FULL_RATE_LIMIT_CENTS = 36_000;
 /** … and 25 % from there up to here (so at most 540 EUR). */
@@ -41,4 +41,9 @@ export function zulage(annualCents: number, children: number, ageAtStart: number
     perYearCents: grundCents + kinderCents,
     bonusCents: ageAtStart < BONUS_AGE_LIMIT ? BONUS_CENTS : 0,
   };
+}
+
+/** Zulage credited for saving year `year` (1-based): perYearCents, plus bonusCents in year 1. */
+export function zulageOfYear(z: Zulage, year: number): number {
+  return z.perYearCents + (year === 1 ? z.bonusCents : 0);
 }

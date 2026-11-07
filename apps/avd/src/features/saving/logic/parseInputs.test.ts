@@ -24,7 +24,7 @@ function valueOf(field: 'monthly' | 'returnPct' | 'costsPct' | 'age', text: stri
 }
 
 describe('parseInputs', () => {
-  it('AC1: the defaults parse to age 40, payout 65, 150 EUR, 0 children, 5 %, 0,5 %', () => {
+  it('AC1: the defaults parse to age 40, payout 65, 150 EUR, 0 children, 5 %, 0,5 %, 30 %', () => {
     expect(parseInputs(DEFAULT_INPUTS)).toEqual({
       ok: true,
       inputs: {
@@ -34,6 +34,7 @@ describe('parseInputs', () => {
         children: 0,
         returnBp: 500,
         costsBp: 50,
+        taxRateBp: 3000,
       },
     });
   });
@@ -81,6 +82,8 @@ describe('parseInputs', () => {
     ['monthly', '0', '-0,01'],
     ['costsPct', '1,00', '1,01'],
     ['costsPct', '0', '-0,01'],
+    ['taxRatePct', '50,00', '50,01'],
+    ['taxRatePct', '0', '-0,01'],
     ['returnPct', '-10,00', '-10,01'],
     ['returnPct', '20,00', '20,01'],
     ['age', '18', '17'],

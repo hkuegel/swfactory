@@ -50,3 +50,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - SVG charts with preserveAspectRatio="none": use horizontal stripes/hollow/dashed outlines for series identity (diagonals shear); bar slots min 8 so one bar is not stretched (story 013).
 - After editing wide markdown tables in a story, ask the orchestrator to run `npx prettier --write` on the story, because I have no shell to run it myself (story 013).
 - Calculator inputs that allow negatives: use inputMode="text", not "decimal", because iOS shows no minus key for decimal (story 013 review).
+- Extending a done feature: new figure labels must not equal a table header or contain an AC-quoted column name alone; keep the heading free of that word too, and list which labels are substrings (story 014).
+- Result figures that are "not part of" a total: bordered group with own heading + lead-in + column separator border, so the boundary is visible without colour (story 014).

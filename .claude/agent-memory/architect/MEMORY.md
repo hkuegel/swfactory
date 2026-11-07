@@ -47,6 +47,9 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - In a markdown table, match a cell's text without its padding in Edit, then run prettier --write: the padded row does not match as one string (story 010).
 - For process/factory stories, mind that check-structure rule 1 forbids app names in `.claude/agents|skills`, `docs/templates`, CLAUDE.md; and that `.claude/agents/*.md` is loaded as agent definitions, so a non-agent file there needs a one-time loader check (story 012).
 - Scripts have no test setup: specify planted-violation dry runs in a scratchpad copy (ROOT = script's parent dir) instead of committed tests (story 012).
-- For money ACs with a cent-exact oracle, recompute the oracle in the scratchpad under each rounding variant before fixing the model: 013's monthly cent rounding missed the oracle by 1 cent (story 013).
+- For money ACs with a cent-exact oracle, recompute the oracle in the scratchpad under each rounding variant before fixing the model: 013's monthly cent rounding missed the oracle by 1 cent (story 013); recompute every number I add myself (unit-test examples) too, cents vs EUR slip easily (story 014).
 - Checklist T2 forbids testing an AC at two levels: put AC-listed values only in e2e (rebuild oracle) and give unit tests other inputs or an independent closed form, even if the orchestrator asks for "the oracle in unit" (story 013).
 - The platform's `signedInContent` is found by role + substring name: choose a name no other label or the title contains (story 013).
+- When a story adds a figure that must not change existing ones, compute it in a separate pure function fed by the existing result, not inside it: "X changes nothing else" then holds by construction (story 014).
+- When a story adds a table column or field, grep earlier specs for positional asserts (`td.last()`, exact header lists, `slice`, `nth`) and list them with a header-index replacement (story 014).
+- For a calculation a split-off follow-up story will make per-year, expose the per-year primitive with explicit inputs (c, Z, rate) now, but don't build the loop for it (story 014).

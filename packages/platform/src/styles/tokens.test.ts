@@ -47,6 +47,7 @@ const PAIRS: readonly Pair[] = [
   ['--color-edge', '--color-surface', NON_TEXT],
   ['--color-edge', '--color-page', NON_TEXT],
   ['--color-edge', '--color-input-bg', NON_TEXT],
+  ['--color-edge', '--color-surface-subtle', NON_TEXT],
   ['--color-focus', '--color-page', NON_TEXT],
   ['--color-focus', '--color-surface', NON_TEXT],
   // View control (story 008): segment border on the selected and hover fills.

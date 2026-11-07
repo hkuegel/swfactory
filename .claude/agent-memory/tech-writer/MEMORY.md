@@ -43,3 +43,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Describe legal rules as the app applies them, with the source and a "check against the law text" note; never call them binding or legally classified (story 013, org instruction).
 - When a new app appears, update the root README line that counts the apps ("Today there are N apps"); it is not generated (story 013).
 - For a new app README, take the rules and the default values from the story's Context and the ADR, and state the rounding rule in developer notes, not in the user section (story 013).
+- When a story adds an input, grep the app README for count words ("six inputs", "four figures", "six labelled") and fix each one, e.g. the Keyboard section and the code layout comments (story 014).
+- Copy UI copy from the component file, not from the UX table, because review can change the wording (story 014: the note sentence changed after the UX table was written).
+- Show a figure that is not part of a total in its own README paragraph, and say in the same sentence that it is not part of the depot or the end value (story 014).
+- Write a legal formula as a code block with the variables defined in a sentence before it, then the model simplifications as bullets, each with "not checked against the law text" where it applies (story 014).
+- Write new CHANGELOG lines in "Added" for a feature of an app added in the same Unreleased cycle, and say which section was chosen in the report, because the convention is not written down (story 014).

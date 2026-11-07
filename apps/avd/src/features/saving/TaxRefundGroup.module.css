@@ -1,0 +1,81 @@
+/* Refund group (story 014, UX §1, §6–§8): a bordered box apart from the depot figures. */
+.group {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-edge);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-base);
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* Below 600 px: label left (may wrap), value right (never wraps), like the figures. */
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+  min-width: 0;
+}
+
+.row dt {
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.row dd {
+  flex: none;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Own contributions after the refund: weight and a border, not colour alone. */
+.net {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-edge);
+}
+
+.net dt,
+.net dd {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* From 600 px: label then value in one line, like the Zulage details. */
+@media (min-width: 600px) {
+  .row {
+    justify-content: flex-start;
+  }
+}
+
+@media (forced-colors: active) {
+  .group,
+  .net {
+    border-color: CanvasText;
+  }
+}

@@ -5,10 +5,15 @@ import styles from './YearTable.module.css';
 
 export interface YearTableProps {
   readonly rows: readonly YearRow[];
+  /** Tax refund per saving year (story 014), same length as rows; not cumulative. */
+  readonly refundsCents: readonly number[];
 }
 
-/** One row per saving year, cumulative (AC5); the text equivalent of the chart. */
-export function YearTable({ rows }: YearTableProps) {
+/**
+ * One row per saving year, cumulative (013 AC5); the text equivalent of the chart, plus the
+ * non-cumulative tax refund per year in the last column (014 AC5).
+ */
+export function YearTable({ rows, refundsCents }: YearTableProps) {
   const headingId = useId();
   return (
     <section className={styles.section} aria-labelledby={headingId}>
@@ -21,7 +26,9 @@ export function YearTable({ rows }: YearTableProps) {
         tabIndex={0}
       >
         <table className={styles.table}>
-          <caption className={styles.caption}>Entwicklung pro Sparjahr, kumuliert</caption>
+          <caption className={styles.caption}>
+            Entwicklung pro Sparjahr, kumuliert; Steuererstattung je Jahr
+          </caption>
           <thead>
             <tr>
               <th scope="col">Jahr</th>
@@ -30,10 +37,13 @@ export function YearTable({ rows }: YearTableProps) {
               <th scope="col">Zulagen gutgeschrieben</th>
               <th scope="col">Erträge</th>
               <th scope="col">Kontostand am Jahresende</th>
+              <th scope="col" className={styles.refund}>
+                Steuererstattung
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row, i) => (
               <tr key={row.year}>
                 <th scope="row">{row.year}</th>
                 <td>{row.age}</td>
@@ -41,6 +51,7 @@ export function YearTable({ rows }: YearTableProps) {
                 <td>{formatEuro(row.zulagenCents)}</td>
                 <td>{formatEuro(row.returnsCents)}</td>
                 <td>{formatEuro(row.balanceCents)}</td>
+                <td className={styles.refund}>{formatEuro(refundsCents[i] ?? 0)}</td>
               </tr>
             ))}
           </tbody>
@@ -48,7 +59,8 @@ export function YearTable({ rows }: YearTableProps) {
       </div>
       <p className={styles.footnote}>
         Zulagen eines Jahres werden im Folgejahr gutgeschrieben. Die letzte Zulage ist im Endwert
-        enthalten, ohne weitere Erträge.
+        enthalten, ohne weitere Erträge. Die Steuererstattung steht im Jahr des Beitrags, ist nicht
+        kumuliert und nicht im Kontostand enthalten.
       </p>
     </section>
   );

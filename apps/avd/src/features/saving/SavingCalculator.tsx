@@ -6,6 +6,7 @@ import { DEFAULT_INPUTS, type FieldId, type RawInputs } from './logic/fields.ts'
 import { formatEuro } from './logic/format.ts';
 import { parseInputs } from './logic/parseInputs.ts';
 import { project } from './logic/project.ts';
+import { taxRefund } from './logic/taxRefund.ts';
 import { ResultSummary } from './ResultSummary.tsx';
 import { useSettledValue } from './useSettledValue.ts';
 import { YearTable } from './YearTable.tsx';
@@ -15,8 +16,8 @@ import styles from './SavingCalculator.module.css';
 const LIVE_REGION_DELAY_MS = 700;
 
 /**
- * Saving phase calculator (story 013): owns the six raw input texts; validation, projection,
- * table, chart and live text are derived on every render.
+ * Saving phase calculator (stories 013, 014): owns the seven raw input texts; validation,
+ * projection, tax refund, table, chart and live text are derived on every render.
  */
 export function SavingCalculator() {
   const [values, setValues] = useState<RawInputs>(DEFAULT_INPUTS);
@@ -25,13 +26,15 @@ export function SavingCalculator() {
 
   const parsed = parseInputs(values);
   const projection = parsed.ok ? project(parsed.inputs) : null;
+  // Derived from the projection, never fed back into it: the rate cannot change a depot figure.
+  const refund = parsed.ok && projection !== null ? taxRefund(parsed.inputs, projection) : null;
   const payoutAge = parsed.ok ? parsed.inputs.payoutAge : null;
   const errors = parsed.ok ? {} : parsed.errors;
 
   let liveText = '';
   if (edited) {
-    if (projection !== null && payoutAge !== null) {
-      liveText = `Endwert bei Auszahlungsbeginn mit ${String(payoutAge)}: ${formatEuro(projection.total.balanceCents)}.`;
+    if (projection !== null && refund !== null && payoutAge !== null) {
+      liveText = `Endwert bei Auszahlungsbeginn mit ${String(payoutAge)}: ${formatEuro(projection.total.balanceCents)}. Steuererstattung gesamt: ${formatEuro(refund.totalCents)}.`;
     } else {
       const field = firstInvalidField(errors);
       if (field !== undefined) liveText = `Kein Ergebnis: ${FIELD_COPY[field].label} ist ungültig.`;
@@ -47,11 +50,16 @@ export function SavingCalculator() {
   return (
     <div className={styles.panel}>
       <InputForm values={values} errors={errors} onChange={handleChange} />
-      <ResultSummary projection={projection} payoutAge={payoutAge} liveText={settledLiveText} />
-      {projection !== null && payoutAge !== null && (
+      <ResultSummary
+        projection={projection}
+        refund={refund}
+        payoutAge={payoutAge}
+        liveText={settledLiveText}
+      />
+      {projection !== null && refund !== null && payoutAge !== null && (
         <>
           <BalanceChart rows={projection.years} payoutAge={payoutAge} />
-          <YearTable rows={projection.years} />
+          <YearTable rows={projection.years} refundsCents={refund.byYearCents} />
         </>
       )}
     </div>

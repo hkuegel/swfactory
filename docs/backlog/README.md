@@ -20,5 +20,5 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 011 | platform    | [Separate the software factory and shared platform code from the apps](011-separate-factory-from-apps.md)                                                 | done   |
 | 012 | platform    | [Factory process: cost per story, reviewer checklist, plain-language explanation at gate 2](012-cost-checklist-explanation.md)                            | done   |
 | 013 | avd         | [Altersvorsorgedepot saving phase with Zulagen](../../apps/avd/docs/backlog/013-avd-saving-phase-zulagen.md)                                              | done   |
-| 014 | avd         | [Altersvorsorgedepot tax refund from the Günstigerprüfung](../../apps/avd/docs/backlog/014-avd-tax-refund.md)                                             | ready  |
+| 014 | avd         | [Altersvorsorgedepot tax refund from the Günstigerprüfung](../../apps/avd/docs/backlog/014-avd-tax-refund.md)                                             | done   |
 | 015 | avd         | [Altersvorsorgedepot optional reinvestment of the tax refund](../../apps/avd/docs/backlog/015-avd-reinvest-tax-refund.md)                                 | ready  |

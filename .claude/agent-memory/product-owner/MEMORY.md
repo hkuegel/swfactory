@@ -31,3 +31,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - For process/factory chores, ACs must only demand what the orchestrator can observe (subagent usage yes, own main-session tokens no); name the unobservable case in an AC (story 012).
 - Gate-2 log lines may say "status done" while the frontmatter is to stay untouched; keep the frontmatter as instructed and flag the mismatch to the orchestrator (story 010).
 - On "Ja, alles" with confirmed defaults, replace each "see Open question N" in ACs with the confirmed value, and put enforcement/scope-in-time defaults into Context rather than new ACs so the AC count stays at 7 (story 012).
+- Calculator stories (avd): hand-compute every AC number (boundaries, cents rounding) in the AC itself and re-check them before writing; AC oracles come from the reference example plus boundary values on both sides of each threshold (story 014).
+- Extending a done calculator story: list each 013 AC whose input list, table, live text or note grows in `changes:` (5 here) and append "(changed by NNN)" in each; keep the old oracle ACs "unchanged" by reference (story 014).

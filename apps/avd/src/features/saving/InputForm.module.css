@@ -1,4 +1,5 @@
-/* Six fields: one column below 600 px, two columns from there (story 013, UX §7). */
+/* Seven fields: one column below 600 px, two columns from there (story 013, UX §7); the
+   seventh (tax rate, story 014) sits alone in the left cell of row 4. */
 .form {
   margin: 0;
 }

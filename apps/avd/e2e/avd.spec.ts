@@ -1,41 +1,33 @@
 /// <reference lib="dom" />
 // e2e/ is typed without the DOM lib; page.evaluate callbacks run in the browser.
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import {
+  ageInput,
+  cellByHeader,
+  chart,
+  childrenInput,
+  costsInput,
+  euro,
+  figure,
+  monthlyInput,
+  noResult,
+  open,
+  payoutInput,
+  returnInput,
+  tableRows,
+} from './avd.helpers.ts';
 
 // Story 013 – Altersvorsorgedepot, saving phase with Zulagen. One test per AC (rebuild oracle).
 // Parsing, Zulage rules, projection and chart geometry are unit-tested next to the code.
 // Euro figures contain U+00A0 before the euro sign: matched with \s.
 
-async function open(page: Page) {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Sign in as guest' }).click();
-  await expect(page.getByRole('form', { name: 'Eingaben' })).toBeVisible();
-}
-
 test.beforeEach(async ({ page }) => {
   await open(page);
 });
 
-// Exact labels: "pro Jahr" is shared by several labels and rows.
-const ageInput = (page: Page) => page.getByLabel('Alter heute', { exact: true });
-const payoutInput = (page: Page) =>
-  page.getByLabel('Auszahlungsbeginn (Lebensjahr)', { exact: true });
-const monthlyInput = (page: Page) => page.getByLabel('Monatlicher Beitrag', { exact: true });
-const childrenInput = (page: Page) => page.getByLabel('Kinder mit Kindergeld', { exact: true });
-const returnInput = (page: Page) => page.getByLabel('Erwartete Rendite pro Jahr', { exact: true });
-const costsInput = (page: Page) => page.getByLabel('Kosten pro Jahr', { exact: true });
-
-/** The value belonging to a result label (`dt` -> following `dd`). */
-const figure = (page: Page, label: string): Locator =>
-  page
-    .locator('dt', { hasText: new RegExp(`^${label.replace(/[()]/g, '\\$&')}$`) })
-    .locator('xpath=following-sibling::dd');
-
-const euro = (amount: string) => new RegExp(`^${amount.replace(/\./g, '\\.')}\\s€`);
-const chart = (page: Page) => page.getByRole('img', { name: /^Gestapeltes Säulendiagramm/ });
-const tableRows = (page: Page) => page.getByRole('table').locator('tbody tr');
-const noResult = (page: Page) =>
-  page.getByText('Kein Ergebnis möglich. Bitte die markierten Felder korrigieren.');
+/** The "Kontostand am Jahresende" cell of a table row, by its header text (not by position). */
+const balanceCell = (page: Page, row: Locator) =>
+  cellByHeader(page, row, 'Kontostand am Jahresende');
 
 /** Cents of a displayed amount such as "-4.478,79 €" (parses the page text, not the model). */
 function cents(text: string | null): number {
@@ -188,7 +180,7 @@ test('AC5: edits update figures, table and chart at once; table and chart text m
     /bis zum Auszahlungsbeginn mit 65, Endwert 22\.256,44\s€\./,
   );
   const lastRow = tableRows(page).last();
-  await expect(lastRow.locator('td').last()).toHaveText(euro('22.256,44'));
+  await expect(await balanceCell(page, lastRow)).toHaveText(euro('22.256,44'));
   await expect(page.getByRole('columnheader')).toHaveText([
     'Jahr',
     'Alter',
@@ -196,6 +188,7 @@ test('AC5: edits update figures, table and chart at once; table and chart text m
     'Zulagen gutgeschrieben',
     'Erträge',
     'Kontostand am Jahresende',
+    'Steuererstattung',
   ]);
   // The parts of the last row sum to its balance (table text equals the figures of AC4).
   const cells = await lastRow.locator('td').allInnerTexts();
@@ -226,7 +219,7 @@ test('AC5: edits update figures, table and chart at once; table and chart text m
   await expect(tableRows(page)).toHaveCount(13);
   const end = (await figure(page, 'Endwert').innerText()).match(/\d[\d.]*,\d{2}\s€/)?.[0] ?? '';
   expect(end).not.toBe('');
-  await expect(tableRows(page).last().locator('td').last()).toHaveText(end);
+  await expect(await balanceCell(page, tableRows(page).last())).toHaveText(end);
   await expect(chart(page)).toHaveAccessibleName(
     new RegExp(`mit 70, Endwert ${end.replace(/\./g, '\\.')}`),
   );
@@ -346,7 +339,7 @@ test('AC7: keyboard reaches every labelled input, errors are descriptions, the l
   await page.clock.runFor(300);
   await expect(live).toBeEmpty();
   await page.clock.runFor(500);
-  await expect(live).toHaveText(/^Endwert bei Auszahlungsbeginn mit 65: [\d.]+,\d{2}\s€\.$/);
+  await expect(live).toHaveText(/^Endwert bei Auszahlungsbeginn mit 65: [\d.]+,\d{2}\s€\./);
 
   await ageInput(page).fill('17');
   await page.clock.runFor(800);
