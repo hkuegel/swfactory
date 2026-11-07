@@ -34,6 +34,8 @@ every step in which one of them edited markdown, run
    Pass hak's request **verbatim** (the full text above) so it lands in "Original request",
    and say which one it is. If the idea doesn't make it obvious, ask hak first: the
    platform (sign-in, shell, tokens, tooling) or which app?
+   If the idea refers to real-world rules (a law, a product, a standard), research the primary
+   sources first and pass them to `product-owner`; the story's Context cites them.
 2. **GATE 1** — show hak the user story, ACs and open questions. Wait for approval or
    answers. Send every answer or correction back to `product-owner`, telling it to
    update the story **and** the Decision log. Continue only on an explicit go.

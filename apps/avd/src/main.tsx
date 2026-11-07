@@ -4,7 +4,7 @@ import { AppShell, AuthProvider, createAuthClient } from '@swfactory/platform';
 import '@swfactory/platform/tokens.css';
 import '@swfactory/platform/base.css';
 import './tokens.css';
-import { Content } from './Content.tsx';
+import { SavingCalculator } from './features/saving/SavingCalculator.tsx';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element #root not found');
@@ -16,7 +16,7 @@ createRoot(root).render(
   <StrictMode>
     <AuthProvider client={authClient}>
       <AppShell title="Altersvorsorgedepot">
-        <Content />
+        <SavingCalculator />
       </AppShell>
     </AuthProvider>
   </StrictMode>,

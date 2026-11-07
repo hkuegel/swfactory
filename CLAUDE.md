@@ -159,8 +159,9 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   component test that repeats what an e2e test already shows. Probes beyond the ACs are
   kept as tests only if they found a defect or cover a real risk (security, races);
   otherwise they're listed in the Test report as "checked, OK". The architect names the
-  minimal test set in the Technical design. e2e specs assert an AC's intent, never
-  design values (exact colours, pixel sizes) — those live in the tokens and their test.
+  minimal test set in the Technical design; if a design has separate rules for the first and
+  the last item (row, year), it includes the case where both are the same item (N = 1). e2e
+  specs assert an AC's intent, never design values (exact colours, pixel sizes) — those live in the tokens and their test.
   Counters and state prove that code ran, not that pixels changed: every check of a visual
   effect includes at least one pixel or frame comparison, and logic that depends on real
   frame timing gets one real-loop test that proves the effect plays, not only that it ends.
@@ -183,6 +184,11 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   re-attach.
 - Optional props that receive CSS-module classes or refs are typed `prop?: T | undefined`
   (required under `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`).
+- **Text inputs with negatives:** an input whose allowed range includes negative values uses
+  `inputMode="text"`; iOS numeric/decimal keypads have no minus key.
+- **Money:** integer cents at module boundaries and string-based parsing of user input (no
+  `parseFloat`); round only where the story's convention says, and derive the last part of a
+  "parts sum to total" breakdown instead of rounding it separately.
 - **Network timeouts:** every network call that keeps the UI in a progress state needs a
   timeout (AbortController + named constant) that ends in the error state — no UI state
   may stay pending forever. Only interactive steps (e.g. a provider popup) are exempt.

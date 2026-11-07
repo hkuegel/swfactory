@@ -56,3 +56,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - A single bad `measure:fps` row (latency 170–300 ms) can be machine load: re-run the old script from `git show HEAD:` and the new one 2× before chasing a regression (story 010).
 - Keep probe-only helpers (lookup tables, counters) inside the guarded probe functions: a module-level `const` used only by the probe stays in `dist/` and check-dist can't see it (story 010 review).
 - Per-frame code paths must be allocation-free when a type says so: out-parameters for helpers that return objects/tuples, index loops instead of `forEach`/`filter`/`reduce`, closures built once per effect; reviewers count them (story 010 review).
+- Size a chart's axis column with an invisible in-flow copy of the widest tick label (`minmax(min, max-content)`): absolutely positioned labels don't widen a fixed column and big values (`400.000 €`) spill off-screen at 375 px (story 013).
+- Element `screenshot()` crops to the element's box, so overflow looks clipped there: check real overflow with `getBoundingClientRect()` against `innerWidth` before "fixing" it (story 013).
+- SVG chart styling under the token test: colours via CSS classes (also on `<pattern>` children), only `fill="url(#id)"` as attribute; `forced-color-adjust: none` + system colours on the svg so solid/stripe/hollow cues survive (story 013).
+- When a design gives rules for the first and the last row, test N = 1 where both apply; the rule that keeps the end value correct wins (story 013).

@@ -7,6 +7,9 @@ disable-model-invocation: true
 
 Idea: $ARGUMENTS
 
+If the idea refers to real-world rules (a law, a product, a standard), research the primary
+sources first and pass them to the `product-owner`; the story's Context cites them.
+
 Delegate to the `product-owner` subagent to create the story in `docs/backlog/` (platform)
 or `apps/<name>/docs/backlog/` (an app); pass the idea **verbatim** so it lands in
 "Original request" and say which backlog. If the idea doesn't make it obvious, ask hak
