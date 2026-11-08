@@ -14,7 +14,7 @@ superseded-by: # set on the OLD story when a newer one replaces it
 
 ## Original request
 
-> hak's request, verbatim — exactly as given to `/feature`, `/story` or `/bug`.
+> hak's request, verbatim — exactly as given to `/feature`, `/story` or `/fix`.
 
 ## User story
 

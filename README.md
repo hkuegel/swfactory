@@ -272,7 +272,7 @@ Open Claude Code in this folder and use:
 | ---------------------------- | ------------------------------------------------------------ |
 | `/story <idea>`              | Product owner writes a story with acceptance criteria        |
 | `/feature <idea>`            | Full pipeline: story → design → build → test → review → docs |
-| `/bug <description>`         | Reproduce with a failing test → fix → verify → review        |
+| `/fix <description>`         | Reproduce with a failing test → fix → verify → review        |
 | `/new-app <name> [title]`    | Create an app from the skeleton in `templates/app/`          |
 | `/rebuild <app> [up-to NNN]` | Regenerate one app from its backlog and the current platform |
 
@@ -322,7 +322,7 @@ and revert what the agents learned.
 ```
 .claude/agents/        role definitions (one subagent per role)
 .claude/agent-memory/  lessons each agent learned, per role
-.claude/skills/        /feature, /story, /bug, /new-app, /rebuild workflows
+.claude/skills/        /feature, /story, /fix, /new-app, /rebuild workflows
 docs/backlog/          platform stories and the index of all stories
 docs/adr/              platform architecture decision records
 docs/templates/        story and ADR templates

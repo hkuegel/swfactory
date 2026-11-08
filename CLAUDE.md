@@ -50,7 +50,7 @@ Workflow entry points (skills in `.claude/skills/`):
 
 - `/feature <idea>` — full pipeline for a new feature (platform or an app)
 - `/story <idea>` — only refine an idea into a story (no implementation)
-- `/bug <description>` — reproduce with a failing test, fix, verify, review
+- `/fix <description>` — reproduce with a failing test, fix, verify, review
 - `/new-app <name> [title]` — create a new app from the skeleton in `templates/app/`
 - `/rebuild <app> [up-to NNN]` — regenerate one app from its backlog on a fresh branch,
   starting from the app skeleton and the current platform

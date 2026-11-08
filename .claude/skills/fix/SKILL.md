@@ -1,5 +1,5 @@
 ---
-name: bug
+name: fix
 description: Fix a bug through the factory - record it, reproduce it with a failing test, fix, verify, review and run a short retro.
 argument-hint: <bug description>
 disable-model-invocation: true
