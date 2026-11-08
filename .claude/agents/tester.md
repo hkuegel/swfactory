@@ -32,7 +32,9 @@ to the code.
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and
    name the path in the Test report. Run unit tests only through the npm scripts
    (`npm test -w apps/<name>`); never pass `-w` to vitest itself (it means watch mode).
-5. Fill the **Test report** in the story — replace the template's placeholder table
+5. Before reporting, grep the app's e2e specs and `e2e/<app>.helpers.ts` for helpers with the
+   same body and merge them into the helpers file.
+6. Fill the **Test report** in the story — replace the template's placeholder table
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
    to reproduce. State how many tests you added. Report test counts per workspace (vitest) and per
    Playwright project, exactly as printed. Set `status: in-review` if all ACs pass,

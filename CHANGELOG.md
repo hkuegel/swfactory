@@ -76,6 +76,9 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- The avd chart draws every part of the bars in a plain, solid colour instead of stripes and
+  outlines. The parts stay apart by colour, and the legend swatches match them. Stripes and
+  outlines return only in forced colours mode (#017).
 - `npm run check:structure` checks each done story from 013 on for the cost table and the
   "Explanation" section. Stories 001 to 012 are not checked (#012).
 - Gate 2 shows the German explanation first, before the acceptance table, test results and

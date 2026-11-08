@@ -55,3 +55,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Document only the UX copy that was built: scope drops decided by the orchestrator are in Implementation notes, so check there before writing a row (story 015, "Ausgezahlt statt angelegt").
 - When a Review finding flags a label as misleading (e.g. a net figure that already has a tax taken out), don't describe it as fact in the README; report it to the orchestrator as an open point (story 016).
 - Write a model's assumptions in the README as bullets per depot, each marked "model assumption, not checked against the law text", and link the ADR for the rules (story 016).
+- When a visual change moves a cue into forced colours only, describe the normal view first, then one sentence for forced colours with the shapes named (story 017).
+- When a story replaces a visual spec, grep the app README for "stripe|hollow|dashed|pattern|outline" and fix every hit; the chart paragraph is the usual one (story 017).

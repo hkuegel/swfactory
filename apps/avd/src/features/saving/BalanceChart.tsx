@@ -20,9 +20,11 @@ const BAR_GAP = 0.2;
 /** Most x labels below and from 600 px (UX §5). */
 const MAX_X_LABELS_NARROW = 8;
 const MAX_X_LABELS_WIDE = 12;
-/** Stripe period of the Zulagen pattern in units of the 100-unit plot height (50 % stripe). */
+/** Forced colours only (story 017): stripe period of the Zulagen pattern in units of the
+ *  100-unit plot height (50 % stripe). */
 const STRIPE_PERIOD = 4;
-/** Heavy stripes of the reinvested refund (story 015, UX §5): period 8, 75 % stripe. */
+/** Forced colours only (story 017): heavy stripes of the reinvested refund (story 015, UX §5):
+ *  period 8, 75 % stripe. */
 const HEAVY_STRIPE_PERIOD = 8;
 const HEAVY_STRIPE_SHARE = 0.75;
 
@@ -31,12 +33,8 @@ function segmentClass(segment: Segment): string | undefined {
   return styles[segment.series];
 }
 
-function segmentFill(segment: Segment, stripes: string, heavyStripes: string): string | undefined {
-  if (segment.loss) return undefined;
-  if (segment.series === 'zulagen') return stripes;
-  if (segment.series === 'reinvested') return heavyStripes;
-  return undefined;
-}
+/** The pattern URLs for the forced-colours rules of BalanceChart.module.css (story 017). */
+type PatternVars = CSSProperties & Record<'--zulagen-stripes' | '--reinvested-stripes', string>;
 
 function percent(fraction: number): string {
   return `${String(fraction * 100)}%`;
@@ -50,8 +48,11 @@ export function BalanceChart({ rows, payoutAge, reinvest }: BalanceChartProps) {
   const patternId = `zulagen-stripes-${safeId}`;
   const heavyPatternId = `reinvested-stripes-${safeId}`;
   const headingId = `${id}-heading`;
-  const stripes = `url(#${patternId})`;
-  const heavyStripes = `url(#${heavyPatternId})`;
+  // CSS picks colour (normal view) or pattern (forced colours); only the id comes from React.
+  const patternVars: PatternVars = {
+    '--zulagen-stripes': `url(#${patternId})`,
+    '--reinvested-stripes': `url(#${heavyPatternId})`,
+  };
 
   const { bars, ticks } = chartGeometry(rows);
   const total = rows[rows.length - 1];
@@ -75,7 +76,7 @@ export function BalanceChart({ rows, payoutAge, reinvest }: BalanceChartProps) {
     `Genaue Werte pro Jahr in der Jahrestabelle.`;
 
   return (
-    <section className={styles.section} aria-labelledby={headingId}>
+    <section className={styles.section} aria-labelledby={headingId} style={patternVars}>
       <h2 id={headingId}>Verlauf des Kontostands</h2>
       <ul className={styles.legend}>
         <li>
@@ -83,12 +84,13 @@ export function BalanceChart({ rows, payoutAge, reinvest }: BalanceChartProps) {
           Eigene Beiträge
         </li>
         <li>
-          <Swatch className={`${styles.zulagen} ${styles.framed}`} fill={stripes} />
+          {/* framed: forced colours only */}
+          <Swatch className={`${styles.zulagen} ${styles.framed}`} />
           Zulagen
         </li>
         {reinvest && (
           <li>
-            <Swatch className={styles.reinvested} fill={heavyStripes} />
+            <Swatch className={styles.reinvested} />
             Reinvestierte Steuererstattung
           </li>
         )}
@@ -163,7 +165,6 @@ export function BalanceChart({ rows, payoutAge, reinvest }: BalanceChartProps) {
                   width={(1 - BAR_GAP) * slot}
                   y={100 - segment.to * 100}
                   height={(segment.to - segment.from) * 100}
-                  fill={segmentFill(segment, stripes, heavyStripes)}
                   vectorEffect="non-scaling-stroke"
                 />
               )),

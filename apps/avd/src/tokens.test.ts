@@ -22,16 +22,25 @@ const app = parseTokens(readFileSync(join(SRC, 'tokens.css'), 'utf8'));
 const merged = withBase(readPlatformScheme(), app);
 const allCss = readCss(SRC);
 
+/** Fills of the chart series (story 017, UX §2), bottom to top as in the bar. */
+const SERIES = [
+  '--chart-contributions',
+  '--chart-zulagen',
+  '--chart-reinvested',
+  '--chart-returns',
+  '--chart-loss',
+] as const;
+/** Least contrast between any two series fills (story 017, UX §2). */
+const SERIES_DISTINCT = 1.35;
+
 /** Contrast pairs that involve an app token: [foreground, background, minimum ratio]. */
 const PAIRS: readonly Pair[] = [
-  // Chart series against the panel (story 013, UX §8); the pale fills are decorative, the
-  // outline or stripe carries the series, and segments are separated by --color-surface.
-  ['--chart-contributions', '--color-surface', NON_TEXT],
-  ['--chart-zulagen', '--color-surface', NON_TEXT],
-  ['--chart-returns', '--color-surface', NON_TEXT],
-  ['--chart-loss', '--color-surface', NON_TEXT],
-  // Stripes and frame of the reinvested tax refund (story 015, UX §8).
-  ['--chart-reinvested', '--color-surface', NON_TEXT],
+  // Every fill against the panel (story 013, UX §8; values story 017, UX §2).
+  ...SERIES.map((fill): Pair => [fill, '--color-surface', NON_TEXT]),
+  // Any two fills, not only current neighbours: an absent series lets two others touch.
+  ...SERIES.flatMap((fill, index) =>
+    SERIES.slice(index + 1).map((other): Pair => [fill, other, SERIES_DISTINCT]),
+  ),
 ];
 
 describe('Altersvorsorgedepot design tokens', () => {
@@ -39,7 +48,9 @@ describe('Altersvorsorgedepot design tokens', () => {
     expect(parityProblems(app)).toEqual([]);
   });
 
-  it('contrast pairs hold in both schemes', () => {
+  it('017/AC2: every series fill has 3:1 against the surface and 1.35:1 against every other fill', () => {
+    // 5 fills against the surface plus all 10 fill pairs, so the check can't pass vacuously.
+    expect(PAIRS).toHaveLength(15);
     expect(contrastProblems(merged, PAIRS)).toEqual([]);
   });
 
@@ -48,6 +59,9 @@ describe('Altersvorsorgedepot design tokens', () => {
   });
 
   it('every var(--x) is a platform or app token', () => {
-    expect(undefinedVarProblems(allCss, merged.light)).toEqual([]);
+    // The pattern URLs are set inline by BalanceChart (useId), read only in forced colours.
+    expect(
+      undefinedVarProblems(allCss, merged.light, ['--zulagen-stripes', '--reinvested-stripes']),
+    ).toEqual([]);
   });
 });

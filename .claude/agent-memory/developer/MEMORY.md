@@ -69,3 +69,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Chromium's native unchecked checkbox border is about 4.5:1 on both surfaces under the platform's `color-scheme: light dark`; sample it from a screenshot instead of drawing an own border (story 015).
 - A label/value flex row with `dt { flex: 1 1 0; min-width: 0 }` lets a large value (`--text-h2`, seven digits) overlap the label at 320 px: for big values add `flex-wrap: wrap`, `dt { flex-basis: auto }`, `dd { margin-left: auto }` so the value drops under the label (story 016).
 - Copy with `formatWholeEuro` (U+00A0 before €) in a label is fine: Playwright's `getByRole(..., { name, exact: true })` matches it with a normal space (story 016).
+- After changing a story status in `docs/backlog/README.md` (sed), run `npx prettier --write docs/backlog/README.md`: a longer status (`in-progress`) widens the table column and root `format:check` fails (story 017).

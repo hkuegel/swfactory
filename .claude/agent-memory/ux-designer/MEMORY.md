@@ -58,3 +58,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Avoid label text that is a lower-case phrase inside the note (getByText is case-insensitive substring), e.g. "nicht wieder angelegt" as a row label (story 015).
 - Fuchsia pair #a21caf / #f0abfc is the 4th chart hue (blue, amber, green, red used); computed 6.3 / 9.4 on surface (story 015).
 - Comparison/result blocks, duplicate AC phrases, minus sign, sub-heading in forms: see [comparison-blocks-and-copy-collisions](feedback_comparison_blocks.md) (story 016).
+- Solid chart series colours: lightness ladder, all-pairs rule 1.35:1, 3:1 on surface; see [chart-colour-ladder](feedback_chart_colour_ladder.md) (story 017).
