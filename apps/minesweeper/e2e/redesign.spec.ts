@@ -221,6 +221,10 @@ test('AC2: one font, one control radius, one primary and one secondary style, on
   const setupError = await message(setupErrors.first());
   await collect();
 
+  // The Start click leaves the mouse on the button: read the resting styles, not a running
+  // hover transition (bug 019: mid-transition colour on the slow CI runner).
+  await page.mouse.move(0, 0);
+  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
   const start = await style(startButton(page));
   const presets = page.getByRole('group', { name: 'Difficulty' }).getByRole('button');
   await expect(presets).toHaveCount(3);

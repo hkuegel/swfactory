@@ -9,6 +9,10 @@ export default createAppPlaywrightConfig({
   // Recent Chromium on Linux needs --enable-unsafe-swiftshader for the software fallback.
   // No effect on 2D tests. Applies to every project (also chromium-3d).
   launchArgs: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+  // Bug 019: on the 4-vCPU ubuntu runner two workers starve software WebGL (frame gaps up to
+  // 6.6 s, frame cost max 6.8 s), so 3D tests time out; one worker passed 109 of 110 there and
+  // was not slower in total (7.4 min against 7.9 to 11.3 min). Local runs keep the default.
+  ciWorkers: 1,
   extraProjects: [
     {
       // Story 008/AC4: the flows of 005 (flag, long press, keyboard, lose, win) once more with

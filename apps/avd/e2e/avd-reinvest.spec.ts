@@ -9,8 +9,8 @@ import {
   chartSeriesPixels,
   childrenInput,
   columnTexts,
-  differingPixels,
   euro,
+  expectSavingUnchanged,
   figure,
   monthlyInput,
   noResult,
@@ -76,10 +76,7 @@ test('AC1: unchecked by default and equal to 014; toggling updates and announces
   await page.keyboard.press('Space');
   await expect(box).not.toBeChecked();
   await expect(figure(page, REINVESTED)).toHaveCount(0);
-  const after = await savingSnapshot(page);
-  expect(after.figures).toBe(before.figures);
-  expect(after.table).toBe(before.table);
-  expect(await differingPixels(page, after.chart, before.chart)).toBe(0);
+  await expectSavingUnchanged(page, before);
   await page.clock.runFor(800);
   await expect(live).toHaveText(
     /^Endwert bei Auszahlungsbeginn mit 65: 22\.256,44\s€\. Steuererstattung gesamt: 3\.542,40\s€\./,

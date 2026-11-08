@@ -778,7 +778,9 @@ test.describe('loading and fallback', () => {
     await startFixed(page, 9, 9, ROW4);
     await cell(page, 9, 5).click();
     const before = await grid(page).ariaSnapshot();
-    await radio3d(page).check();
+    // click(), not check(): the app falls back to 2D as designed, which check() reports as a
+    // failed click when the abort is fast (bug 019).
+    await radio3d(page).click();
     await expect(visibleText(page, FAILED)).toBeVisible();
     await expect(announced(page, FAILED)).toHaveCount(1);
     await expect(radio2d(page)).toBeChecked();
