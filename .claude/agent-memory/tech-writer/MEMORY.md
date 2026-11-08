@@ -53,3 +53,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Document a per-year range by its format and sub-line, not by a sample max; the max is set by the last year and a sample goes stale (story 015).
 - When a feature changes an older Unreleased CHANGELOG line's claim, qualify that line ("unless you reinvest it") instead of leaving a contradiction (story 015).
 - Document only the UX copy that was built: scope drops decided by the orchestrator are in Implementation notes, so check there before writing a row (story 015, "Ausgezahlt statt angelegt").
+- When a Review finding flags a label as misleading (e.g. a net figure that already has a tax taken out), don't describe it as fact in the README; report it to the orchestrator as an open point (story 016).
+- Write a model's assumptions in the README as bullets per depot, each marked "model assumption, not checked against the law text", and link the ADR for the rules (story 016).

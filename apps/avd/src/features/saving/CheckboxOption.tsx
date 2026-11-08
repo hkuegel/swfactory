@@ -1,19 +1,22 @@
 import { useId } from 'react';
-import { REINVEST_COPY } from './fieldCopy.ts';
-import styles from './ReinvestOption.module.css';
+import styles from './CheckboxOption.module.css';
 
-export interface ReinvestOptionProps {
+export interface CheckboxOptionProps {
+  readonly label: string;
+  /** Always visible below the row, the box's description. */
+  readonly hint: string;
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
 }
 
 /**
- * The checkbox "Steuererstattung wieder anlegen" (story 015, AC1, UX §1, §6): not a text field,
- * never invalid or disabled; one stable native input, so focus stays on it while toggling.
+ * A labelled checkbox with a hint, in the right cell next to a field (story 015 reinvest box,
+ * story 016 Pauschbetrag box; UX §1, §6): not a text field, never invalid or disabled; one stable
+ * native input, so focus stays on it while toggling.
  */
-export function ReinvestOption({ checked, onChange }: ReinvestOptionProps) {
+export function CheckboxOption({ label, hint, checked, onChange }: CheckboxOptionProps) {
   const id = useId();
-  const inputId = `${id}-reinvest`;
+  const inputId = `${id}-box`;
   const hintId = `${inputId}-hint`;
   return (
     <div className={styles.option}>
@@ -29,10 +32,10 @@ export function ReinvestOption({ checked, onChange }: ReinvestOptionProps) {
             onChange(event.target.checked);
           }}
         />
-        {REINVEST_COPY.label}
+        {label}
       </label>
       <p id={hintId} className={styles.hint}>
-        {REINVEST_COPY.hint}
+        {hint}
       </p>
     </div>
   );

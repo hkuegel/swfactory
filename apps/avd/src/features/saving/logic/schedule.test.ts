@@ -11,6 +11,7 @@ const BASE: Inputs = {
   returnBp: 500,
   costsBp: 50,
   taxRateBp: 4200,
+  retirementRateBp: 2000,
 };
 
 describe('savingSchedule', () => {

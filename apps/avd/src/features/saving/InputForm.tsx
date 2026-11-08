@@ -1,9 +1,9 @@
 import { useId, type FormEvent } from 'react';
-import { ErrorIcon } from './ErrorIcon.tsx';
-import { errorMessage, FIELD_COPY } from './fieldCopy.ts';
-import { FIELD_IDS, FIELD_SPECS, type FieldId, type RawInputs } from './logic/fields.ts';
+import { CheckboxOption } from './CheckboxOption.tsx';
+import { ALLOWANCE_COPY, REINVEST_COPY } from './fieldCopy.ts';
+import { FIELD_IDS, type FieldId, type RawInputs } from './logic/fields.ts';
 import type { FieldErrors } from './logic/parseInputs.ts';
-import { ReinvestOption } from './ReinvestOption.tsx';
+import { TextField } from './TextField.tsx';
 import styles from './InputForm.module.css';
 
 export interface InputFormProps {
@@ -13,14 +13,13 @@ export interface InputFormProps {
   /** Story 015: reinvest the tax refund (checkbox after the seven fields). */
   readonly reinvest: boolean;
   readonly onReinvestChange: (checked: boolean) => void;
+  /** Story 016: the Sparer-Pauschbetrag of the ETF depot (last checkbox). */
+  readonly allowance: boolean;
+  readonly onAllowanceChange: (checked: boolean) => void;
 }
 
-function inputModeFor(field: FieldId) {
-  const spec = FIELD_SPECS[field];
-  // The iOS decimal keypad has no minus key: fields that allow negative values need the full keyboard.
-  if (spec.min < 0) return 'text';
-  return spec.decimals === 0 ? 'numeric' : 'decimal';
-}
+/** The ETF comparison's field, rendered after the reinvest box (story 016, UX §1). */
+const RETIREMENT_FIELD: FieldId = 'retirementRatePct';
 
 function preventSubmit(event: FormEvent<HTMLFormElement>) {
   // No submit button: the result follows every keystroke. Enter must never reload the page.
@@ -28,8 +27,9 @@ function preventSubmit(event: FormEvent<HTMLFormElement>) {
 }
 
 /**
- * The seven labelled text inputs with hint and error (013/014 AC1, AC6, AC7), then the reinvest
- * checkbox (015 AC1) in the free right cell of row 4.
+ * The seven labelled text inputs with hint and error (013/014 AC1, AC6, AC7), the reinvest
+ * checkbox (015 AC1) in the free right cell of row 4, then the ETF comparison's group: sub-heading,
+ * retirement rate and Pauschbetrag checkbox (016 AC1, AC10). DOM order = tab order.
  */
 export function InputForm({
   values,
@@ -37,54 +37,40 @@ export function InputForm({
   onChange,
   reinvest,
   onReinvestChange,
+  allowance,
+  onAllowanceChange,
 }: InputFormProps) {
   const id = useId();
   const headingId = `${id}-heading`;
+  const field = (fieldId: FieldId) => (
+    <TextField
+      key={fieldId}
+      field={fieldId}
+      inputId={`${id}-${fieldId}`}
+      value={values[fieldId]}
+      error={errors[fieldId]}
+      onChange={onChange}
+    />
+  );
   return (
     <form className={styles.form} aria-labelledby={headingId} noValidate onSubmit={preventSubmit}>
       <h2 id={headingId}>Eingaben</h2>
       <div className={styles.fields}>
-        {FIELD_IDS.map((field) => {
-          const copy = FIELD_COPY[field];
-          const error = errors[field];
-          const inputId = `${id}-${field}`;
-          const hintId = `${inputId}-hint`;
-          const errorId = `${inputId}-error`;
-          return (
-            <div key={field} className={styles.field}>
-              <label htmlFor={inputId}>{copy.label}</label>
-              <div className={styles.control}>
-                <input
-                  id={inputId}
-                  className={styles.input}
-                  type="text"
-                  inputMode={inputModeFor(field)}
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={values[field]}
-                  aria-invalid={error === undefined ? undefined : true}
-                  aria-describedby={error === undefined ? hintId : `${hintId} ${errorId}`}
-                  onChange={(event) => {
-                    onChange(field, event.target.value);
-                  }}
-                />
-                <span className={styles.suffix} aria-hidden="true">
-                  {copy.suffix}
-                </span>
-              </div>
-              <p id={hintId} className={styles.hint}>
-                {copy.hint}
-              </p>
-              {error !== undefined && (
-                <p id={errorId} className={styles.error}>
-                  <ErrorIcon className={styles.icon} />
-                  <span>{errorMessage(field, error)}</span>
-                </p>
-              )}
-            </div>
-          );
-        })}
-        <ReinvestOption checked={reinvest} onChange={onReinvestChange} />
+        {FIELD_IDS.filter((fieldId) => fieldId !== RETIREMENT_FIELD).map(field)}
+        <CheckboxOption
+          label={REINVEST_COPY.label}
+          hint={REINVEST_COPY.hint}
+          checked={reinvest}
+          onChange={onReinvestChange}
+        />
+        <h3 className={styles.subheading}>Für den ETF-Vergleich</h3>
+        {field(RETIREMENT_FIELD)}
+        <CheckboxOption
+          label={ALLOWANCE_COPY.label}
+          hint={ALLOWANCE_COPY.hint}
+          checked={allowance}
+          onChange={onAllowanceChange}
+        />
       </div>
     </form>
   );

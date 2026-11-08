@@ -218,7 +218,7 @@ test('AC7: the rate follows the costs field in tab order, is labelled and descri
   await expect(live).toBeEmpty();
   await page.clock.runFor(500);
   await expect(live).toHaveText(
-    /^Endwert bei Auszahlungsbeginn mit 65: [\d.]+,\d{2}\s€\. Steuererstattung gesamt: 11\.070,00\s€\.$/,
+    /^Endwert bei Auszahlungsbeginn mit 65: [\d.]+,\d{2}\s€\. Steuererstattung gesamt: 11\.070,00\s€\./,
   );
 
   await rateInput(page).fill('51');

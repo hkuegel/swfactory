@@ -10,6 +10,7 @@ const INPUTS = {
   returnBp: 500,
   costsBp: 50,
   taxRateBp: 3000,
+  retirementRateBp: 2000,
 };
 
 describe('chartGeometry', () => {

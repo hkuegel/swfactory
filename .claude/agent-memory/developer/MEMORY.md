@@ -67,3 +67,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Below 600 px, a label/value flex row whose label may be long needs `dt { flex: 1 1 0; min-width: 0 }`; a sub-line that must not widen its value gets `width: 0; min-width: 100%` (story 015).
 - Check pure logic against story oracles directly with `node --experimental-strip-types --no-warnings --input-type=module -e "import { f } from './f.ts' …"` from the logic dir (node 25), no test file needed (story 015).
 - Chromium's native unchecked checkbox border is about 4.5:1 on both surfaces under the platform's `color-scheme: light dark`; sample it from a screenshot instead of drawing an own border (story 015).
+- A label/value flex row with `dt { flex: 1 1 0; min-width: 0 }` lets a large value (`--text-h2`, seven digits) overlap the label at 320 px: for big values add `flex-wrap: wrap`, `dt { flex-basis: auto }`, `dd { margin-left: auto }` so the value drops under the label (story 016).
+- Copy with `formatWholeEuro` (U+00A0 before €) in a label is fine: Playwright's `getByRole(..., { name, exact: true })` matches it with a normal space (story 016).

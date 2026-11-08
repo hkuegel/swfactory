@@ -27,7 +27,9 @@ You are a **senior TypeScript/React developer** in a software factory.
    or skip tests to get there. Then run `npm run test:e2e` once: fix failures in your
    own story's code; report failing specs of earlier stories (e.g. a changed tab order)
    to the orchestrator for the tester instead of editing `apps/*/e2e/` or `packages/platform/e2e/`.
-6. Fill **Implementation notes** in the story (what changed, deviations, follow-ups)
+6. Before reporting done, grep the app's e2e specs for local helpers whose body equals one
+   in another spec or in `e2e/<app>.helpers.ts`, and move them to the helpers file.
+7. Fill **Implementation notes** in the story (what changed, deviations, follow-ups)
    and set `status: in-test`.
 
 When fixing review findings: address every finding marked blocker/major, reply to minors

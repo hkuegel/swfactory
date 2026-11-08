@@ -7,6 +7,11 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- The avd calculator compares the Altersvorsorgedepot with a normal ETF depot. Both get the
+  same monthly rate and are paid out in equal monthly payouts until age 85. The comparison shows
+  the yield after tax and the difference between the two depots. A new input sets the tax rate
+  in retirement, and a checkbox sets the Sparerpauschbetrag of the ETF depot. The tax on the
+  unsubsidised part of the AVD is an assumption that the BMF has not yet confirmed (#016).
 - The avd calculator can reinvest the tax refund. Tick "Steuererstattung wieder anlegen" to pay
   the refund of each saving year into the depot on 1 January of the next year, up to the yearly
   limit of 6.840 €. The result, the yearly table and the chart show the reinvested part (#015).
