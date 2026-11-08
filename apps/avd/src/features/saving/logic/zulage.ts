@@ -22,18 +22,20 @@ const BONUS_AGE_LIMIT = 25;
 const NONE: Zulage = { grundCents: 0, kinderCents: 0, perYearCents: 0, bonusCents: 0 };
 
 /**
- * Integer cents for every contribution the form allows: `annualCents` is 12 × the monthly
- * cents, so 0,5 · c and 0,25 · (c − 36.000) are whole cents.
+ * Integer cents for every integer `annualCents`. With a reinvested tax refund (story 015) c need
+ * not be a multiple of 12 any more, so 0,5 · c and 0,25 · (c − 36.000) can have half or quarter
+ * cents: the Grundzulage is rounded once, half up (ADR 0008); for c = 12 · monthly it is exact.
  */
 export function zulage(annualCents: number, children: number, ageAtStart: number): Zulage {
   if (annualCents < MIN_CONTRIBUTION_CENTS) return NONE;
-  const grundCents =
+  const grundCents = Math.round(
     0.5 * Math.min(annualCents, GRUND_FULL_RATE_LIMIT_CENTS) +
-    0.25 *
-      Math.max(
-        0,
-        Math.min(annualCents, GRUND_REDUCED_RATE_LIMIT_CENTS) - GRUND_FULL_RATE_LIMIT_CENTS,
-      );
+      0.25 *
+        Math.max(
+          0,
+          Math.min(annualCents, GRUND_REDUCED_RATE_LIMIT_CENTS) - GRUND_FULL_RATE_LIMIT_CENTS,
+        ),
+  );
   const kinderCents = children * Math.min(annualCents, KINDER_LIMIT_CENTS);
   return {
     grundCents,

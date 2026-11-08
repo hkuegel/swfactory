@@ -7,9 +7,13 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- The avd calculator can reinvest the tax refund. Tick "Steuererstattung wieder anlegen" to pay
+  the refund of each saving year into the depot on 1 January of the next year, up to the yearly
+  limit of 6.840 €. The result, the yearly table and the chart show the reinvested part (#015).
 - The avd calculator takes your marginal tax rate (Grenzsteuersatz, 30 % by default) and shows
   the tax refund from the Günstigerprüfung per saving year and in total. It also shows your own
-  contributions after the refund. The refund is kept apart from the depot (#014).
+  contributions after the refund. The refund is kept apart from the depot unless you reinvest it
+  (#014, #015).
 - The avd yearly table has a "Steuererstattung" column with the refund of each saving year
   (#014).
 - New app `avd`: an Altersvorsorgedepot calculator for the saving phase. Enter age, payout

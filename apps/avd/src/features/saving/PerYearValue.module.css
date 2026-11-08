@@ -1,0 +1,18 @@
+/* Sub-line of a per-year range (story 015, UX §2, §7): muted, under the value, may wrap. */
+.subLine {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: var(--leading-sm);
+  white-space: normal;
+}
+
+/* Narrow rows: the sub-line takes the value's width instead of widening it, so the label next
+   to it keeps its room and the value stays on one line (UX §7). */
+@media (max-width: 599.98px) {
+  .subLine {
+    width: 0;
+    min-width: 100%;
+  }
+}

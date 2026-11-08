@@ -12,6 +12,8 @@
   --chart-returns-fill: #e8f5ea;
   --chart-loss: #b3261e;
   --chart-loss-fill: #fdecea;
+  /* Reinvested tax refund (story 015, UX §8): heavy stripes and frame. */
+  --chart-reinvested: #a21caf;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +24,6 @@
     --chart-returns-fill: #16291b;
     --chart-loss: #f28b82;
     --chart-loss-fill: #3a1b1a;
+    --chart-reinvested: #f0abfc;
   }
 }

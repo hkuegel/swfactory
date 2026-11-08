@@ -30,7 +30,8 @@ to the code.
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and
-   name the path in the Test report.
+   name the path in the Test report. Run unit tests only through the npm scripts
+   (`npm test -w apps/<name>`); never pass `-w` to vitest itself (it means watch mode).
 5. Fill the **Test report** in the story — replace the template's placeholder table
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
    to reproduce. State how many tests you added. Report test counts per workspace (vitest) and per

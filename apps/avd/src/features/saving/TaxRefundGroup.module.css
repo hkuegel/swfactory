@@ -47,11 +47,27 @@
 }
 
 .row dd {
-  flex: none;
+  /* Shrinks only down to the value (nowrap); a range's sub-line (015) wraps under it. */
+  flex: 0 1 auto;
   margin: 0;
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
+}
+
+/* A per-year range (story 015): the label keeps its words, the value moves under it, right. */
+@media (max-width: 599.98px) {
+  .row:where(.wraps) {
+    flex-wrap: wrap;
+  }
+
+  .row:where(.wraps) dt {
+    min-width: auto;
+  }
+
+  .row:where(.wraps) dd {
+    margin-left: auto;
+  }
 }
 
 /* Own contributions after the refund: weight and a border, not colour alone. */

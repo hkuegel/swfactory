@@ -1,13 +1,13 @@
 import type { YearRow } from './project.ts';
 
-export type Series = 'contributions' | 'zulagen' | 'returns';
+export type Series = 'contributions' | 'zulagen' | 'reinvested' | 'returns';
 
 export interface Segment {
   readonly series: Series;
   /** Fraction of the plot height, 0 = baseline, from < to. */
   readonly from: number;
   readonly to: number;
-  /** returns < 0: drawn from the balance up to contributions + Zulagen. */
+  /** returns < 0: drawn from the balance up to contributions + Zulagen + reinvested. */
   readonly loss: boolean;
 }
 
@@ -50,14 +50,18 @@ function segment(series: Series, from: number, to: number, loss: boolean): Segme
 }
 
 /**
- * Rows → one stacked bar per saving year (contributions, Zulagen, returns from the baseline up)
- * and the y-axis ticks, all as fractions of the plot height. Negative returns become a `loss`
- * segment from the balance up to contributions + Zulagen, drawn over the stack.
+ * Rows → one stacked bar per saving year (contributions, Zulagen, reinvested refund, returns from
+ * the baseline up) and the y-axis ticks, all as fractions of the plot height. Negative returns
+ * become a `loss` segment from the balance up to the paid-in sum, drawn over the stack.
  */
 export function chartGeometry(rows: readonly YearRow[]): ChartGeometry {
   let max = 0;
   for (const row of rows) {
-    max = Math.max(max, row.contributionsCents + row.zulagenCents, row.balanceCents);
+    max = Math.max(
+      max,
+      row.contributionsCents + row.zulagenCents + row.reinvestedCents,
+      row.balanceCents,
+    );
   }
   if (max <= 0) {
     return {
@@ -72,14 +76,16 @@ export function chartGeometry(rows: readonly YearRow[]): ChartGeometry {
 
   const bars = rows.map((row): Bar => {
     const contributions = row.contributionsCents / top;
-    const paid = (row.contributionsCents + row.zulagenCents) / top;
+    const zulagen = (row.contributionsCents + row.zulagenCents) / top;
+    const paid = (row.contributionsCents + row.zulagenCents + row.reinvestedCents) / top;
     const balance = row.balanceCents / top;
     return {
       year: row.year,
       age: row.age,
       segments: [
         ...segment('contributions', 0, contributions, false),
-        ...segment('zulagen', contributions, paid, false),
+        ...segment('zulagen', contributions, zulagen, false),
+        ...segment('reinvested', zulagen, paid, false),
         ...(row.returnsCents < 0
           ? segment('returns', balance, paid, true)
           : segment('returns', paid, balance, false)),

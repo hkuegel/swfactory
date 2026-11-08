@@ -69,3 +69,7 @@ For the chart:
   function or revisiting this ADR.
 - Values stay far inside `Number.MAX_SAFE_INTEGER` (worst valid case about 7,2 · 10^10
   cents: age 18 to 70, 570 EUR, 10 children, 20 % return).
+- Amended by [ADR 0008](0008-avd-yearly-contribution-schedule-with-reinvested-refund.md)
+  (story 015): yearly contributions, Zulagen and refunds come from an integer schedule
+  computed before the balance loop; with a reinvested refund c is no longer a multiple of 12,
+  so the Grundzulage is rounded once to the cent, and the result has a fourth part.

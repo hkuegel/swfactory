@@ -3,12 +3,16 @@ import { ErrorIcon } from './ErrorIcon.tsx';
 import { errorMessage, FIELD_COPY } from './fieldCopy.ts';
 import { FIELD_IDS, FIELD_SPECS, type FieldId, type RawInputs } from './logic/fields.ts';
 import type { FieldErrors } from './logic/parseInputs.ts';
+import { ReinvestOption } from './ReinvestOption.tsx';
 import styles from './InputForm.module.css';
 
 export interface InputFormProps {
   readonly values: RawInputs;
   readonly errors: FieldErrors;
   readonly onChange: (field: FieldId, value: string) => void;
+  /** Story 015: reinvest the tax refund (checkbox after the seven fields). */
+  readonly reinvest: boolean;
+  readonly onReinvestChange: (checked: boolean) => void;
 }
 
 function inputModeFor(field: FieldId) {
@@ -23,8 +27,17 @@ function preventSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
 }
 
-/** The seven labelled text inputs with hint and error (013/014 AC1, AC6, AC7). */
-export function InputForm({ values, errors, onChange }: InputFormProps) {
+/**
+ * The seven labelled text inputs with hint and error (013/014 AC1, AC6, AC7), then the reinvest
+ * checkbox (015 AC1) in the free right cell of row 4.
+ */
+export function InputForm({
+  values,
+  errors,
+  onChange,
+  reinvest,
+  onReinvestChange,
+}: InputFormProps) {
   const id = useId();
   const headingId = `${id}-heading`;
   return (
@@ -71,6 +84,7 @@ export function InputForm({ values, errors, onChange }: InputFormProps) {
             </div>
           );
         })}
+        <ReinvestOption checked={reinvest} onChange={onReinvestChange} />
       </div>
     </form>
   );

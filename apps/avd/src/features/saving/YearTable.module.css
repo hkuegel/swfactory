@@ -21,6 +21,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* One more column while the refund is reinvested (story 015, UX §7). */
+.table:where(.reinvest) {
+  min-width: 720px;
+}
+
 .caption {
   padding: var(--space-2) var(--space-3);
   color: var(--color-text-muted);

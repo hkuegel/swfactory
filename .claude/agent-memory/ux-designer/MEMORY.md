@@ -31,7 +31,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Cell-size formulas for fluid boards must subtract panel padding, well padding and the grid gaps; keep it in tokens, since a wrong constant makes the page scroll sideways (story 007).
 - AC wording can collide with third-party branding (Google button fill/font) and functional loops (spinner vs "nothing loops"): list these in Open points for the product owner instead of silently deviating (story 007).
 - Native radios styled as a segmented control: input as full-size opacity:0 overlay (not display:none, not the 1 px clip) so Playwright check() works; draw focus ring on the sibling span, since the input's own outline is invisible; keep weight constant and the check mark in the DOM (visibility) so selecting never reflows (story 008).
-- A state change made on a focused native control (radio, checkbox) needs no live region: the control announces itself; a region would duplicate (story 008).
+- A state change made on a focused native control (radio, checkbox) needs no live region of its own: the control announces itself; a region would duplicate (story 008).
 - Check CSS specificity claims of the Technical design: a later `@media (forced-colors)` block does NOT win over a more specific earlier selector like `.scroller[data-view] .cell`; recommend `:where()` (story 008).
 - Dark mode: inset shadows in near-black on a near-black well are invisible (1.1:1); give dark its own cue (light 1 px edge) instead of relying on shade, and say shape carries the state (story 008).
 - No `filter: drop-shadow` on hundreds of SVG glyphs; use a `::before` background ellipse (story 008).
@@ -47,8 +47,13 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Choose German labels so no label is a substring of another (getByLabel is substring by default); name the form "Eingaben" and use that word nowhere else so it works as signedInContent probe (story 013).
 - Calculator with live results: live region mounted empty, filled only after the first edit, text debounced about 700 ms (visible UI immediate); field errors via aria-describedby, no role=alert (story 013).
 - Spinner convention: 20 px ring, 2 px `--color-text-muted`, 0.8 s, static ring at opacity 0.6 under reduced motion (LoginView.module.css); reuse, and flag the loop to the PO (story 009).
-- SVG charts with preserveAspectRatio="none": use horizontal stripes/hollow/dashed outlines for series identity (diagonals shear); bar slots min 8 so one bar is not stretched (story 013).
-- After editing wide markdown tables in a story, ask the orchestrator to run `npx prettier --write` on the story, because I have no shell to run it myself (story 013).
+- SVG charts with preserveAspectRatio="none": use horizontal stripes/hollow/dashed outlines for series identity (diagonals and dots shear); vary stripe pitch/weight plus a 2 px frame for further series; bar slots min 8 (story 013, 015).
+- After editing wide markdown tables in a story, ask the orchestrator to run `npx prettier --write` on the story, because I have no shell to run it myself (story 013, 015).
 - Calculator inputs that allow negatives: use inputMode="text", not "decimal", because iOS shows no minus key for decimal (story 013 review).
 - Extending a done feature: new figure labels must not equal a table header or contain an AC-quoted column name alone; keep the heading free of that word too, and list which labels are substrings (story 014).
 - Result figures that are "not part of" a total: bordered group with own heading + lead-in + column separator border, so the boundary is visible without colour (story 014).
+- A toggle that makes earlier copy false: write a checked variant for every sentence (heading, lead-in, footnote, note), keep the unchecked strings byte-identical (existing tests), and make the checked heading not a substring of the old one (story 015).
+- A per-year figure that varies once a mode is on: keep the label (tests look it up), show `{min} bis {max}` plus a muted sub-line only when values differ; don't rename to "im 1. Jahr" (story 015).
+- Live sentence for a toggle: append a part (e.g. "Davon wieder angelegt: x.") so the string differs in both directions and the debounced region always announces (story 015).
+- Avoid label text that is a lower-case phrase inside the note (getByText is case-insensitive substring), e.g. "nicht wieder angelegt" as a row label (story 015).
+- Fuchsia pair #a21caf / #f0abfc is the 4th chart hue (blue, amber, green, red used); computed 6.3 / 9.4 on surface (story 015).

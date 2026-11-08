@@ -29,6 +29,13 @@ describe('zulage', () => {
     });
   });
 
+  it('015: the Grundzulage of a c that is not a multiple of 4 cents is rounded once, half up', () => {
+    // 0,25 · (100.002 − 36.000) = 16.000,5 → 34.000,5 cents; 100.001 → 34.000,25 cents.
+    expect(zulage(100_002, 0, 40).grundCents).toBe(34_001);
+    expect(zulage(100_001, 0, 40).grundCents).toBe(34_000);
+    expect(zulage(100_001, 0, 40).perYearCents).toBe(34_000);
+  });
+
   it('every allowed monthly contribution gives whole cents in every part', () => {
     const notWhole: number[] = [];
     for (let monthlyCents = 0; monthlyCents <= 57_000; monthlyCents++) {

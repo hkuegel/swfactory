@@ -16,17 +16,20 @@ import styles from './SavingCalculator.module.css';
 const LIVE_REGION_DELAY_MS = 700;
 
 /**
- * Saving phase calculator (stories 013, 014): owns the seven raw input texts; validation,
- * projection, tax refund, table, chart and live text are derived on every render.
+ * Saving phase calculator (stories 013, 014, 015): owns the seven raw input texts and the
+ * reinvest checkbox; validation, projection, tax refund, table, chart and live text are derived
+ * on every render.
  */
 export function SavingCalculator() {
   const [values, setValues] = useState<RawInputs>(DEFAULT_INPUTS);
   // The default result on load is not announced; the live region speaks after the first edit.
   const [edited, setEdited] = useState(false);
+  // Outside the text fields, so an invalid field never touches it (015 AC5); unchecked = 014.
+  const [reinvest, setReinvest] = useState(false);
 
   const parsed = parseInputs(values);
-  const projection = parsed.ok ? project(parsed.inputs) : null;
-  // Derived from the projection, never fed back into it: the rate cannot change a depot figure.
+  const projection = parsed.ok ? project(parsed.inputs, { reinvestRefund: reinvest }) : null;
+  // Reads c and Z of every year from the projection's schedule (ADR 0008).
   const refund = parsed.ok && projection !== null ? taxRefund(parsed.inputs, projection) : null;
   const payoutAge = parsed.ok ? parsed.inputs.payoutAge : null;
   const errors = parsed.ok ? {} : parsed.errors;
@@ -35,6 +38,9 @@ export function SavingCalculator() {
   if (edited) {
     if (projection !== null && refund !== null && payoutAge !== null) {
       liveText = `Endwert bei Auszahlungsbeginn mit ${String(payoutAge)}: ${formatEuro(projection.total.balanceCents)}. Steuererstattung gesamt: ${formatEuro(refund.totalCents)}.`;
+      if (reinvest) {
+        liveText += ` Davon wieder angelegt: ${formatEuro(projection.total.reinvestedCents)}.`;
+      }
     } else {
       const field = firstInvalidField(errors);
       if (field !== undefined) liveText = `Kein Ergebnis: ${FIELD_COPY[field].label} ist ungültig.`;
@@ -47,19 +53,35 @@ export function SavingCalculator() {
     setEdited(true);
   }
 
+  function handleReinvestChange(checked: boolean) {
+    setReinvest(checked);
+    setEdited(true);
+  }
+
   return (
     <div className={styles.panel}>
-      <InputForm values={values} errors={errors} onChange={handleChange} />
+      <InputForm
+        values={values}
+        errors={errors}
+        onChange={handleChange}
+        reinvest={reinvest}
+        onReinvestChange={handleReinvestChange}
+      />
       <ResultSummary
         projection={projection}
         refund={refund}
         payoutAge={payoutAge}
         liveText={settledLiveText}
+        reinvest={reinvest}
       />
       {projection !== null && refund !== null && payoutAge !== null && (
         <>
-          <BalanceChart rows={projection.years} payoutAge={payoutAge} />
-          <YearTable rows={projection.years} refundsCents={refund.byYearCents} />
+          <BalanceChart rows={projection.years} payoutAge={payoutAge} reinvest={reinvest} />
+          <YearTable
+            rows={projection.years}
+            refundsCents={refund.byYearCents}
+            reinvest={reinvest}
+          />
         </>
       )}
     </div>

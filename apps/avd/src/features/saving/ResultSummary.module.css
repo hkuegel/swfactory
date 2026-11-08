@@ -105,6 +105,15 @@
   color: var(--color-danger);
 }
 
+/* Below 600 px a long label (story 015, "Reinvestierte Steuererstattung") wraps; the value
+   stays on the right of the same row. */
+@media (max-width: 599.98px) {
+  .figure dt {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
 /* From 600 px: cards with the label above the value, 2 × 2 (4 in a row from 900 px). */
 @media (min-width: 600px) {
   .figures {
@@ -134,11 +143,21 @@
   .endValue dd {
     font-size: var(--text-h1);
   }
+
+  /* Five cards (story 015, UX §1): Endwert keeps a full-width last row. */
+  :where(.five) .endValue {
+    grid-column: span 2;
+  }
 }
 
+/* From 900 px: four in a row; five cards in three columns, Endwert spans two (story 015). */
 @media (min-width: 900px) {
   .figures {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .figures:where(.five) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

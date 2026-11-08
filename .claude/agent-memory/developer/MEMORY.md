@@ -62,3 +62,8 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - When a design gives rules for the first and the last row, test N = 1 where both apply; the rule that keeps the end value correct wins (story 013).
 - Before adding a contrast pair to an app's `tokens.test.ts`, grep `packages/platform/src/styles/tokens.test.ts`: generic pairs (e.g. muted text on `--color-surface-subtle`) are already tested there (story 014).
 - When a story adds a table column or field, grep e2e for positional lookups (`td').last()`, `nth(`, exact header lists, `$`-anchored live text) and switch them to header-index lookups (story 014).
+- Before making a function read precomputed values from a shared object (e.g. `projection.schedule`), grep its tests for calls that vary an input on one precomputed object: copied values would make them pass vacuously; recompute from the shared parts plus the input instead (story 015).
+- When existing oracle cases are rerun for a new branch (checked option), check the branch is exercised (all 013 cases had refund 0); add one case and assert a strict difference when it applies, equality otherwise (story 015).
+- Below 600 px, a label/value flex row whose label may be long needs `dt { flex: 1 1 0; min-width: 0 }`; a sub-line that must not widen its value gets `width: 0; min-width: 100%` (story 015).
+- Check pure logic against story oracles directly with `node --experimental-strip-types --no-warnings --input-type=module -e "import { f } from './f.ts' …"` from the logic dir (node 25), no test file needed (story 015).
+- Chromium's native unchecked checkbox border is about 4.5:1 on both surfaces under the platform's `color-scheme: light dark`; sample it from a screenshot instead of drawing an own border (story 015).
