@@ -38,17 +38,14 @@ type Probe = {
 };
 type TestWindow = Window & { __minesweeperMines?: Pair[]; __board3dProbe?: Probe };
 
-/** Safety cap of the watch window on hardware GL (the bound itself follows the measured frames, see AC_LIMIT_MS). */
-const HARDWARE_WATCH_MS = 5000;
-/** The AC's limit for the explosion. */
-const AC_LIMIT_MS = 2500;
-/** Margin for one more frame on top of the longest measured frame gap. */
+/** Margin for one more frame on top of the frame gaps before the end. */
 const FRAME_MARGIN_MS = 100;
 /**
- * Safety cap of the watch window on software WebGL (SwiftShader): 2.5 s plus the longest frame gap measured on
- * the GitHub runner, 6.6 s (rAF at 375 x 800, tester's run, story 019 Verification), about 10 s.
+ * Safety cap of the watch window. Headless Chromium renders on software WebGL (SwiftShader) on every
+ * machine: 2.5 s plus the longest frame gap measured on the GitHub runner, 6.6 s (rAF at 375 x 800,
+ * Test report "Reproduction", story 019), about 10 s.
  */
-const SOFTWARE_WATCH_MS = 10_000;
+const WATCH_MS = 10_000;
 
 const UNAVAILABLE = '3D is not available in this browser.';
 const LOST = 'You lost. You revealed a mine.';
@@ -757,11 +754,7 @@ test.describe('real loop', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await openGame(page);
     await choose3dLive(page);
-    const software = await page.evaluate(() =>
-      /swiftshader|software|llvmpipe/i.test((window as TestWindow).__board3dProbe?.renderer ?? ''),
-    );
-    const watchMs = software ? SOFTWARE_WATCH_MS : HARDWARE_WATCH_MS;
-    test.setTimeout(software ? 90_000 : 60_000);
+    test.setTimeout(90_000);
     await warmUp(page);
     const t0 = await loseTimed(page);
 
@@ -794,23 +787,28 @@ test.describe('real loop', () => {
         }
         return { states, during, final: probe.luminance(area()) };
       },
-      [t0, index(9, ...LOSS_CLICK), watchMs] as const,
+      [t0, index(9, ...LOSS_CLICK), WATCH_MS] as const,
     );
     const last = seen.states.at(-1);
     expect(last?.running, 'ends by itself').toBe(false);
     expect(last?.particles).toBe(0);
-    // The AC's 2.5 s plus the one slow frame that can hide the end: the longest gap between consecutive frames of
-    // this run (from the click on), so a fast machine stays close to 2.5 s (runner: gaps up to 6.6 s).
-    let longestGap = 0;
-    let previous = 0;
-    for (const s of seen.states) {
-      longestGap = Math.max(longestGap, s.t - previous);
-      previous = s.t;
-    }
+    // The end can be hidden by at most the frame that first saw `running === false` (the gap before
+    // it) plus one frame, because `fxState.running` can be one frame stale (the gap before that):
+    // the first idle frame is at most the AC's 2.5 s plus those two gaps plus a margin. Gaps earlier
+    // in the run (e.g. the first one, which includes the evaluate round trip) do not count.
+    // (Runner: single gaps up to 6.6 s.)
+    const idleAt = seen.states.findIndex((s) => !s.running);
+    const gapBefore = (i: number) =>
+      (seen.states[i]?.t ?? 0) - (i > 0 ? (seen.states[i - 1]?.t ?? 0) : 0);
     expect(
-      last?.t,
-      'and not later than the AC limit plus the longest frame gap',
-    ).toBeLessThanOrEqual(AC_LIMIT_MS + longestGap + FRAME_MARGIN_MS);
+      seen.states[idleAt]?.t,
+      'and not later than the AC limit plus the two frame gaps before the end',
+    ).toBeLessThanOrEqual(
+      LOSS_LIMIT_MS +
+        gapBefore(idleAt) +
+        (idleAt > 0 ? gapBefore(idleAt - 1) : 0) +
+        FRAME_MARGIN_MS,
+    );
     // Not cut short: the first frame that sees it ended is at or after its own end (2.2 s; the
     // bug this guards against ended it after ~0.57 s), and it was seen running before.
     const firstIdle = seen.states.find((s) => !s.running);
