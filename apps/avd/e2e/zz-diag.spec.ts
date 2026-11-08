@@ -66,7 +66,21 @@ test('diag avd AC1 chart noise', async ({ page }) => {
   await page.clock.pauseAt(new Date('2027-01-04T10:01:00Z'));
   await setReference(page);
   await rateInput(page).fill('42');
+  const geo = () =>
+    page.evaluate(() => {
+      const c = document.querySelector('[role=img]')!;
+      const r = c.getBoundingClientRect();
+      return {
+        scrollY: window.scrollY,
+        top: r.top,
+        left: r.left,
+        h: r.height,
+        w: r.width,
+        dpr: window.devicePixelRatio,
+      };
+    });
   const before = await savingSnapshot(page);
+  const geoBefore = await geo();
   const animsBefore = await anims(page);
   await rateInput(page).focus();
   await page.keyboard.press('Tab');
@@ -76,10 +90,13 @@ test('diag avd AC1 chart noise', async ({ page }) => {
   await page.keyboard.press('Space');
   await expect(reinvestBox(page)).not.toBeChecked();
   const after = await savingSnapshot(page);
+  const geoAfter = await geo();
   const animsAfter = await anims(page);
   await page.clock.runFor(800);
   const settled = await savingSnapshot(page);
   const r: Record<string, unknown> = { animsBefore, animsAfter, animsSettled: await anims(page) };
+  r.geoBefore = geoBefore;
+  r.geoAfter = geoAfter;
   r.afterVsBefore = await diffBox(page, after.chart, before.chart);
   r.settledVsBefore = await diffBox(page, settled.chart, before.chart);
   r.settledVsAfter = await diffBox(page, settled.chart, after.chart);
