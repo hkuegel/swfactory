@@ -56,39 +56,38 @@ test('diag avd screenshot sources', async ({ page }) => {
       ph: document.documentElement.scrollHeight,
     }));
   const r: Record<string, unknown> = {};
-  const a = await shot();
-  const htmlA = await html();
-  r.infoA = await info();
-  const b = await shot();
-  r.AvsB_sameState = await diff(page, a, b);
-  // round trip as in the test, via keyboard
+  const sizes = await chart(page).evaluate((e) => {
+    const b = e.getBoundingClientRect();
+    return { top: b.top + window.scrollY, h: b.height, w: b.width };
+  });
+  r.sizes = sizes;
+  const at = async (y: number) => {
+    await page.evaluate((v) => window.scrollTo(0, v), y);
+    const info = await chart(page).evaluate((e) => ({
+      vtop: e.getBoundingClientRect().top,
+      sy: window.scrollY,
+    }));
+    return { info, png: await shot() };
+  };
+  const base = await at(2000);
+  const same = await at(2000);
+  r.repeatSameScroll = await diff(page, base.png, same.png);
+  for (const y of [2001, 2010, 2100, 1900]) {
+    const o = await at(y);
+    r[`scroll${y}`] = { info: o.info, ...(await diff(page, base.png, o.png)) };
+  }
+  // reach the same scroll after keyboard round trip
   await rateInput(page).focus();
   await page.keyboard.press('Tab');
   await page.clock.runFor(900);
   await page.keyboard.press('Space');
-  await reinvestBox(page).waitFor();
   await page.keyboard.press('Space');
   await page.waitForTimeout(100);
-  r.infoAfter = await info();
-  const c = await shot();
-  const htmlC = await html();
-  r.AvsC = await diff(page, a, c);
-  r.BvsC = await diff(page, b, c);
-  r.htmlEqual = htmlA === htmlC;
-  if (htmlA !== htmlC) {
-    let i = 0;
-    while (htmlA[i] === htmlC[i]) i++;
-    r.firstDiff = [
-      htmlA.slice(Math.max(0, i - 80), i + 120),
-      htmlC.slice(Math.max(0, i - 80), i + 120),
-    ];
-  }
-  // round trip through the mouse instead, then re-shot twice
-  const d = await shot();
-  r.CvsD = await diff(page, c, d);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  const e = await shot();
-  r.AvsE_afterScrollTop = await diff(page, a, e);
-  r.infoE = await info();
+  const back = await at(2000);
+  r.afterRoundTripSameScroll = { info: back.info, ...(await diff(page, base.png, back.png)) };
+  // only a focus change
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  const blurred = await at(2000);
+  r.afterBlur = await diff(page, base.png, blurred.png);
   console.log('DIAG2 ' + JSON.stringify(r));
 });
