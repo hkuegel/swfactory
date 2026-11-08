@@ -5,25 +5,22 @@
  * tokens.test.ts). Generic tokens belong to the platform, not here.
  */
 :root {
-  /* Chart series (story 013, UX §8): 3:1 against --color-surface; pale fills are decorative. */
-  --chart-contributions: #1d4ed8;
-  --chart-zulagen: #b45309;
-  --chart-returns: #1a7030;
-  --chart-returns-fill: #e8f5ea;
-  --chart-loss: #b3261e;
-  --chart-loss-fill: #fdecea;
-  /* Reinvested tax refund (story 015, UX §8): heavy stripes and frame. */
-  --chart-reinvested: #a21caf;
+  /* Chart series (story 017, UX §2): fills of the series; 3:1 against --color-surface; any two
+     differ by 1,35:1. Forced colours use system colours and patterns instead. */
+  --chart-contributions: #2243ac;
+  --chart-zulagen: #d17d00;
+  --chart-returns: #1f6f3b;
+  --chart-loss: #d8433c;
+  /* Reinvested tax refund (story 015; colour story 017, UX §2). */
+  --chart-reinvested: #5f1259;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --chart-contributions: #8ab4f8;
-    --chart-zulagen: #f6ad55;
-    --chart-returns: #81c995;
-    --chart-returns-fill: #16291b;
-    --chart-loss: #f28b82;
-    --chart-loss-fill: #3a1b1a;
-    --chart-reinvested: #f0abfc;
+    --chart-contributions: #5186e8;
+    --chart-zulagen: #fddf9c;
+    --chart-returns: #4cb66b;
+    --chart-loss: #fdaba3;
+    --chart-reinvested: #a84ca2;
   }
 }

@@ -117,11 +117,14 @@ added up to that year. It sits between **Zulagen gutgeschrieben** and **Erträge
 part of the balance, even when the refund is reinvested.
 
 The **Verlauf des Kontostands** chart shows the same parts as stacked bars, one bar per year.
-The parts differ by pattern as well as by colour: contributions are solid, Zulagen are
-striped, returns have an outline. Negative returns have a dashed outline. While the checkbox
-is ticked, the reinvested refund is a fourth part with heavy stripes inside a frame. It is
-listed as **Reinvestierte Steuererstattung** in the legend. The chart has a text alternative
-with the end value and the payout start. The table gives the same numbers as text. Without the
+Each part has its own solid colour, and the legend lists the parts in the order of the bar.
+Negative returns are drawn as a loss part in its own colour, over the stack. While the checkbox
+is ticked, the reinvested refund is a fourth part in its own colour. It is listed as
+**Reinvestierte Steuererstattung** in the legend. In forced colours mode (for example Windows
+high contrast), the system colours replace these colours. The parts then differ by pattern and
+outline: contributions are solid, Zulagen are striped, the reinvested refund has heavy stripes
+inside a frame, returns are hollow with an outline, and a loss is hollow with a dashed outline.
+The chart has a text alternative with the end value and the payout start. The table gives the same numbers as text. Without the
 checkbox, the chart does not show the tax refund.
 
 ### Tax refund

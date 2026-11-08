@@ -99,6 +99,8 @@ The backlog must be enough to rebuild the app without any chat history:
   `app: platform | <name>`). Numbers are global across all backlogs; the root
   `docs/backlog/README.md` lists every story. Acceptance criteria are numbered
   `AC1, AC2, …` in Given/When/Then form; tests reference them in their names (e.g. `it('AC2: shows an error when …')`).
+  After changing a status in `docs/backlog/README.md`, run `npx prettier --write docs/backlog/README.md`
+  (the column width follows the longest status).
 - **Story record:** from story 013 on, a done story has a `### Cost` table in its
   Retrospective (one row per agent run, orchestrator row "not measured" or "estimate"), a
   Review section that lists every item of the versioned `.claude/agents/reviewer-checklist.md`
@@ -186,7 +188,9 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   case-insensitive substring unless `exact: true` is set, and later stories add blocks with
   the same labels.
 - **Shared e2e helpers:** an app's shared e2e helpers live in one `e2e/<app>.helpers.ts`
-  that every spec imports; never copy them.
+  that every spec imports; never copy them. Helpers that read pixels or resolve colours share
+  one resolver; values are resolved outside `page.evaluate` and passed in, never re-resolved per
+  helper.
 - **Time and randomness** never inside reducers: pass `now` or a seed in the action. e2e
   tests control time with Playwright `page.clock`; a dev-only hook only if that doesn't
   work.
@@ -225,7 +229,11 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   (ADR 0004, 0006); a token belongs to the platform iff a platform module reads it. No
   colour literals or `font-family` in CSS modules; dark mode only in the token files;
   every `transition` uses `var(--duration)`. Every state cue also exists as a
-  border, outline or glyph, so it survives forced colours. The token test of the
+  border, outline or glyph, so it survives forced colours. A chart series may be a plain
+  colour in the normal view when a token test enforces its contrast against the surface and
+  against every other series; the non-colour cue then lives in the forced-colours block. A
+  paint that differs by media query is chosen in CSS; a value only React knows (`url(#useId)`)
+  is passed as an inline custom property, never as the `fill` attribute. The token test of the
   platform and of every app (`src/tokens.test.ts`, shared rules in
   `@swfactory/platform/test/tokenRules`) enforces this over the CSS, with the contrast pairs
   the modules actually paint. Values derived from tokens are `calc()` over the token, never a hand-rounded number. Variant

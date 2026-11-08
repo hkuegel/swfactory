@@ -105,45 +105,45 @@ export function cents(text: string | null): number {
 /** Counts chart pixels within a small tolerance of each series token colour (013, 015). */
 export async function chartSeriesPixels(page: Page) {
   const png = (await chart(page).screenshot({ animations: 'disabled' })).toString('base64');
-  return page.evaluate(async (data) => {
-    const style = getComputedStyle(document.documentElement);
-    const rgb = (name: string) => {
-      const probe = document.createElement('span');
-      probe.style.color = style.getPropertyValue(name);
-      document.body.append(probe);
-      const m = /rgba?\((\d+), (\d+), (\d+)/.exec(getComputedStyle(probe).color);
-      probe.remove();
-      return [Number(m?.[1]), Number(m?.[2]), Number(m?.[3])];
-    };
-    const image = new Image();
-    image.src = `data:image/png;base64,${data}`;
-    await image.decode();
-    const canvas = document.createElement('canvas');
-    canvas.width = image.width;
-    canvas.height = image.height;
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) throw new Error('no 2d context');
-    ctx.drawImage(image, 0, 0);
-    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const count = (target: number[]) => {
-      let n = 0;
-      for (let i = 0; i < pixels.length; i += 4) {
-        if (
-          Math.abs((pixels[i] ?? 0) - (target[0] ?? 0)) < 12 &&
-          Math.abs((pixels[i + 1] ?? 0) - (target[1] ?? 0)) < 12 &&
-          Math.abs((pixels[i + 2] ?? 0) - (target[2] ?? 0)) < 12
-        )
-          n += 1;
-      }
-      return n;
-    };
-    return {
-      contributions: count(rgb('--chart-contributions')),
-      zulagen: count(rgb('--chart-zulagen')),
-      reinvested: count(rgb('--chart-reinvested')),
-      returns: count(rgb('--chart-returns')),
-    };
-  }, png);
+  const rgb = {
+    contributions: await colourOf(page, SERIES_TOKENS.contributions),
+    zulagen: await colourOf(page, SERIES_TOKENS.zulagen),
+    reinvested: await colourOf(page, SERIES_TOKENS.reinvested),
+    returns: await colourOf(page, SERIES_TOKENS.returns),
+  };
+  return page.evaluate(
+    async ([data, colours]) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${data}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx === null) throw new Error('no 2d context');
+      ctx.drawImage(image, 0, 0);
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const count = (target: number[]) => {
+        let n = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (
+            Math.abs((pixels[i] ?? 0) - (target[0] ?? 0)) < 12 &&
+            Math.abs((pixels[i + 1] ?? 0) - (target[1] ?? 0)) < 12 &&
+            Math.abs((pixels[i + 2] ?? 0) - (target[2] ?? 0)) < 12
+          )
+            n += 1;
+        }
+        return n;
+      };
+      return {
+        contributions: count(colours.contributions),
+        zulagen: count(colours.zulagen),
+        reinvested: count(colours.reinvested),
+        returns: count(colours.returns),
+      };
+    },
+    [png, rgb] as const,
+  );
 }
 
 /** Pixels whose channels differ by more than `tolerance` between two PNGs (base64); raster noise stays below it. */
@@ -191,4 +191,207 @@ export async function savingSnapshot(page: Page) {
     table: await page.getByRole('table').innerText(),
     chart: (await chart(page).screenshot({ animations: 'disabled' })).toString('base64'),
   };
+}
+
+// ---- Story 017: chart colours -------------------------------------------------------------
+
+/** The three scenarios of story 017: S1 reference unchecked, S2 42 % checked, S3 S2 with -1 % return. */
+export type ChartScenario = 'S1' | 'S2' | 'S3';
+
+/** The legend of the chart region, whose items are `li`. */
+export const legend = (page: Page) =>
+  page.getByRole('region', { name: 'Verlauf des Kontostands', exact: true }).getByRole('list');
+
+/** Brings the page into a scenario of story 017 and waits until the legend shows its series. */
+export async function setScenario(page: Page, scenario: ChartScenario) {
+  await setReference(page);
+  await rateInput(page).fill('42');
+  const reinvested = legend(page).getByText('Reinvestierte Steuererstattung', { exact: true });
+  const loss = legend(page).getByText('Verlust (negative Erträge)', { exact: true });
+  if (scenario === 'S1') {
+    await reinvestBox(page).uncheck();
+    await expect(reinvested).toHaveCount(0);
+    await expect(loss).toHaveCount(0);
+    return;
+  }
+  await reinvestBox(page).check();
+  await expect(reinvested).toBeVisible();
+  if (scenario === 'S2') {
+    await returnInput(page).fill('5');
+    await expect(loss).toHaveCount(0);
+  } else {
+    await returnInput(page).fill('-1');
+    await expect(loss).toBeVisible();
+  }
+}
+
+/** The five series in the order of the stack (bottom to top) and their tokens. */
+export const SERIES_TOKENS = {
+  contributions: '--chart-contributions',
+  zulagen: '--chart-zulagen',
+  reinvested: '--chart-reinvested',
+  returns: '--chart-returns',
+  loss: '--chart-loss',
+} as const;
+export type SeriesName = keyof typeof SERIES_TOKENS;
+
+export interface Run {
+  /** Name of the palette colour the run matches, or `other` (blend, anti-aliasing, unknown colour). */
+  readonly label: string;
+  readonly length: number;
+  /** The run's middle pixel as [r, g, b]. */
+  readonly rgb: readonly number[];
+}
+
+/**
+ * Scans the centre column of every bar (the `svg > rect` of the chart, structural, no class) from the
+ * baseline to the bar top on the chart screenshot and returns its runs of equal colour, bottom to top.
+ * `palette` maps a label to a CSS colour (a token `var(--x)` or a system colour such as `CanvasText`);
+ * pixels are labelled by the nearest palette colour within `tolerance` per channel, else `other`.
+ * Runs shorter than `minLength` px (1 px separators, anti-aliased edges) are dropped.
+ * Measured noise: 0 per channel inside every segment of S1 to S3 in light and dark (tolerance 0 matched
+ * all interior pixels); tolerance 1 only absorbs a rounding difference between engines.
+ */
+export async function barRuns(
+  page: Page,
+  palette: Readonly<Record<string, string>>,
+  minLength = 3,
+  tolerance = 1,
+): Promise<Run[][]> {
+  const png = (await chart(page).screenshot({ animations: 'disabled' })).toString('base64');
+  const frame = await chart(page).boundingBox();
+  if (frame === null) throw new Error('no chart');
+  const boxes = await chart(page)
+    .locator('svg > rect')
+    .evaluateAll(
+      (rects, origin) =>
+        rects.map((rect) => {
+          const r = rect.getBoundingClientRect();
+          return { x: r.x - origin.x, y: r.y - origin.y, w: r.width, h: r.height };
+        }),
+      { x: frame.x, y: frame.y },
+    );
+  const colourList: (readonly [string, number[]])[] = [];
+  for (const [label, css] of Object.entries(palette))
+    colourList.push([label, await colourOf(page, css)]);
+  return page.evaluate(
+    async ([data, entries, rects, min, tol]) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${data}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx === null) throw new Error('no 2d context');
+      ctx.drawImage(image, 0, 0);
+      const pixel = (x: number, y: number) => ctx.getImageData(x, y, 1, 1).data;
+      const labelOf = (p: Uint8ClampedArray) => {
+        for (const [label, c] of entries) {
+          if ([0, 1, 2].every((k) => Math.abs((p[k] ?? 0) - (c[k] ?? 0)) <= Number(tol)))
+            return label;
+        }
+        return 'other';
+      };
+      // One bar = rects with the same x.
+      const bars = new Map<number, { x: number; w: number; top: number; bottom: number }>();
+      for (const r of rects as { x: number; y: number; w: number; h: number }[]) {
+        const key = Math.round(r.x);
+        const bar = bars.get(key);
+        if (bar === undefined) bars.set(key, { x: r.x, w: r.w, top: r.y, bottom: r.y + r.h });
+        else {
+          bar.top = Math.min(bar.top, r.y);
+          bar.bottom = Math.max(bar.bottom, r.y + r.h);
+        }
+      }
+      return [...bars.values()]
+        .sort((a, b) => a.x - b.x)
+        .map((bar) => {
+          const x = Math.round(bar.x + bar.w / 2);
+          const raw: { label: string; ys: number[] }[] = [];
+          for (let y = Math.ceil(bar.bottom) - 1; y >= Math.floor(bar.top); y -= 1) {
+            const label = labelOf(pixel(x, y));
+            const last = raw[raw.length - 1];
+            if (last !== undefined && last.label === label) last.ys.push(y);
+            else raw.push({ label, ys: [y] });
+          }
+          return raw
+            .filter((run) => run.ys.length >= Number(min))
+            .map((run) => ({
+              label: run.label,
+              length: run.ys.length,
+              rgb: [...pixel(x, run.ys[Math.floor(run.ys.length / 2)] ?? 0).slice(0, 3)],
+            }));
+        });
+    },
+    [png, colourList, boxes, minLength, tolerance] as const,
+  );
+}
+
+/** Palette of the normal view: the five series tokens and the surface (separator). */
+export const NORMAL_PALETTE: Readonly<Record<string, string>> = {
+  ...SERIES_TOKENS,
+  surface: '--color-surface',
+};
+
+/** The legend swatch of an item (by its exact text) as one PNG (base64) and the computed stroke dash. */
+export async function swatchOf(page: Page, text: string) {
+  const item = legend(page)
+    .getByRole('listitem')
+    .filter({ hasText: new RegExp(`^${text.replace(/[()]/g, '\\$&')}$`) });
+  const svg = item.locator('svg');
+  const png = (await svg.screenshot({ animations: 'disabled' })).toString('base64');
+  const dash = await svg
+    .locator('rect')
+    .evaluate((rect) => getComputedStyle(rect).getPropertyValue('stroke-dasharray'));
+  return { png, dash };
+}
+
+/** Pixels of a base64 PNG inside an inset of `inset` px, as [r, g, b] triples. */
+export async function innerPixels(page: Page, png: string, inset: number) {
+  return page.evaluate(
+    async ([data, margin]) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${data}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx === null) throw new Error('no 2d context');
+      ctx.drawImage(image, 0, 0);
+      const out: number[][] = [];
+      for (let y = Number(margin); y < image.height - Number(margin); y += 1) {
+        for (let x = Number(margin); x < image.width - Number(margin); x += 1) {
+          out.push([...ctx.getImageData(x, y, 1, 1).data.slice(0, 3)]);
+        }
+      }
+      return out;
+    },
+    [png, inset] as const,
+  );
+}
+
+/** Computed paint signature of every bar rect of the plot (structural selector, no class). */
+export async function barSignatures(page: Page): Promise<string[]> {
+  return chart(page)
+    .locator('svg > rect')
+    .evaluateAll((rects) =>
+      rects.map((rect) => {
+        const style = getComputedStyle(rect);
+        return [style.fill, style.stroke, style.strokeWidth, style.strokeDasharray].join(' | ');
+      }),
+    );
+}
+
+/** A system or token colour as [r, g, b] (resolved the way the browser paints it). */
+export async function colourOf(page: Page, css: string): Promise<number[]> {
+  return page.evaluate((value) => {
+    const probe = document.createElement('span');
+    probe.style.color = value.startsWith('--') ? `var(${value})` : value;
+    document.body.append(probe);
+    const m = /rgba?\((\d+), (\d+), (\d+)/.exec(getComputedStyle(probe).color);
+    probe.remove();
+    return [Number(m?.[1]), Number(m?.[2]), Number(m?.[3])];
+  }, css);
 }

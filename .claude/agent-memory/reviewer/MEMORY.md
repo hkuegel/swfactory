@@ -15,3 +15,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Recount reported test numbers per workspace/project from the raw output (vitest: platform, avd, …; Playwright: chromium vs platform): a Test report mixed unit and e2e counts (014).
 - Grep every spec for local helpers with the same body as another spec's (snapshot/region helpers): copies recur (014 helper file, 016 `savingSnapshot`).
 - Check exact UX copy by importing the copy module in node and comparing against the story's backticked texts (regex, U+00A0 normalised); faster than reading (016).
+- CSS-only look stories (017): when a forced-colours block wins only by source order at equal specificity, confirm the order also in the built `dist/assets/*.css` (byte offsets of both rules); a `var()` fill that breaks inherits black = CanvasText in forced colours, so computed-signature checks pass and only a pixel/shape assertion catches it: make sure one exists.

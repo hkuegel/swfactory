@@ -121,52 +121,35 @@
   text-align: center;
 }
 
-/* Series: solid / stripes / heavy framed stripes (015) / hollow / dashed hollow, so identity
-   never relies on colour. */
-.contributions {
-  fill: var(--chart-contributions);
+/* Series in the normal view (story 017, UX §2): one solid token fill each and the 1 px surface
+   separator; no pattern, frame or dash. Keep these rules above the forced-colours block. */
+.contributions,
+.zulagen,
+.reinvested,
+.returns,
+.loss {
   stroke: var(--color-surface);
   stroke-width: 1px;
+}
+
+.contributions {
+  fill: var(--chart-contributions);
 }
 
 .zulagen {
-  stroke: var(--color-surface);
-  stroke-width: 1px;
-}
-
-.stripe {
   fill: var(--chart-zulagen);
 }
 
-.stripeGap {
-  fill: var(--color-surface);
-}
-
 .reinvested {
-  stroke: var(--chart-reinvested);
-  stroke-width: 2px;
-}
-
-.heavyStripe {
   fill: var(--chart-reinvested);
 }
 
 .returns {
-  fill: var(--chart-returns-fill);
-  stroke: var(--chart-returns);
-  stroke-width: 2px;
+  fill: var(--chart-returns);
 }
 
 .loss {
-  fill: var(--chart-loss-fill);
-  stroke: var(--chart-loss);
-  stroke-width: 2px;
-  stroke-dasharray: 4 3;
-}
-
-/* The striped swatch is half surface: a frame shows its extent. */
-.legend .framed {
-  stroke: var(--color-edge);
+  fill: var(--chart-loss);
 }
 
 .grid {
@@ -194,7 +177,10 @@
   }
 }
 
-/* Forced colours: keep the shape cues with system colours (UX §5). */
+/* Forced colours (story 017, UX §5): the only place with shape cues, so identity never relies on
+   colour: solid / stripes / heavy framed stripes (015) / hollow / dashed hollow. The pattern URLs
+   come from BalanceChart (inline custom properties); same specificity as the rules above, later
+   in the file, so this block wins. */
 @media (forced-colors: active) {
   .svg,
   .swatch {
@@ -207,10 +193,29 @@
   }
 
   .zulagen {
+    fill: var(--zulagen-stripes);
     stroke: Canvas;
   }
 
-  .stripe {
+  .reinvested {
+    fill: var(--reinvested-stripes);
+    stroke: CanvasText;
+    stroke-width: 2px;
+  }
+
+  .returns,
+  .loss {
+    fill: Canvas;
+    stroke: CanvasText;
+    stroke-width: 2px;
+  }
+
+  .loss {
+    stroke-dasharray: 4 3;
+  }
+
+  .stripe,
+  .heavyStripe {
     fill: CanvasText;
   }
 
@@ -218,20 +223,7 @@
     fill: Canvas;
   }
 
-  .reinvested {
-    stroke: CanvasText;
-  }
-
-  .heavyStripe {
-    fill: CanvasText;
-  }
-
-  .returns,
-  .loss {
-    fill: Canvas;
-    stroke: CanvasText;
-  }
-
+  /* The striped swatch is half canvas: a frame shows its extent. */
   .legend .framed {
     stroke: CanvasText;
   }
