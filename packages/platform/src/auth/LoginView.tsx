@@ -9,7 +9,10 @@ export interface LoginViewProps {
   readonly inProgress: boolean;
   readonly notice: SignInNotice | null;
   readonly onSignIn: () => void;
-  /** Guest sign-in (story 004); the button renders only if set and only in DEV. */
+  /**
+   * Guest sign-in (story 004); the button renders only if set, and only in DEV or in the
+   * guest-only deploy build (story 018).
+   */
   readonly onSignInAsGuest?: (() => void) | undefined;
   readonly signInButtonRef?: Ref<HTMLButtonElement> | undefined;
 }
@@ -23,14 +26,28 @@ export function LoginView({
 }: LoginViewProps) {
   return (
     <div className={styles.login}>
-      <p>Use your Google account to sign in.</p>
+      {/* Literal guards everywhere (story 018, ADR 0010): the guest-only deploy build drops
+          every Google offer; the intro stays the card's first child in both builds. */}
+      {import.meta.env.VITE_GUEST_ONLY !== 'true' && <p>Use your Google account to sign in.</p>}
+      {import.meta.env.VITE_GUEST_ONLY === 'true' && (
+        <p>This site offers guest access only. Nothing is stored; reloading signs you out.</p>
+      )}
       <div className={styles.buttons}>
-        <GoogleSignInButton ref={signInButtonRef} disabled={inProgress} onClick={onSignIn} />
-        {/* Literal DEV guard so the label never reaches a production bundle (004/AC12). */}
-        {import.meta.env.DEV && onSignInAsGuest && (
+        {import.meta.env.VITE_GUEST_ONLY !== 'true' && (
+          <GoogleSignInButton ref={signInButtonRef} disabled={inProgress} onClick={onSignIn} />
+        )}
+        {/* Literal guard so the label never reaches a standard production bundle (004/AC12). */}
+        {(import.meta.env.DEV || import.meta.env.VITE_GUEST_ONLY === 'true') && onSignInAsGuest && (
           <Button
-            variant="secondary"
-            className={styles.guest}
+            // Guest-only: the only sign-in control, so focus lands here after sign-out.
+            ref={import.meta.env.VITE_GUEST_ONLY === 'true' ? signInButtonRef : undefined}
+            // Guest-only: the one real entry, filled and without the test-tool look (UX §2).
+            variant={import.meta.env.VITE_GUEST_ONLY === 'true' ? 'primary' : 'secondary'}
+            className={
+              import.meta.env.VITE_GUEST_ONLY === 'true'
+                ? styles.guest
+                : `${styles.guest} ${styles.guestTool}`
+            }
             disabled={inProgress}
             onClick={onSignInAsGuest}
           >

@@ -1,6 +1,6 @@
 import type { AuthUser } from './types.ts';
 
-/** The user a dev-only guest sign-in produces (story 004). */
+/** The user a guest sign-in produces (dev or guest-only deploy build; stories 004, 018). */
 export const GUEST_USER = {
   provider: 'guest',
   id: 'guest',

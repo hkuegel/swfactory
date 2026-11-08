@@ -3,8 +3,9 @@ import type { AuthState } from './authReducer.ts';
 
 /**
  * Focus moves on auth transitions (001 UX §3, 004 UX §4): any → signedIn (Google success or
- * guest sign-in) focuses the identity; signingIn/signedIn → signedOut focuses the Google
- * sign-in button. Page load moves nothing.
+ * guest sign-in) focuses the identity; signingIn/signedIn → signedOut focuses the first sign-in
+ * button (Google; the guest button in the guest-only deploy build, story 018). Page load moves
+ * nothing.
  */
 export function useAuthFocus(status: AuthState['status']) {
   const identityRef = useRef<HTMLParagraphElement>(null);

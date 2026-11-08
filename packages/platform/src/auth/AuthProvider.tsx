@@ -55,8 +55,12 @@ export function AuthProvider({ client, children }: AuthProviderProps) {
     () => ({
       state,
       signIn,
-      // Literal DEV guard (not a shared constant) so `vite build` drops the guest path (AC12).
-      signInAsGuest: import.meta.env.DEV ? signInAsGuest : undefined,
+      // Literal guards (not a shared constant): a standard `vite build` drops the guest path
+      // (004/AC12); the guest-only deploy build keeps it (story 018, ADR 0010).
+      signInAsGuest:
+        import.meta.env.DEV || import.meta.env.VITE_GUEST_ONLY === 'true'
+          ? signInAsGuest
+          : undefined,
       signOut,
     }),
     [state, signIn, signInAsGuest, signOut],

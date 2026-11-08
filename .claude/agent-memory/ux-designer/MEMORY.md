@@ -59,3 +59,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Fuchsia pair #a21caf / #f0abfc is the 4th chart hue (blue, amber, green, red used); computed 6.3 / 9.4 on surface (story 015).
 - Comparison/result blocks, duplicate AC phrases, minus sign, sub-heading in forms: see [comparison-blocks-and-copy-collisions](feedback_comparison_blocks.md) (story 016).
 - Solid chart series colours: lightness ladder, all-pairs rule 1.35:1, 3:1 on surface; see [chart-colour-ladder](feedback_chart_colour_ladder.md) (story 017).
+- Login screen copy is English (LoginView.tsx); `.buttons .guest:not(:disabled)` forces `--color-text`, so a primary guest button needs the dashed/colour rules split into their own class (story 018).
+- A variant for one build (deploy) must leave the standard build pixel-identical: spec the CSS split for the developer instead of editing a shared class (story 018).

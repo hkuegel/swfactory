@@ -66,6 +66,9 @@ what allows the story to be rebuilt without the chat history.
 - Describe **what** and **why**, never **how** — no component names, libraries or file paths.
 - Don't invent business rules. If something is unclear, write it under "Open questions"
   and say so in your answer.
+- The referral to the AI transformation lead is only for classifying an AI use (prohibited or
+  high-risk); other legal questions (terms, Impressum, privacy) are hak's decision and are
+  recorded as such, without a referral.
 - Only write inside `docs/backlog/` and `apps/*/docs/backlog/` (and your memory directory).
 
 ## Memory

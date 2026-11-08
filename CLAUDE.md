@@ -149,7 +149,9 @@ apps/<name>/            one app
   docs/backlog, docs/adr  the app's stories and ADRs
   dist-check.json       the app's own dev-only strings and budgets (optional)
 templates/app/          app skeleton, copied by /new-app (scripts/new-app.mjs)
+_site/                  deploy output of `npm run build:pages` (gitignored)
 scripts/                check-dist.mjs, check-structure.mjs, new-app.mjs
+scripts/                build-pages.mjs, serve-pages.mjs (GitHub Pages deploy, see Commands)
 ```
 
 Platform code never names or imports an app (`npm run check:structure` fails on it). A
@@ -213,14 +215,22 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   may stay pending forever. Only interactive steps (e.g. a provider popup) are exempt.
 - **Dev-only code** must never reach a production build (checked per app):
   - test fakes (e.g. the e2e sign-in fake) via
-    `import.meta.env.DEV && import.meta.env.MODE === '<mode>'`;
-  - dev-only features (e.g. "Sign in as guest") via `import.meta.env.DEV`;
-  - in both cases written out literally at every use site — never a shared constant,
-    runtime flag or env var alone — so Vite drops the code;
-  - their identifying strings are added to `dist-check.json` (`forbidden`) of the
+    `import.meta.env.DEV && import.meta.env.MODE === '<mode>'`; never shipped, whatever
+    build setting is on;
+  - dev-only features via `import.meta.env.DEV`;
+  - one exception, guest sign-in (ADR 0010): available in development or when the public
+    build setting `VITE_GUEST_ONLY` is `'true'`, via
+    `import.meta.env.DEV || import.meta.env.VITE_GUEST_ONLY === 'true'`; Google sign-in is
+    then left out via `import.meta.env.VITE_GUEST_ONLY !== 'true'`. Only the GitHub Pages
+    deploy build (`npm run build:pages`) sets it; never put it in `.env.local`;
+  - in every case written out literally at every use site — never a shared constant or
+    runtime flag — so Vite drops the code (a `VITE_*` setting is replaced by a literal at
+    build time; a value read at runtime is not);
+  - their identifying strings are added to `dist-check.json` (`forbidden` for every build;
+    `standard` / `guestOnly` for strings that depend on the build setting) of the
     workspace that owns the code (`packages/platform/` for platform code, else the app) in
-    the same change; `npm run verify` fails if they appear in an app's `dist/`
-    (`scripts/check-dist.mjs`). The platform's strings cover every app, new ones included;
+    the same change; `npm run verify` fails if they appear in an app's `dist/` or in the
+    deploy output `_site/` (`scripts/check-dist.mjs`). The platform's strings cover every app, new ones included;
   - helpers used only by dev-only code (lookup tables, counters) live inside the guarded
     function, never at module level, because they survive tree-shaking and `check-dist`
     can't see them.
@@ -242,7 +252,10 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   checked on rendered pixels in e2e; passing token pairs are necessary, not sufficient.
 - **Config:** `VITE_*` values are public (inlined into the bundle) — never put secrets
   there. Per-developer values go in `.env.local` in the repo root (gitignored, shared by
-  all apps), documented in `.env.example`.
+  all apps), documented in `.env.example`. `VITE_GUEST_ONLY` is set only by `npm run build:pages`;
+  never in `.env.local`.
+- **CI deploys:** a CI deploy uses a workflow-level concurrency group per ref, so runs on `main`
+  are serialised and an older run never deploys after a newer one.
 - **Workspace tooling:** `prettier --check` inside a workspace needs
   `--ignore-path ../../.prettierignore` (it reads only the `.prettierignore` of its working
   directory, so it would check `dist/`); an app's `tsconfig.app.json` includes
@@ -260,6 +273,8 @@ npm run format      # prettier --write
 npm test            # vitest (single run), every workspace
 npm run test:e2e    # playwright for every app: app in mode e2e on port 5174 with the fake sign-in, never real Google
 npm run test:e2e -w apps/<name>     # one app's specs plus the platform's sign-in specs
+npm run build:pages  # every app guest-only under /swfactory/<app>/ into _site/, checked (part of verify)
+npm run test:pages   # build:pages + Playwright smoke test of _site/ under /swfactory/
 npm run check:dist  # dev-only strings and budgets in every app's dist/ (after build)
 npm run check:structure  # no app names in factory files/platform, no dead markdown links, every story listed once, index status = story status
 npm run check:template   # unit tests + typecheck of the app skeleton templates/app (not a workspace)

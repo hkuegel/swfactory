@@ -1,3 +1,8 @@
 {
-  "forbidden": ["Sign in as guest", "__fakeGoogle"]
+  "forbidden": ["__fakeGoogle"],
+  "standard": { "forbidden": ["Sign in as guest"] },
+  "guestOnly": {
+    "forbidden": ["Sign in with Google", "accounts.google.com", "googleapis.com"],
+    "required": ["Sign in as guest"]
+  }
 }

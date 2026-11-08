@@ -5,7 +5,10 @@ export interface AuthContextValue {
   readonly state: AuthState;
   /** Call directly from the click handler, with no await before it (popup needs the gesture). */
   readonly signIn: () => void;
-  /** Present only in DEV builds (story 004). Signs in as the guest synchronously. */
+  /**
+   * Present only in DEV builds and in the guest-only deploy build (stories 004, 018). Signs in
+   * as the guest synchronously.
+   */
   readonly signInAsGuest?: (() => void) | undefined;
   readonly signOut: () => void;
 }

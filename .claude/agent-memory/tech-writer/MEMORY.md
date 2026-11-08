@@ -57,3 +57,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Write a model's assumptions in the README as bullets per depot, each marked "model assumption, not checked against the law text", and link the ADR for the rules (story 016).
 - When a visual change moves a cue into forced colours only, describe the normal view first, then one sentence for forced colours with the shapes named (story 017).
 - When a story replaces a visual spec, grep the app README for "stripe|hollow|dashed|pattern|outline" and fix every hit; the chart paragraph is the usual one (story 017).
+- When a build setting makes a dev-only feature online, grep README and CHANGELOG for "dev only|only in the dev server|never part of|production" and fix each hit (story 018).
+- When you rename a README heading, grep for its old `#anchor` in the repo and update each link, because the dead-link check covers files, not anchors (story 018).
+- When the brief limits you to root docs and an app README is now wrong, don't edit it; name the file and line in the report (story 018).
+- Phrase a legal note for hak as "may need X; check it, e.g. with a legal review", never as a verdict or a rule (story 018, org instruction).

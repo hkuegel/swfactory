@@ -7,6 +7,8 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- The apps are published on GitHub Pages at `hkuegel.github.io/swfactory/<app>/`. The
+  published sites offer only guest sign-in, no Google sign-in (#018).
 - The avd calculator compares the Altersvorsorgedepot with a normal ETF depot. Both get the
   same monthly rate and are paid out in equal monthly payouts until age 85. The comparison shows
   the yield after tax and the difference between the two depots. A new input sets the tax rate
@@ -59,8 +61,8 @@ All notable changes to this project are documented here, following
   choose Start to play (#006).
 - Timer next to "Mines left" in the Minesweeper game. It starts at the first reveal,
   stops on win or loss and resets on Start. Screen readers announce the final time (#006).
-- Sign in as guest on the login screen, for local development and test runs only. It is
-  never part of a production build (#004).
+- Sign in as guest on the login screen, for local development, test runs and the GitHub
+  Pages sites (#018). It is not part of other production builds (#004).
 - Sign in with Google on the login screen. Once signed in, the header shows your name,
   or your email if Google provides no name (#001).
 - Sign out from the header. After signing out, the login screen is shown again (#001).

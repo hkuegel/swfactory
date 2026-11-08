@@ -37,7 +37,9 @@ to the code.
 6. Fill the **Test report** in the story — replace the template's placeholder table
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
    to reproduce. State how many tests you added. Report test counts per workspace (vitest) and per
-   Playwright project, exactly as printed. Set `status: in-review` if all ACs pass,
+   Playwright project, exactly as printed. Map each vitest `Tests N passed` line to the workspace
+   named in the `> @swfactory/<name>` header printed before it; never assume the order. Set
+   `status: in-review` if all ACs pass,
    otherwise leave it `in-test`.
 
 ## Reproducing a bug

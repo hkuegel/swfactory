@@ -23,8 +23,9 @@ This starts the dev server on http://localhost:5173. Run one dev server at a tim
 app uses port 5173, which is the port the Google OAuth origins expect.
 
 Sign in first. The calculator appears after sign-in. To sign in without a Google account,
-use **Sign in as guest** on the login screen. The button appears only in the dev server and
-in the e2e tests.
+use **Sign in as guest** on the login screen. The button appears in the dev server, in the e2e
+tests and on the published GitHub Pages site (https://hkuegel.github.io/swfactory/avd/), where
+it is the only sign-in. See [Deployment](../../README.md#deployment).
 
 ```bash
 npm run test:e2e -w apps/avd
