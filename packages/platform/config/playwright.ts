@@ -54,14 +54,14 @@ export function createAppPlaywrightConfig(
       {
         name: 'chromium',
         // App-owned specs of the built site run by `npm run test:pages`, not on the dev server (bug 020).
-        testIgnore: '**/pages/**',
+        testIgnore: '**/e2e/pages/**',
         use: { ...devices['Desktop Chrome'] },
       },
       {
         name: 'platform',
         testDir: platformE2eDir,
         // The pages spec needs the built `_site/`, not the dev server (story 018).
-        testIgnore: '**/pages/**',
+        testIgnore: '**/e2e/pages/**',
         use: {
           ...devices['Desktop Chrome'],
           appTitle: options.title,
