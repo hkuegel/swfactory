@@ -47,7 +47,7 @@ In automated tests the identity provider will be simulated. The ACs below descri
 - **AC6:** Given a sign-in attempt has failed or was cancelled and an error or cancel message is shown, when I retry and the sign-in succeeds, then I see the signed-in state and no error or cancel message is shown anymore.
 - ~~**AC7:** Given I am signed in and my Google session is still valid, when I reload the page, then I am still signed in with my name displayed, without having to choose "Sign in with Google" again.~~ _Removed 2026-11-01 (hak, option C) — staying signed in moves to [003](003-stay-signed-in.md)._
 - ~~**AC8:** Given I was signed in but my Google session is no longer valid, when I reload the page, then I see the login screen and no signed-in state.~~ _Removed 2026-11-01 (hak, option C) — staying signed in moves to [003](003-stay-signed-in.md)._
-- **AC9:** Given I am signed in, when I choose to sign out, then I see the login screen with the "Sign in with Google" option and no signed-in state.
+- **AC9:** Given I am signed in, when I choose to sign out, then I see the login screen with the "Sign in with Google" option and no signed-in state. (changed by [018](018-deploy-github-pages.md): holds while the guest-only build setting is off)
 - **AC10:** Given I have signed out and my Google session is still valid, when I reload the page, then I still see the login screen and no signed-in state (I am not signed in again silently).
 - **AC11:** Given Google provides no name for my account, when I sign in successfully, then my email address is displayed in place of the name.
 

@@ -10,8 +10,12 @@ const notConfiguredClient: AuthClient = {
 /**
  * Picks the AuthClient for this page load (ADR 0003). Call once, outside React.
  * The fake branch is statically false in `vite build` (DEV is false), so it is tree-shaken.
+ * The guest-only deploy build (story 018, ADR 0010) returns before any Google code, so it loads
+ * no Google script, makes no Google request and logs no missing-client-ID error.
  */
 export function createAuthClient(): AuthClient {
+  // Literal guard (not a shared constant) so the deploy build drops the Google client.
+  if (import.meta.env.VITE_GUEST_ONLY === 'true') return notConfiguredClient;
   if (import.meta.env.DEV && import.meta.env.MODE === 'e2e') {
     return createFakeAuthClient({ exposeControl: true });
   }

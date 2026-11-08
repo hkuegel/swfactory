@@ -1,15 +1,24 @@
-// Fails if an app's production bundle contains dev-only code (story 004 AC12, story 011 AC6).
-// Usage: node scripts/check-dist.mjs [app ...]   (default: every directory in apps/ with a package.json)
-// Forbidden strings come from packages/platform/dist-check.json (shared by every app) and from
-// apps/<app>/dist-check.json (optional): { "forbidden": [...], "lazyChunks": [...] }.
+// Fails if an app's production bundle contains dev-only code (story 004 AC12, story 011 AC6) or,
+// in the guest-only deploy build, Google sign-in code (story 018, ADR 0010).
+// Usage: node scripts/check-dist.mjs [--guest-only] [--out <dir>] [--base <prefix>] [app ...]
+//   (default apps: every directory in apps/ with a package.json)
+// Mode: `standard` (default) or `guestOnly` (--guest-only); the caller states it, the check never
+// reads VITE_GUEST_ONLY, and the rules are symmetric (a build checked in the wrong mode fails).
+// Where: without --out `apps/<app>/dist`; with --out `<dir>/<app>`, and then every top-level entry
+// of <dir> must be a checked app (the uploaded artefact is checked completely).
+// Base: URL prefix of the build (default `/`); with --out an app lives under `<base><app>/`.
+// Config: packages/platform/dist-check.json (shared by every app) and apps/<app>/dist-check.json
+// (optional): { forbidden, lazyChunks, standard: { forbidden, required }, guestOnly: { ... } }.
 // Plain Node instead of grep so it behaves the same on macOS and ubuntu CI.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PLATFORM_CONFIG = join(ROOT, 'packages', 'platform', 'dist-check.json');
+const MODES = ['standard', 'guestOnly'];
+const TOP_KEYS = ['forbidden', 'lazyChunks', ...MODES];
 
 /** Every problem is collected per app; the process exits 1 if any app has one. */
 class CheckError extends Error {}
@@ -30,12 +39,15 @@ function isStringArray(value) {
 }
 
 /**
- * Reads and validates a dist-check.json; a missing file is `{}` only when `optional`.
- * `requireForbidden`: the list must have at least one entry (the platform's, shared by every app).
+ * Reads and validates a dist-check.json; a missing file is empty only when `optional`.
+ * `isPlatform`: the lists that every app relies on must not be empty (an empty list silences
+ * the check).
  */
-function readConfig(path, optional, requireForbidden = false) {
+function readConfig(path, optional, isPlatform = false) {
+  const none = { forbidden: [], required: [] };
+  const empty = { forbidden: [], lazyChunks: [], standard: none, guestOnly: none };
   if (!existsSync(path)) {
-    if (optional) return { forbidden: [], lazyChunks: [] };
+    if (optional) return empty;
     fail(`${path} not found`);
   }
   let config;
@@ -44,9 +56,18 @@ function readConfig(path, optional, requireForbidden = false) {
   } catch (error) {
     fail(`${path} is not valid JSON: ${error.message}`);
   }
+  if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+    fail(`${path}: must be a JSON object`);
+  }
+  const unknown = Object.keys(config).filter((k) => !TOP_KEYS.includes(k));
+  if (unknown.length > 0) {
+    fail(
+      `${path}: unknown key(s) ${unknown.map((k) => `"${k}"`).join(', ')} (allowed: ${TOP_KEYS.join(', ')})`,
+    );
+  }
   const { forbidden = [], lazyChunks = [] } = config;
   if (!isStringArray(forbidden)) fail(`${path}: "forbidden" must be an array of non-empty strings`);
-  if (requireForbidden && forbidden.length === 0) {
+  if (isPlatform && forbidden.length === 0) {
     fail(`${path}: "forbidden" must list at least one string (an empty list silences the check)`);
   }
   if (!Array.isArray(lazyChunks)) fail(`${path}: "lazyChunks" must be an array`);
@@ -62,7 +83,30 @@ function readConfig(path, optional, requireForbidden = false) {
       chunk.gzipMaxKb > 0;
     if (!ok) fail(`${path}: each lazyChunks entry needs marker, entry (strings) and gzipMaxKb`);
   }
-  return { forbidden, lazyChunks };
+  const result = { forbidden, lazyChunks };
+  for (const mode of MODES) {
+    const section = config[mode] ?? {};
+    if (section === null || typeof section !== 'object' || Array.isArray(section)) {
+      fail(`${path}: "${mode}" must be an object`);
+    }
+    const badKey = Object.keys(section).find((k) => k !== 'forbidden' && k !== 'required');
+    if (badKey) fail(`${path}: unknown key "${mode}.${badKey}" (allowed: forbidden, required)`);
+    for (const key of ['forbidden', 'required']) {
+      const list = section[key] ?? [];
+      if (!isStringArray(list))
+        fail(`${path}: "${mode}.${key}" must be an array of non-empty strings`);
+    }
+    result[mode] = { forbidden: section.forbidden ?? [], required: section.required ?? [] };
+  }
+  if (isPlatform) {
+    if (result.standard.forbidden.length === 0) {
+      fail(`${path}: "standard.forbidden" must list at least one string`);
+    }
+    if (result.guestOnly.required.length === 0) {
+      fail(`${path}: "guestOnly.required" must list at least one string`);
+    }
+  }
+  return result;
 }
 
 function defaultApps() {
@@ -73,44 +117,89 @@ function defaultApps() {
     .sort();
 }
 
+/** Asset URLs that index.html loads: module scripts, modulepreloads and stylesheets. */
+function entryUrls(html) {
+  const urls = [];
+  for (const [tag, name] of [...html.matchAll(/<(script|link)\b[^>]*>/g)].map((m) => [
+    m[0],
+    m[1],
+  ])) {
+    const attr = (a) => tag.match(new RegExp(`\\b${a}="([^"]*)"`))?.[1];
+    if (name === 'script' && attr('type') === 'module' && attr('src')) urls.push(attr('src'));
+    if (name === 'link' && attr('href') && ['modulepreload', 'stylesheet'].includes(attr('rel'))) {
+      urls.push(attr('href'));
+    }
+  }
+  return urls;
+}
+
 /** Checks one app; returns the "ok" summary or throws a CheckError. */
-function checkApp(app, platformForbidden) {
+function checkApp(app, platform, options) {
+  const { mode, out, base } = options;
   const appDir = join(ROOT, 'apps', app);
   if (!existsSync(join(appDir, 'package.json')))
     fail(`apps/${app} is not an app (no package.json)`);
   const own = readConfig(join(appDir, 'dist-check.json'), true);
-  const forbidden = [...new Set([...platformForbidden, ...own.forbidden])];
+  const forbidden = [
+    ...new Set([
+      ...platform.forbidden,
+      ...own.forbidden,
+      ...platform[mode].forbidden,
+      ...own[mode].forbidden,
+    ]),
+  ];
+  const required = [...new Set([...platform[mode].required, ...own[mode].required])];
 
-  const dist = join(appDir, 'dist');
+  const dist = out ? join(out, app) : join(appDir, 'dist');
+  const rel = (f) => (f.startsWith(ROOT) ? f.slice(ROOT.length) : f);
   let files;
   try {
     files = listFiles(dist);
   } catch {
-    return fail(`apps/${app}/dist not found; run the build first.`);
+    return fail(`${rel(dist)} not found; run the build first.`);
   }
   // Guard against a trivially passing check on an empty or wrong build output.
   if (!files.some((f) => f.endsWith('.js')) || !files.some((f) => f.endsWith('index.html'))) {
-    fail(`apps/${app}/dist has no index.html and JS bundle; nothing meaningful to check.`);
+    fail(`${rel(dist)} has no index.html and JS bundle; nothing meaningful to check.`);
   }
 
   const contents = new Map(files.map((f) => [f, readFileSync(f, 'utf8')]));
-  const rel = (f) => f.slice(ROOT.length);
 
   const hits = files.flatMap((file) =>
     forbidden.filter((s) => contents.get(file).includes(s)).map((s) => `${rel(file)}: "${s}"`),
   );
   if (hits.length > 0) {
-    fail(`dev-only code found in the production bundle of ${app}:\n  ${hits.join('\n  ')}`);
+    fail(`code that must not be in the ${mode} build of ${app}:\n  ${hits.join('\n  ')}`);
+  }
+  const missing = required.filter((s) => !files.some((f) => contents.get(f).includes(s)));
+  if (missing.length > 0) {
+    fail(
+      `${app}: string(s) required in the ${mode} build not found in any file: ${missing.map((s) => `"${s}"`).join(', ')}`,
+    );
   }
 
-  // The entry chunk: index.html's module script and modulepreloads.
+  // The entry chunk: index.html's module scripts, modulepreloads and stylesheets. Each URL must
+  // lie under the base and name an existing file; else a subpath deploy would 404 (and the lazy
+  // chunk checks below would resolve the wrong files and pass vacuously).
+  const prefix = out ? `${base}${app}/` : base;
   const html = contents.get(join(dist, 'index.html'));
-  const entryFiles = new Set(
-    [
-      ...html.matchAll(/<script\b[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/g),
-      ...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g),
-    ].map((m) => join(dist, (m[1] ?? '').replace(/^(\.\/|\/)/, ''))),
-  );
+  const urls = entryUrls(html);
+  if (!urls.some((u) => /\.m?js(\?|#|$)/.test(u))) {
+    fail(`${app}: index.html loads no module script; nothing meaningful to check.`);
+  }
+  const entryFiles = new Set();
+  for (const url of urls) {
+    const path = url.startsWith(prefix)
+      ? join(dist, url.slice(prefix.length).split(/[?#]/)[0])
+      : '';
+    const inside = path !== '' && (path + sep).startsWith(dist + sep);
+    if (!inside || !contents.has(path)) {
+      fail(
+        `${app}: entry asset "${url}" is outside the base "${prefix}" or missing from the build`,
+      );
+    }
+    entryFiles.add(path);
+  }
 
   const notes = [];
   for (const { marker, entry, gzipMaxKb } of own.lazyChunks) {
@@ -148,18 +237,45 @@ function checkApp(app, platformForbidden) {
   }
 
   const extra = notes.length > 0 ? `, ${notes.join(', ')}` : '';
-  return `check-dist: ok ${app} (${files.length} files, no dev-only strings${extra})`;
+  return `check-dist: ok ${app} (${mode}, ${files.length} files${extra})`;
 }
 
-let platformForbidden;
+function usage(message) {
+  console.error(`check-dist: ${message}`);
+  console.error(
+    'usage: node scripts/check-dist.mjs [--guest-only] [--out <dir>] [--base <prefix>] [app ...]',
+  );
+  process.exit(2);
+}
+
+// --- command line
+let mode = 'standard';
+let out;
+let base = '/';
+const requested = [];
+const argv = process.argv.slice(2);
+for (let i = 0; i < argv.length; i++) {
+  const arg = argv[i];
+  if (arg === '--guest-only') mode = 'guestOnly';
+  else if (arg === '--out' || arg === '--base') {
+    const value = argv[++i];
+    if (value === undefined || value.startsWith('--')) usage(`${arg} needs a value`);
+    if (arg === '--out') out = resolve(process.cwd(), value);
+    else base = value;
+  } else if (arg.startsWith('--')) usage(`unknown option ${arg}`);
+  else requested.push(arg);
+}
+if (!base.startsWith('/') || !base.endsWith('/'))
+  usage(`--base must start and end with "/", got "${base}"`);
+
+let platform;
 try {
-  platformForbidden = readConfig(PLATFORM_CONFIG, false, true).forbidden;
+  platform = readConfig(PLATFORM_CONFIG, false, true);
 } catch (error) {
   console.error(`check-dist: ${error.message}`);
   process.exit(1);
 }
 
-const requested = process.argv.slice(2);
 const apps = requested.length > 0 ? requested : defaultApps();
 if (apps.length === 0) {
   console.error('check-dist: no apps found in apps/.');
@@ -167,9 +283,23 @@ if (apps.length === 0) {
 }
 
 let failed = false;
+if (out) {
+  // Every file of the artefact is checked: the directory exists and holds nothing but checked apps.
+  if (!existsSync(out) || !statSync(out).isDirectory()) {
+    console.error(`check-dist: --out ${relative(ROOT, out) || out} is not a directory`);
+    process.exit(1);
+  }
+  for (const entry of readdirSync(out)) {
+    const isApp = apps.includes(entry) && statSync(join(out, entry)).isDirectory();
+    if (!isApp) {
+      failed = true;
+      console.error(`check-dist: unchecked entry "${entry}" in ${relative(ROOT, out) || out}`);
+    }
+  }
+}
 for (const app of apps) {
   try {
-    console.log(checkApp(app, platformForbidden));
+    console.log(checkApp(app, platform, { mode, out, base }));
   } catch (error) {
     if (!(error instanceof CheckError)) throw error;
     failed = true;

@@ -9,7 +9,10 @@ export type AuthUser =
       readonly name: string | null;
     }
   | {
-      /** Dev-only guest sign-in (story 004). Never an identity toward a backend. */
+      /**
+       * Guest sign-in, dev or guest-only deploy build (stories 004, 018). Never an identity
+       * toward a backend.
+       */
       readonly provider: 'guest';
       readonly id: 'guest';
       readonly email: null;

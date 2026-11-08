@@ -35,7 +35,10 @@ every step in which one of them edited markdown, run
    and say which one it is. If the idea doesn't make it obvious, ask hak first: the
    platform (sign-in, shell, tokens, tooling) or which app?
    If the idea refers to real-world rules (a law, a product, a standard), research the primary
-   sources first and pass them to `product-owner`; the story's Context cites them.
+   sources first and pass them to `product-owner`; the story's Context cites them. For a
+   third-party service (hosting, sign-in, analytics), the research also covers its terms of use
+   and the legal duties it brings for a public site (e.g. Impressum, privacy statement, data sent
+   to third parties), and hak sees them before a recommendation.
 2. **GATE 1** — show hak the user story, ACs and open questions. Wait for approval or
    answers. Send every answer or correction back to `product-owner`, telling it to
    update the story **and** the Decision log. Continue only on an explicit go.

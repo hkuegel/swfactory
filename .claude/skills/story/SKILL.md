@@ -8,7 +8,10 @@ disable-model-invocation: true
 Idea: $ARGUMENTS
 
 If the idea refers to real-world rules (a law, a product, a standard), research the primary
-sources first and pass them to the `product-owner`; the story's Context cites them.
+sources first and pass them to the `product-owner`; the story's Context cites them. For a
+third-party service (hosting, sign-in, analytics), the research also covers its terms of use
+and the legal duties it brings for a public site (e.g. Impressum, privacy statement, data sent
+to third parties), and hak sees them before a recommendation.
 
 Delegate to the `product-owner` subagent to create the story in `docs/backlog/` (platform)
 or `apps/<name>/docs/backlog/` (an app); pass the idea **verbatim** so it lands in

@@ -45,19 +45,20 @@ server at a time.
 
 The app runs without any setup. To sign in with Google, follow
 [Google sign-in setup](#google-sign-in-setup). To try the app without Google, use the
-guest button described in [Sign in as guest](#sign-in-as-guest-local-testing).
+guest button described in [Sign in as guest](#sign-in-as-guest).
 
-## Sign in as guest (local testing)
+## Sign in as guest
 
-The login screen of every app has a **Sign in as guest** button next to **Sign in with
-Google**. It appears only in the dev server (`npm run dev`) and in the e2e tests
-(`npm run test:e2e`). Use it to reach the signed-in state without a Google account. A
-guest sees the same signed-in screen as a Google user, with "Signed in as Guest". Like a
-Google user, a guest is not kept across page reloads.
+The login screen of every app has a **Sign in as guest** button. Locally it sits next to
+**Sign in with Google**. It appears in the dev server (`npm run dev`), in the e2e tests
+(`npm run test:e2e`) and on the GitHub Pages sites, where it is the only sign-in
+(see [Deployment](#deployment)). Use it to reach the signed-in state without a Google
+account. A guest sees the same signed-in screen as a Google user, with "Signed in as
+Guest". Like a Google user, a guest is not kept across page reloads.
 
-The button is not part of production builds. A built app, `npm run preview -w apps/<name>`
-and a deployed app do not show it. `npm run verify` checks this: it fails if the guest
-label or the e2e fake end up in the `dist/` of any app.
+The button is not part of other production builds. A build made with `npm run build`
+and `npm run preview -w apps/<name>` do not show it. `npm run verify` checks this: it
+fails if the guest label or the e2e fake end up in the `dist/` of any app built that way.
 
 ## Google sign-in setup
 
@@ -126,8 +127,8 @@ so your client ID stays out of git.
 ### Publishing later
 
 Publishing the consent screen ("In production") lets any Google account sign in. Google
-requires a homepage and a privacy-policy URL for that. The apps have neither while they
-run only locally. Publish once an app has a public URL.
+requires a homepage and a privacy-policy URL for that. The apps have neither. The
+GitHub Pages sites do not offer Google sign-in, see [Deployment](#deployment).
 
 ### About the client ID
 
@@ -153,6 +154,65 @@ run only locally. Publish once an app has a public URL.
 
 Sign-in is not kept across page reloads yet. Every reload shows the login screen again.
 This comes with story 003 (`docs/backlog/003-stay-signed-in.md`).
+
+## Deployment
+
+Every app under `apps/` is published on GitHub Pages:
+
+- https://hkuegel.github.io/swfactory/avd/
+- https://hkuegel.github.io/swfactory/minesweeper/
+
+The root address `https://hkuegel.github.io/swfactory/` has no page. A new app is
+published on its first merge to `main`. You change nothing else for it.
+
+### One-time setup
+
+Before the first merge to `main`, open the repository on GitHub and go to **Settings →
+Pages → Build and deployment → Source**. Choose **GitHub Actions**. Without this step the
+`deploy` job fails.
+
+### When it deploys
+
+The `CI` workflow publishes the apps after a push to `main`, when verify, the e2e tests
+and the Pages check are green. Pull requests and other branches never publish.
+
+To publish without a push, open the **Actions** tab, choose **CI**, then **Run workflow**
+and select the branch `main`. The run publishes only if all checks pass. On any other
+branch it publishes nothing.
+
+### Build and test the Pages site locally
+
+```bash
+npm run build:pages
+```
+
+This builds every app under its Pages address into `_site/<app>/` and runs the dev-only
+check on the result. `npm run verify` runs it too.
+
+```bash
+npm run test:pages
+```
+
+This builds the site again and opens each app under its address in Chromium. Run
+`npx playwright install chromium` once first, as in [Getting started](#getting-started).
+Neither command needs a client ID.
+
+### What is online
+
+The deployed apps offer only **Sign in as guest**. There is no Google sign-in online, so
+the sites need no client ID and no Google setup. Guest sign-in keeps nothing in the
+browser and makes no network request. A reload signs you out.
+
+`VITE_GUEST_ONLY` is set to `true` only by the deploy build. It turns Google sign-in off
+and guest sign-in on. Never put it in `.env.local` or in any other file. A local build
+with it set is guest-only, and `npm run verify` fails on it.
+
+### Note for hak
+
+By your decision, the sites have no Impressum and no privacy page. GitHub logs the IP
+addresses of visitors. The factory makes no legal assessment. A public site from Germany
+may need an Impressum and a privacy statement. Whether this is enough is for you to check,
+for example with a legal review.
 
 ## Creating an app
 
@@ -194,7 +254,7 @@ the entry) afterwards.
 
 The new app works at once, without any change to another app:
 
-- Google sign-in, guest sign-in (dev only) and the e2e sign-in fake,
+- Google sign-in, guest sign-in (see [Sign in as guest](#sign-in-as-guest)) and the e2e sign-in fake,
 - the page shell with your title, and the generic design tokens,
 - the unit, e2e, lint, format and build checks, including `check:dist`.
 
@@ -325,11 +385,14 @@ Root scripts run over the platform and all apps:
 | `npm run check:dist`      | Fail if dev-only code is in an app's dist/  |
 | `npm run check:structure` | Structure and link guard                    |
 | `npm run check:template`  | Unit tests and typecheck of `templates/app` |
+| `npm run build:pages`     | Build the GitHub Pages site into `_site/`   |
+| `npm run test:pages`      | Test the Pages site in Chromium             |
 | `npm run verify`          | Run all checks except e2e (order below)     |
 
 `npm run verify` runs the checks in this order: typecheck, lint, format check, structure
-check, skeleton check (`check:template`), unit tests, build, and `check:dist`. It does not run the e2e tests. It fails if the
-platform or any app fails.
+check, skeleton check (`check:template`), unit tests, build, `check:dist`, and
+`build:pages`. It does not run the e2e tests or `test:pages`. It fails if the platform or
+any app fails.
 
 To work on one app, add `-w apps/<name>`:
 
@@ -347,7 +410,8 @@ scripts of its own. The Minesweeper scripts are in its
 [README](apps/minesweeper/README.md).
 
 `npm run check:dist` reads the forbidden strings from `packages/platform/dist-check.json`
-(the guest label and the e2e fake) and from the app's own `dist-check.json`, and scans the
+(the e2e fake and, in a standard build, the guest label) and from the app's own
+`dist-check.json`, and scans the
 build output of each app in `apps/`. It needs a build first. A new app is covered with no
 change to the check. The app's `dist-check.json` can also declare size budgets for lazy
 chunks.

@@ -20,13 +20,17 @@
   gap: var(--space-3);
 }
 
-/* Dev-only guest button: secondary look; the dashed border marks a test tool. */
+/* Guest button: fills the card in both builds (story 004, 018 UX §9). */
 .buttons .guest {
   width: 100%;
+}
+
+/* Standard build only: secondary look; the dashed border marks a test tool. */
+.buttons .guestTool {
   border-style: dashed;
 }
 
-.buttons .guest:not(:disabled) {
+.buttons .guestTool:not(:disabled) {
   border-color: var(--color-edge);
   color: var(--color-text);
 }

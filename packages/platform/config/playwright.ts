@@ -48,6 +48,8 @@ export function createAppPlaywrightConfig(
       {
         name: 'platform',
         testDir: platformE2eDir,
+        // The pages spec needs the built `_site/`, not the dev server (story 018).
+        testIgnore: '**/pages/**',
         use: {
           ...devices['Desktop Chrome'],
           appTitle: options.title,

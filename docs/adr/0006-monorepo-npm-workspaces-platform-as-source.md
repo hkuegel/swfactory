@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-03
+- **Revised:** 2026-11-08 (story 018): "Sign in as guest" is dropped from production builds only while the build setting `VITE_GUEST_ONLY` is off; the GitHub Pages deploy build turns it on, and `check-dist` checks per build mode (ADR 0010).
 - **Story:** docs/backlog/011-separate-factory-from-apps.md
 
 ## Context
