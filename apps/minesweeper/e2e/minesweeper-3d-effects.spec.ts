@@ -32,10 +32,20 @@ type Probe = {
     index: number,
     offset?: readonly [dx: number, dy: number, dz: number],
   ): { x: number; y: number };
+  readonly renderer: string;
   readonly fxState: Fx;
   luminance(rect?: Rect): number;
 };
 type TestWindow = Window & { __minesweeperMines?: Pair[]; __board3dProbe?: Probe };
+
+/** Margin for one more frame on top of the frame gaps before the end. */
+const FRAME_MARGIN_MS = 100;
+/**
+ * Safety cap of the watch window. Headless Chromium renders on software WebGL (SwiftShader) on every
+ * machine: 2.5 s plus the longest frame gap measured on the GitHub runner, 6.6 s (rAF at 375 x 800,
+ * Test report "Reproduction", story 019), about 10 s.
+ */
+const WATCH_MS = 10_000;
 
 const UNAVAILABLE = '3D is not available in this browser.';
 const LOST = 'You lost. You revealed a mine.';
@@ -740,20 +750,20 @@ test.describe('real loop', () => {
   test('AC1: on the real clock the explosion survives the slow first frames, is drawn, and ends by itself', async ({
     page,
   }) => {
-    test.setTimeout(60_000);
     await page.setViewportSize({ width: 375, height: 800 }); // smaller canvas: faster software frames
     await page.emulateMedia({ colorScheme: 'dark' });
     await openGame(page);
     await choose3dLive(page);
+    test.setTimeout(90_000);
     await warmUp(page);
     const t0 = await loseTimed(page);
 
-    // Watch the effect state on the real clock until it ends (5 s at the latest). One luminance read of the mine's
+    // Watch the effect state on the real clock until it ends (5 s at the latest, more on software WebGL). One luminance read of the mine's
     // surroundings (1.2 cells around it) is taken at the first frame after 0.4 s, while it runs:
     // the marker is settled by then, so smoke and the rest of the effect are what differs from
     // the final board. (A read renders a frame, which is slow on software WebGL: only one.)
     const seen = await page.evaluate(
-      async ([start, mineIndex]) => {
+      async ([start, mineIndex, limit]) => {
         const probe = (window as TestWindow).__board3dProbe;
         if (!probe) throw new Error('no probe');
         const states: { t: number; running: boolean; particles: number }[] = [];
@@ -768,7 +778,7 @@ test.describe('real loop', () => {
         for (;;) {
           await new Promise((resolve) => requestAnimationFrame(resolve));
           const t = performance.now() - Number(start);
-          if (t > 5000) break;
+          if (t > Number(limit)) break;
           const fx = probe.fxState;
           states.push({ t, running: fx.running, particles: fx.particles });
           if (!fx.running && t > 800) break;
@@ -777,12 +787,28 @@ test.describe('real loop', () => {
         }
         return { states, during, final: probe.luminance(area()) };
       },
-      [t0, index(9, ...LOSS_CLICK)] as const,
+      [t0, index(9, ...LOSS_CLICK), WATCH_MS] as const,
     );
     const last = seen.states.at(-1);
     expect(last?.running, 'ends by itself').toBe(false);
     expect(last?.particles).toBe(0);
-    expect(last?.t, 'and not later than the AC limit plus a slow frame').toBeLessThan(5000);
+    // The end can be hidden by at most the frame that first saw `running === false` (the gap before
+    // it) plus one frame, because `fxState.running` can be one frame stale (the gap before that):
+    // the first idle frame is at most the AC's 2.5 s plus those two gaps plus a margin. Gaps earlier
+    // in the run (e.g. the first one, which includes the evaluate round trip) do not count.
+    // (Runner: single gaps up to 6.6 s.)
+    const idleAt = seen.states.findIndex((s) => !s.running);
+    const gapBefore = (i: number) =>
+      (seen.states[i]?.t ?? 0) - (i > 0 ? (seen.states[i - 1]?.t ?? 0) : 0);
+    expect(
+      seen.states[idleAt]?.t,
+      'and not later than the AC limit plus the two frame gaps before the end',
+    ).toBeLessThanOrEqual(
+      LOSS_LIMIT_MS +
+        gapBefore(idleAt) +
+        (idleAt > 0 ? gapBefore(idleAt - 1) : 0) +
+        FRAME_MARGIN_MS,
+    );
     // Not cut short: the first frame that sees it ended is at or after its own end (2.2 s; the
     // bug this guards against ended it after ~0.57 s), and it was seen running before.
     const firstIdle = seen.states.find((s) => !s.running);

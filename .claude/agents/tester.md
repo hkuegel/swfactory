@@ -38,8 +38,9 @@ to the code.
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
    to reproduce. State how many tests you added. Report test counts per workspace (vitest) and per
    Playwright project, exactly as printed. Map each vitest `Tests N passed` line to the workspace
-   named in the `> @swfactory/<name>` header printed before it; never assume the order. Set
-   `status: in-review` if all ACs pass,
+   named in the `> @swfactory/<name>` header printed before it; never assume the order.
+   A CI e2e job is green even with flaky tests; read the log for `flaky` and count a pass
+   on retry as a failure. Set `status: in-review` if all ACs pass,
    otherwise leave it `in-test`.
 
 ## Reproducing a bug

@@ -178,7 +178,8 @@ and the Pages check are green. Pull requests and other branches never publish.
 
 To publish without a push, open the **Actions** tab, choose **CI**, then **Run workflow**
 and select the branch `main`. The run publishes only if all checks pass. On any other
-branch it publishes nothing.
+branch it publishes nothing. Until a push to `main` starts the workflow on its own, run it
+this way after each merge, or with `gh workflow run CI --ref main`.
 
 ### Build and test the Pages site locally
 

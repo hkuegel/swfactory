@@ -184,13 +184,41 @@ export async function differingPixels(page: Page, a: string, b: string, toleranc
 /** The "Ergebnis" region. */
 export const result = (page: Page) => page.getByRole('region', { name: 'Ergebnis', exact: true });
 
-/** Figures and notes of "Ergebnis", the year table and the chart, to compare before and after. */
+/**
+ * Hides the chart's HTML text (axis labels, axis title, empty note) for a screenshot; layout stays.
+ * Bug 019: on the Linux runner the same label text rasterises differently after a re-render
+ * (2920 px, up to 85/255, only in glyphs; bars 1/255), so pixels compare the plot and the DOM
+ * compares the labels.
+ */
+const CHART_TEXT_HIDDEN =
+  '[aria-label^="Gestapeltes Säulendiagramm"] > :not(:has(svg)), ' +
+  '[aria-label^="Gestapeltes Säulendiagramm"] p { visibility: hidden !important; }';
+
+/**
+ * Figures and notes of "Ergebnis", the year table and the chart, to compare before and after:
+ * the chart as a screenshot without its text plus its markup (labels, positions, aria-label).
+ */
 export async function savingSnapshot(page: Page) {
   return {
     figures: (await result(page).locator('dl, p:not([aria-live])').allInnerTexts()).join('\n'),
     table: await page.getByRole('table').innerText(),
-    chart: (await chart(page).screenshot({ animations: 'disabled' })).toString('base64'),
+    chart: (
+      await chart(page).screenshot({ animations: 'disabled', style: CHART_TEXT_HIDDEN })
+    ).toString('base64'),
+    chartHtml: await chart(page).evaluate((el) => el.outerHTML),
   };
+}
+
+/** Figures, table, chart pixels (no differing pixel) and chart markup equal `before`. */
+export async function expectSavingUnchanged(
+  page: Page,
+  before: Awaited<ReturnType<typeof savingSnapshot>>,
+) {
+  const after = await savingSnapshot(page);
+  expect(after.figures).toBe(before.figures);
+  expect(after.table).toBe(before.table);
+  expect(after.chartHtml).toBe(before.chartHtml);
+  expect(await differingPixels(page, after.chart, before.chart)).toBe(0);
 }
 
 // ---- Story 017: chart colours -------------------------------------------------------------

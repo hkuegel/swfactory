@@ -17,3 +17,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Verify GitHub Action majors with `gh api repos/actions/<name>/releases/latest --jq .tag_name` before pinning, and bump all workflow uses to one version per action (story 018).
 - `npm run test:e2e` takes about 2 minutes (minesweeper 110 specs): run it in the background, not in a foreground call with a 120 s timeout (story 018).
 - Check factory-file diffs with explicit paths (zsh does not word-split a path variable) and expect CLAUDE.md to hold earlier uncommitted changes from other stories; report those separately (story 018 retro).
+- Check the 120-char limit on added lines only (`git diff -U0 | grep '^+' | awk`) because CLAUDE.md has older long lines; zsh has no `${PIPESTATUS}`, use `${pipestatus}` (retro P1-P4, 019).

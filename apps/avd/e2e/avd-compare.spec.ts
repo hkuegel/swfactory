@@ -11,8 +11,8 @@ import {
   comparison,
   costsInput,
   depotBlock,
-  differingPixels,
   euro,
+  expectSavingUnchanged,
   monthlyInput,
   noResult,
   open,
@@ -64,16 +64,6 @@ async function setAge40(page: Page) {
   await monthlyInput(page).fill('570');
   await returnInput(page).fill('5');
   await costsInput(page).fill('0,5');
-}
-
-async function expectSavingUnchanged(
-  page: Page,
-  before: Awaited<ReturnType<typeof savingSnapshot>>,
-) {
-  const after = await savingSnapshot(page);
-  expect(after.figures).toBe(before.figures);
-  expect(after.table).toBe(before.table);
-  expect(await differingPixels(page, after.chart, before.chart)).toBe(0);
 }
 
 async function expectFigures(page: Page, depot: 'AVD' | 'ETF', figures: Record<string, string>) {

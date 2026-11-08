@@ -30,6 +30,8 @@ h2 {
   font-size: var(--text-h2);
   font-weight: 600;
   line-height: 1.3;
+  /* A word wider than the column (a wide font at 160 px, bug 019) breaks instead of overflowing. */
+  overflow-wrap: anywhere;
 }
 
 p {

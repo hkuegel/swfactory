@@ -112,9 +112,13 @@ The backlog must be enough to rebuild the app without any chat history:
   that's costly to reverse (new dependency, state management, API contract, …).
 - **Branches:** one per story, `feature/NNN-slug` or `fix/NNN-slug`. Agents never
   commit, push or merge unless hak says so. Agents use only read-only git commands and
-  `git mv`; they never stage, unstage, commit or reset.
+  `git mv`; they never stage, unstage, commit or reset. Throw-away diagnostic commits
+  (`chore(diag) … drop me`) are squashed or dropped before merge; temporary workflows and
+  their runs are removed.
 - **Definition of Done:** all ACs covered by passing tests, `npm run verify` green,
-  reviewer verdict APPROVED, README/CHANGELOG updated where user-visible.
+  reviewer verdict APPROVED, README/CHANGELOG updated where user-visible, and a green CI
+  run of the story branch on GitHub (run id in the Test report). While a push doesn't
+  start CI, the orchestrator starts it with `gh workflow run CI --ref <branch>`.
 - **Measurement scripts:** a script that measures or checks something (fps, sizes, …)
   first verifies that its scenario is non-vacuous (e.g. the game keeps running, something
   animates) before it reports a number.
@@ -189,6 +193,11 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   label (`dt` text, region name) are scoped to their region; `getByRole` matches `name` as a
   case-insensitive substring unless `exact: true` is set, and later stories add blocks with
   the same labels.
+- **Runner environment:** e2e runs on the Ubuntu runner with DejaVu fonts only; headless
+  Chromium renders WebGL with SwiftShader on every machine. Layout checks at narrow widths
+  must hold with wider fonts; pixel comparisons across systems leave text out and compare
+  it as DOM/text; computed styles are read only after transitions ended (`getAnimations()`
+  empty); software-GL specs run with one worker on CI.
 - **Shared e2e helpers:** an app's shared e2e helpers live in one `e2e/<app>.helpers.ts`
   that every spec imports; never copy them. Helpers that read pixels or resolve colours share
   one resolver; values are resolved outside `page.evaluate` and passed in, never re-resolved per

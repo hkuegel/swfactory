@@ -32,4 +32,6 @@ Layer and performance claims ("no per-cell layers"): count layers with a CDP `La
 
 CSS calc constants derived from tokens (e.g. `/ 1.05` = 1 + 2 × a margin token) drift when the token changes and no test ties them together. Ask for the calc to use the token itself (story 008).
 
+Global CSS rule in the platform (`base.css`, 019): start both apps' dev servers on scratch ports and compare full-page screenshots with and without the rule (`addStyleTag` override, `!important`) at 1280 down to 160 px; byte-equal PNGs prove "no change at normal widths", then grep which pixel tests include the element.
+
 Related: [[build-guard-checks]], [[test-proportionality]]

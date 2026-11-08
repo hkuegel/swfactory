@@ -16,6 +16,12 @@ export interface AppE2eOptions {
   readonly extraProjects?: readonly Project<AppOptions>[];
   /** Extra Chromium launch arguments for every project. */
   readonly launchArgs?: readonly string[];
+  /**
+   * Number of Playwright workers on CI (`process.env.CI`); unset keeps Playwright's default.
+   * Locally the default always applies. An app whose specs drive software WebGL sets 1: two
+   * workers on the 4-vCPU runner stall its frames and time out its tests (bug 019).
+   */
+  readonly ciWorkers?: number | undefined;
 }
 
 /**
@@ -37,6 +43,7 @@ export function createAppPlaywrightConfig(
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
+    ...(process.env.CI && options.ciWorkers !== undefined ? { workers: options.ciWorkers } : {}),
     reporter: process.env.CI ? 'github' : 'list',
     use: {
       baseURL: `http://localhost:${port}`,

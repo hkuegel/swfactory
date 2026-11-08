@@ -111,3 +111,10 @@ All notable changes to this project are documented here, following
 - The counter and the placeholder text are shown only when signed in (#001).
 - `npm run verify` ends with `check:dist`, which fails if dev-only code (the guest sign-in
   or the e2e fake) ends up in the production build (#004).
+
+### Fixed
+
+- Headings wrap at very narrow widths instead of running past the edge of the page. The CI
+  e2e tests are green on the GitHub runner: Minesweeper runs one test at a time on CI, the
+  tests wait for transitions to end, the avd chart check compares the labels as text, and the
+  3D real-loop test allows the measured slow frames of software graphics (#019).

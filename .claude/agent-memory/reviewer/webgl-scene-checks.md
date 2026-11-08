@@ -26,5 +26,7 @@ Story 010 additions (end effects on the same controller):
 - **Dev-only helpers outside the guard:** module-level tables/statements used only by the probe (e.g. a LINEAR lookup built with `Array.from`) survive tree-shaking; grep `dist/assets/*.js` for their body, `check-dist` only sees identifying strings.
 - Listeners registered in `buildController` before `renderer.compile` leak if the build throws: they should be registered after the last throwing step.
 - Per-frame helpers returning arrays/objects (`screenToScene`, envelope functions) are the usual allocation leak despite an "allocation-free" doc comment; grep helper return types.
+- **Renderer branches in e2e (019):** headless Chromium on macOS reports "ANGLE (… SwiftShader driver)" even without `--use-angle=swiftshader`, so a "hardware GL" branch in a spec never runs in the suite; probe the renderer string with a 10-line `chromium.launch()` script before accepting a hardware/software split.
+- **Bounds from measured frame gaps (019):** check which gap feeds the bound: the longest gap anywhere (incl. the first one from the click, which holds the evaluate round trip) lets a late end pass after an early stall; only the gap(s) at the end matter, and `fxState.running` set in the scene's own frame can be one frame stale.
 
 Related: [[ui-a11y-probes]], [[build-guard-checks]]
