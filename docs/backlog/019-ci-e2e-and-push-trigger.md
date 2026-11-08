@@ -333,6 +333,8 @@ Proposals for the smallest correct fix per cause (for the developer and devops, 
 
 Regression after review fixes (2026-11-08): runner runs 42494874101 (head 2686475) and 42495980433 (head 2686475), dispatched one after another, each with e2e success, 0 failed and 0 flaky per log: avd 80 passed, minesweeper 110 passed (1 worker) in both; local `npm run verify` green (platform 154, avd 100, minesweeper 95 vitest; template 5), local `npm run test:e2e` green (avd 80 passed, minesweeper 110 passed).
 
+After the merge (2026-11-08): the squash merge ee65409 pushed to `main` started CI by itself (run 42498533834, event `push`): verify, pages, e2e (avd 80 passed, minesweeper 110 passed, no flaky) and deploy all green, so AC1 and AC5 hold. Both live URLs answer 200 and their bundles contain the guest sign-in and no Google sign-in URL (checked with curl; the browser pane blocks github.io by org policy). The cause of the earlier missing push runs stays unproven. hak's own check of guest sign-in on the live sites is still open.
+
 ## Review
 
 _reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
