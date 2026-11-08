@@ -19,7 +19,16 @@ export default defineConfig({
     baseURL: `http://localhost:${PAGES_PORT}${PAGES_BASE}`,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'pages', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'pages', use: { ...devices['Desktop Chrome'] } },
+    {
+      // App-owned checks of the production build: apps/<name>/e2e/pages/*.pages.spec.ts (bug 020).
+      name: 'app-pages',
+      testDir: '../../../apps',
+      testMatch: '*/e2e/pages/*.pages.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
   webServer: {
     command: `node "${serveScript}" "${SITE_DIR}" ${PAGES_BASE} ${PAGES_PORT}`,
     // Port, not url: the site root has no index page, so a url would answer 404.

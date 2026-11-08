@@ -51,7 +51,12 @@ export function createAppPlaywrightConfig(
       launchOptions: { args: [...(options.launchArgs ?? [])] },
     },
     projects: [
-      { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+      {
+        name: 'chromium',
+        // App-owned specs of the built site run by `npm run test:pages`, not on the dev server (bug 020).
+        testIgnore: '**/pages/**',
+        use: { ...devices['Desktop Chrome'] },
+      },
       {
         name: 'platform',
         testDir: platformE2eDir,
