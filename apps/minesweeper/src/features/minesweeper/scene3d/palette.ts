@@ -53,7 +53,14 @@ export const SCENE_LOOK_TOKENS: Readonly<Record<keyof SceneLook, string>> = {
   fxLightIntensity: '--scene-fx-light-intensity',
 };
 
-const HEX = /^#[0-9a-f]{6}$/i;
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+/** Lower-case 6-digit form: a minifier shortens the 6-digit white to the 3-digit form, and the browser returns it as authored (bug 020). */
+function normaliseHex(value: string): string {
+  const lower = value.toLowerCase();
+  if (lower.length === 7) return lower;
+  return `#${[...lower.slice(1)].map((digit) => digit + digit).join('')}`;
+}
 
 /** Reads the palette through `getVar` (a computed custom property). Throws on a missing or invalid token. */
 export function readPalette(getVar: (name: string) => string): ScenePalette {
@@ -61,8 +68,8 @@ export function readPalette(getVar: (name: string) => string): ScenePalette {
     Object.entries(SCENE_COLOUR_TOKENS).map(([key, token]) => {
       const value = getVar(token).trim();
       if (!HEX.test(value))
-        throw new Error(`${token} must be a 6-digit hex colour, got "${value}"`);
-      return [key, value.toLowerCase()];
+        throw new Error(`${token} must be a 3- or 6-digit hex colour, got "${value}"`);
+      return [key, normaliseHex(value)];
     }),
   ) as Record<SceneColour, string>; // every key of SCENE_COLOUR_TOKENS is mapped above
   const look = Object.fromEntries(

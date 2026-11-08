@@ -198,6 +198,10 @@ This builds the site again and opens each app under its address in Chromium. Run
 `npx playwright install chromium` once first, as in [Getting started](#getting-started).
 Neither command needs a client ID.
 
+An app can add its own checks for the published site. Put them in
+`apps/<name>/e2e/pages/*.pages.spec.ts`. `npm run test:pages` runs them together with the
+platform's checks.
+
 ### What is online
 
 The deployed apps offer only **Sign in as guest**. There is no Google sign-in online, so

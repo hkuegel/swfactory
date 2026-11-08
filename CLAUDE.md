@@ -150,6 +150,7 @@ apps/<name>/            one app
   src/features/<name>/  feature-sliced code: components, hooks, api, tests colocated
   src/tokens.css        app-specific design tokens (extend the platform's)
   e2e/                  the app's Playwright specs
+  e2e/pages/            checks of the published build (npm run test:pages)
   docs/backlog, docs/adr  the app's stories and ADRs
   dist-check.json       the app's own dev-only strings and budgets (optional)
 templates/app/          app skeleton, copied by /new-app (scripts/new-app.mjs)
@@ -197,7 +198,8 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   Chromium renders WebGL with SwiftShader on every machine. Layout checks at narrow widths
   must hold with wider fonts; pixel comparisons across systems leave text out and compare
   it as DOM/text; computed styles are read only after transitions ended (`getAnimations()`
-  empty); software-GL specs run with one worker on CI.
+  empty); software-GL specs run with one worker on CI. Playwright `testIgnore`/`testMatch` globs
+  are matched against absolute paths and are anchored (e.g. `**/e2e/pages/**`).
 - **Shared e2e helpers:** an app's shared e2e helpers live in one `e2e/<app>.helpers.ts`
   that every spec imports; never copy them. Helpers that read pixels or resolve colours share
   one resolver; values are resolved outside `page.evaluate` and passed in, never re-resolved per
@@ -258,7 +260,10 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   the modules actually paint. Values derived from tokens are `calc()` over the token, never a hand-rounded number. Variant
   selectors (e.g. `[data-view]`) wrap their scoping part in `:where()`, so forced-colours
   and other override blocks still win. In rendered scenes (canvas, WebGL), contrast is
-  checked on rendered pixels in e2e; passing token pairs are necessary, not sufficient.
+  checked on rendered pixels in e2e; passing token pairs are necessary, not sufficient. Code that
+  reads CSS values at run time accepts every notation a minifier may produce (e.g. a three-digit
+  colour), and an app with such code checks it on the published build in its own
+  `apps/<name>/e2e/pages/*.pages.spec.ts`.
 - **Config:** `VITE_*` values are public (inlined into the bundle) — never put secrets
   there. Per-developer values go in `.env.local` in the repo root (gitignored, shared by
   all apps), documented in `.env.example`. `VITE_GUEST_ONLY` is set only by `npm run build:pages`;
@@ -283,7 +288,7 @@ npm test            # vitest (single run), every workspace
 npm run test:e2e    # playwright for every app: app in mode e2e on port 5174 with the fake sign-in, never real Google
 npm run test:e2e -w apps/<name>     # one app's specs plus the platform's sign-in specs
 npm run build:pages  # every app guest-only under /swfactory/<app>/ into _site/, checked (part of verify)
-npm run test:pages   # build:pages + Playwright smoke test of _site/ under /swfactory/
+npm run test:pages   # build:pages + Playwright smoke test of _site/ under /swfactory/ + app checks in apps/*/e2e/pages
 npm run check:dist  # dev-only strings and budgets in every app's dist/ (after build)
 npm run check:structure  # no app names in factory files/platform, no dead markdown links, every story listed once, index status = story status
 npm run check:template   # unit tests + typecheck of the app skeleton templates/app (not a workspace)

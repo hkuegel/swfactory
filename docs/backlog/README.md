@@ -26,4 +26,4 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 017 | avd         | [Altersvorsorgedepot chart with solid colours instead of stripes](../../apps/avd/docs/backlog/017-avd-chart-solid-colours.md)                             | done   |
 | 018 | platform    | [Deploy the apps on GitHub Pages](018-deploy-github-pages.md)                                                                                             | done   |
 | 019 | platform    | [CI - e2e green on the GitHub runner and push to main starts CI](019-ci-e2e-and-push-trigger.md)                                                          | done   |
-| 020 | minesweeper | [Minesweeper 3D loads in the production build](../../apps/minesweeper/docs/backlog/020-minesweeper-3d-production-palette.md)                              | ready  |
+| 020 | minesweeper | [Minesweeper 3D loads in the production build](../../apps/minesweeper/docs/backlog/020-minesweeper-3d-production-palette.md)                              | done   |

@@ -61,3 +61,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - When you rename a README heading, grep for its old `#anchor` in the repo and update each link, because the dead-link check covers files, not anchors (story 018).
 - When the brief limits you to root docs and an app README is now wrong, don't edit it; name the file and line in the report (story 018).
 - Phrase a legal note for hak as "may need X; check it, e.g. with a legal review", never as a verdict or a rule (story 018, org instruction).
+- When `test:pages` gains a check, update the root README "Build and test the Pages site locally" paragraph and CHANGELOG "Fixed" or "Added" with the story id, since it describes what the command covers (bug 020).
+- Don't write a bug's CHANGELOG line as a separate "Pages" section; put it under "Fixed" in the Unreleased list, newest first (bug 020).

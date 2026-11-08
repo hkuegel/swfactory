@@ -114,6 +114,9 @@ All notable changes to this project are documented here, following
 
 ### Fixed
 
+- Minesweeper's 3D view loads again in production builds, such as the GitHub Pages site. The
+  3D palette accepts the short colour notation that the CSS minifier produces (`#fff`). The
+  Pages smoke test also runs app-owned checks and opens 3D on the published build (#020).
 - Headings wrap at very narrow widths instead of running past the edge of the page. The CI
   e2e tests are green on the GitHub runner: Minesweeper runs one test at a time on CI, the
   tests wait for transitions to end, the avd chart check compares the labels as text, and the

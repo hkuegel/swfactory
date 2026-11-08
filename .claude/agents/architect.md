@@ -28,7 +28,9 @@ You are the **software architect** of a factory building a TypeScript/React app
    - a short, ordered implementation plan the developer can follow
    - the minimal test set (see "Test proportionality" in `CLAUDE.md`): one test per AC
      at the cheapest level; each behaviour is tested once — edge cases of pure logic
-     (limits, rare paths) in unit tests, the AC's visible behaviour in e2e, never both
+     (limits, rare paths) in unit tests, the AC's visible behaviour in e2e, never both;
+     when a feature depends on the built output (minified CSS values, lazy chunks, base path),
+     the minimal test set names one check on the published build
    - when the design wraps or moves existing markup: every e2e spec (all stories) that
      walks `parentElement` / `locator('..')` from it, so the developer updates them
 3. For decisions that are costly to reverse, write `docs/adr/NNNN-title.md` (platform) or
