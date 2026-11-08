@@ -44,7 +44,7 @@ Relation to other stories:
 
 ## Acceptance criteria
 
-- **AC1:** Given I am not signed in and the guest sign-in is available in this environment (local development or a test run), when I open the app, then the login screen shows both a "Sign in with Google" option and a "Sign in as guest" option, and no signed-in state.
+- **AC1:** Given I am not signed in and the guest sign-in is available in this environment (local development or a test run), when I open the app, then the login screen shows both a "Sign in with Google" option and a "Sign in as guest" option, and no signed-in state. (changed by [018](018-deploy-github-pages.md): holds in development and test runs; the deploy build shows only the guest option)
 - **AC2:** Given I am on the login screen, when I choose "Sign in as guest", then I am signed in immediately, without any Google popup or Google request being needed, I see the signed-in state (a "Signed in as …" line and a "Sign out" option), and the login screen is no longer shown.
 - **AC3:** Given Google sign-in cannot work (for example no Google client ID is configured or the Google script cannot be loaded), when I choose "Sign in as guest", then I am signed in as in AC2 and no Google error message is shown.
 - **AC4:** Given I am signed in as a guest, when I choose "Sign out", then I see the login screen with both sign-in options and no signed-in state.
@@ -54,8 +54,8 @@ Relation to other stories:
 - **AC8:** Given I choose "Sign in as guest", when I am signed in, then the signed-in line reads "Signed in as Guest".
 - **AC9:** Given I have chosen "Sign in with Google" and the sign-in is in progress, when I look at the login screen, then "Sign in as guest" is disabled until the Google attempt ends, and it is enabled again after the attempt is cancelled or has failed.
 - **AC10:** Given I am signed in as a guest, when I reload the page, then I see the login screen and no signed-in state.
-- **AC11:** Given the login screen shows the guest option, when I read the login screen, then the intro text "Use your Google account to sign in." is still shown unchanged.
-- **AC12:** Given the app is built for production (as for a deployment), when I open the login screen of that build, then there is no guest option, "Sign in as guest" is not shown, and the text "Sign in as guest" does not appear anywhere in the built files.
+- **AC11:** Given the login screen shows the guest option, when I read the login screen, then the intro text "Use your Google account to sign in." is still shown unchanged. (changed by [018](018-deploy-github-pages.md): holds while Google sign-in is offered, not in the deploy build)
+- **AC12:** Given the app is built for production (as for a deployment), when I open the login screen of that build, then there is no guest option, "Sign in as guest" is not shown, and the text "Sign in as guest" does not appear anywhere in the built files. (changed by [018](018-deploy-github-pages.md): holds while the public guest build setting is off; the GitHub Pages deploy build turns it on)
 
 ## Out of scope
 

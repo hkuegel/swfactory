@@ -39,7 +39,7 @@ In automated tests the identity provider will be simulated. The ACs below descri
 
 ## Acceptance criteria
 
-- **AC1:** Given I am not signed in, when I open the app, then I see a login screen with a "Sign in with Google" option and no signed-in state. (changed by [004](004-guest-login.md))
+- **AC1:** Given I am not signed in, when I open the app, then I see a login screen with a "Sign in with Google" option and no signed-in state. (changed by [004](004-guest-login.md)) (changed by [018](018-deploy-github-pages.md): the deploy build shows no Google option)
 - **AC2:** Given I am on the login screen, when I choose "Sign in with Google" and complete the Google sign-in successfully, then I see that I am signed in, with my name displayed, and the login screen is no longer shown.
 - **AC3:** Given I have chosen "Sign in with Google" and the sign-in is in progress, when I look at the login screen, then a progress indication is visible and the "Sign in with Google" option is disabled until the attempt ends.
 - **AC4:** Given I have chosen "Sign in with Google", when I cancel or close the Google sign-in without completing it, then I stay on the login screen, I see a message that the sign-in was cancelled, and the option is enabled again.

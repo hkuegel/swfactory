@@ -24,3 +24,4 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 015 | avd         | [Altersvorsorgedepot optional reinvestment of the tax refund](../../apps/avd/docs/backlog/015-avd-reinvest-tax-refund.md)                                 | done   |
 | 016 | avd         | [Altersvorsorgedepot comparison with a normal ETF depot](../../apps/avd/docs/backlog/016-avd-etf-comparison.md)                                           | done   |
 | 017 | avd         | [Altersvorsorgedepot chart with solid colours instead of stripes](../../apps/avd/docs/backlog/017-avd-chart-solid-colours.md)                             | done   |
+| 018 | platform    | [Deploy the apps on GitHub Pages](018-deploy-github-pages.md)                                                                                             | ready  |
