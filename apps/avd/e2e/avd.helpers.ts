@@ -2,7 +2,7 @@
 // e2e/ is typed without the DOM lib; page.evaluate callbacks run in the browser.
 import { expect, type Locator, type Page } from '@playwright/test';
 
-// Helpers of the story 013, 014 and 015 specs. Euro figures contain U+00A0 before the euro sign: matched with \s.
+// Helpers of the story 013 to 016 specs. Euro figures contain U+00A0 before the euro sign: matched with \s.
 
 export async function open(page: Page) {
   await page.goto('/');
@@ -22,12 +22,42 @@ export const costsInput = (page: Page) => page.getByLabel('Kosten pro Jahr', { e
 export const rateInput = (page: Page) => page.getByLabel('Grenzsteuersatz', { exact: true });
 export const reinvestBox = (page: Page) =>
   page.getByRole('checkbox', { name: 'Steuererstattung wieder anlegen', exact: true });
+export const retirementInput = (page: Page) =>
+  page.getByLabel('Steuersatz im Ruhestand', { exact: true });
+export const allowanceBox = (page: Page) =>
+  page.getByRole('checkbox', {
+    name: 'Sparerpauschbetrag (1.000 €/Jahr) für dieses Depot nutzen',
+    exact: true,
+  });
 
-/** The value belonging to a result label (`dt` -> following `dd`), full label only. */
-export const figure = (page: Page, label: string): Locator =>
-  page
+/** The `dd` of a `dt` with exactly this text inside `scope`. */
+const valueOf = (scope: Locator, label: string): Locator =>
+  scope
     .locator('dt', { hasText: new RegExp(`^${label.replace(/[()]/g, '\\$&')}$`) })
     .locator('xpath=following-sibling::dd');
+
+/** The value belonging to a result label in "Ergebnis" (`dt` -> following `dd`), full label only. */
+export const figure = (page: Page, label: string): Locator =>
+  valueOf(page.getByRole('region', { name: 'Ergebnis', exact: true }), label);
+
+/** The ETF comparison region (story 016). */
+export const comparison = (page: Page) =>
+  page.getByRole('region', { name: 'Vergleich mit einem ETF-Depot', exact: true });
+
+/** The figure block of one depot in the comparison. */
+export const depotBlock = (page: Page, depot: 'AVD' | 'ETF') =>
+  comparison(page).getByRole('group', {
+    name: depot === 'AVD' ? 'Altersvorsorgedepot (AVD)' : 'ETF-Depot',
+    exact: true,
+  });
+
+/** A comparison figure of one depot by its exact label (never by position). */
+export const compareFigure = (page: Page, depot: 'AVD' | 'ETF', label: string): Locator =>
+  valueOf(depotBlock(page, depot), label);
+
+/** The signed difference "AVD minus ETF", outside both blocks. */
+export const compareDifference = (page: Page): Locator =>
+  valueOf(comparison(page), 'Unterschied (AVD minus ETF)');
 
 export const euro = (amount: string) => new RegExp(`^${amount.replace(/\./g, '\\.')}\\s€`);
 export const chart = (page: Page) => page.getByRole('img', { name: /^Gestapeltes Säulendiagramm/ });
@@ -149,4 +179,16 @@ export async function differingPixels(page: Page, a: string, b: string, toleranc
     },
     [a, b, tolerance] as const,
   );
+}
+
+/** The "Ergebnis" region. */
+export const result = (page: Page) => page.getByRole('region', { name: 'Ergebnis', exact: true });
+
+/** Figures and notes of "Ergebnis", the year table and the chart, to compare before and after. */
+export async function savingSnapshot(page: Page) {
+  return {
+    figures: (await result(page).locator('dl, p:not([aria-live])').allInnerTexts()).join('\n'),
+    table: await page.getByRole('table').innerText(),
+    chart: (await chart(page).screenshot({ animations: 'disabled' })).toString('base64'),
+  };
 }

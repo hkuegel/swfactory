@@ -18,6 +18,8 @@ import {
   payoutInput,
   rateInput,
   reinvestBox,
+  result,
+  savingSnapshot,
   setReference,
   tableRows,
 } from './avd.helpers.ts';
@@ -34,16 +36,7 @@ test.beforeEach(async ({ page }) => {
   await open(page);
 });
 
-const result = (page: Page) => page.getByRole('region', { name: 'Ergebnis' });
 const endValue = async (page: Page) => cents(await figure(page, 'Endwert').innerText());
-
-async function snapshot(page: Page) {
-  return {
-    figures: (await result(page).locator('dl, p:not([aria-live])').allInnerTexts()).join('\n'),
-    table: await page.getByRole('table').innerText(),
-    chart: (await chart(page).screenshot({ animations: 'disabled' })).toString('base64'),
-  };
-}
 
 test('AC1: unchecked by default and equal to 014; toggling updates and announces without a submit and unchecking restores it', async ({
   page,
@@ -63,7 +56,7 @@ test('AC1: unchecked by default and equal to 014; toggling updates and announces
 
   await setReference(page);
   await rateInput(page).fill('42');
-  const before = await snapshot(page);
+  const before = await savingSnapshot(page);
 
   // Keyboard only: from the rate field one Tab reaches the box, Space toggles it.
   await rateInput(page).focus();
@@ -78,18 +71,18 @@ test('AC1: unchecked by default and equal to 014; toggling updates and announces
   await expect(figure(page, NET)).toHaveCount(0);
   await expect(figure(page, 'Endwert')).not.toHaveText(euro('22.256,44'));
   await page.clock.runFor(800);
-  await expect(live).toHaveText(/Davon wieder angelegt: 3\.099,60\s€\.$/);
+  await expect(live).toHaveText(/Davon wieder angelegt: 3\.099,60\s€\./);
 
   await page.keyboard.press('Space');
   await expect(box).not.toBeChecked();
   await expect(figure(page, REINVESTED)).toHaveCount(0);
-  const after = await snapshot(page);
+  const after = await savingSnapshot(page);
   expect(after.figures).toBe(before.figures);
   expect(after.table).toBe(before.table);
   expect(await differingPixels(page, after.chart, before.chart)).toBe(0);
   await page.clock.runFor(800);
   await expect(live).toHaveText(
-    /^Endwert bei Auszahlungsbeginn mit 65: 22\.256,44\s€\. Steuererstattung gesamt: 3\.542,40\s€\.$/,
+    /^Endwert bei Auszahlungsbeginn mit 65: 22\.256,44\s€\. Steuererstattung gesamt: 3\.542,40\s€\./,
   );
   await expect(live).not.toContainText('Davon wieder angelegt');
 });

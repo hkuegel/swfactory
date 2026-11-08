@@ -78,3 +78,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Page-text snapshots that include the visually hidden `aria-live` region change with every edit; select `dl, p:not([aria-live])` when comparing before/after (story 015).
 - Choose inputs that actually move the oracle: monthly 200 EUR hits the 1.800 EUR deduction cap so refund/reinvested stay 3.099,60; use 100 EUR for "update on input change" (story 015).
 - A pixel check on a framed+striped series survives a mutant dropping only the stripes; mutate by omitting the segment (story 015).
+- Tax/finance logic mutation set (story 016): mutate each rule in a python runner (1/12 rule, allowance, Variante A netting, Teilfreistellung, Basiszins, VAP timing, kept refunds) and run `npm run test:e2e -w apps/avd -- <spec>` plus `npm test -w apps/avd`; some mutants are killed only by unit tests (120 EUR rule), which is fine.
+- Browser-drawn checkbox border contrast: screenshot the box, decode in page, max luminance contrast vs corner pixel (light 8.2, dark 7.3 in Chromium); forced colours: read computed border colours of groups plus a `CanvasText` probe div (story 016).

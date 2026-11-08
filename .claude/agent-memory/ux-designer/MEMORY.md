@@ -57,3 +57,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Live sentence for a toggle: append a part (e.g. "Davon wieder angelegt: x.") so the string differs in both directions and the debounced region always announces (story 015).
 - Avoid label text that is a lower-case phrase inside the note (getByText is case-insensitive substring), e.g. "nicht wieder angelegt" as a row label (story 015).
 - Fuchsia pair #a21caf / #f0abfc is the 4th chart hue (blue, amber, green, red used); computed 6.3 / 9.4 on surface (story 015).
+- Comparison/result blocks, duplicate AC phrases, minus sign, sub-heading in forms: see [comparison-blocks-and-copy-collisions](feedback_comparison_blocks.md) (story 016).

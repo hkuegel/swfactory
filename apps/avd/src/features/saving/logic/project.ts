@@ -40,6 +40,11 @@ const UNCHECKED: ProjectOptions = { reinvestRefund: false };
 const BP = 10_000;
 const MONTHS = 12;
 
+/** (1 + r)(1 − costs) − 1, the net annual rate of project() (ADR 0007); also the payout phase's (ADR 0009). */
+export function netAnnualRate(inputs: Pick<Inputs, 'returnBp' | 'costsBp'>): number {
+  return (1 + inputs.returnBp / BP) * (1 - inputs.costsBp / BP) - 1;
+}
+
 /** Zulage of saving year `year` (1-based) from the schedule; 0 outside it. */
 function zulageOf(schedule: readonly ScheduleYear[], year: number): number {
   return schedule[year - 1]?.zulageCents ?? 0;
@@ -55,11 +60,11 @@ function zulageOf(schedule: readonly ScheduleYear[], year: number): number {
  * story 013.
  */
 export function project(inputs: Inputs, options: ProjectOptions = UNCHECKED): Projection {
-  const { age, payoutAge, monthlyCents, children, returnBp, costsBp } = inputs;
+  const { age, payoutAge, monthlyCents, children } = inputs;
   const savingYears = payoutAge - age;
   const z = zulage(MONTHS * monthlyCents, children, age);
   const schedule = savingSchedule(inputs, options.reinvestRefund);
-  const netRate = (1 + returnBp / BP) * (1 - costsBp / BP) - 1;
+  const netRate = netAnnualRate(inputs);
   const monthlyGrowth = (1 + netRate) ** (1 / MONTHS);
 
   const years: YearRow[] = [];

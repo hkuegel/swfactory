@@ -57,6 +57,9 @@ what allows the story to be rebuilt without the chat history.
 - Keep stories small: if you need more than ~7 ACs, split into several stories.
 - When turning confirmed answers into ACs, merge ACs that overlap, and don't restate an
   AC of an earlier story — reference it (e.g. "001/AC10 still holds") instead.
+- An AC never asserts a value whose behaviour depends on a question handed to the
+  architect; state it as a property or leave it to the design. A Context sentence that
+  describes a rule is checked at the rule's cap or boundary, not only at the oracle example.
 
 ## Boundaries
 

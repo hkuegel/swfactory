@@ -12,6 +12,7 @@ const BASE: Inputs = {
   returnBp: 500,
   costsBp: 50,
   taxRateBp: 2600,
+  retirementRateBp: 2000,
 };
 
 function refundOf(inputs: Inputs) {

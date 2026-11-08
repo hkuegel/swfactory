@@ -11,6 +11,7 @@ const BASE: Inputs = {
   returnBp: 600,
   costsBp: 30,
   taxRateBp: 3000,
+  retirementRateBp: 2000,
 };
 
 /** E = m · Σ g^i + Σ_{n<N} zulageOf(n) · g^{12(N−n)−1} + zulageOf(N) (story 013 design). */
@@ -100,6 +101,7 @@ describe('project', () => {
       returnBp,
       costsBp,
       taxRateBp: 5000,
+      retirementRateBp: 2000,
     });
     for (const row of years) {
       for (const value of [

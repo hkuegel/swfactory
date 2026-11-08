@@ -2,6 +2,7 @@ import type { FieldId } from './logic/fields.ts';
 import type { FieldError, FieldErrors } from './logic/parseInputs.ts';
 import { FIELD_IDS } from './logic/fields.ts';
 import { formatWholeEuro } from './logic/format.ts';
+import { ALLOWANCE_CENTS } from './logic/etfDepot.ts';
 import { CONTRIBUTION_CAP_CENTS } from './logic/schedule.ts';
 
 export interface FieldCopy {
@@ -13,7 +14,7 @@ export interface FieldCopy {
   readonly range: string;
 }
 
-/** Exact texts of the UX design (story 013, UX §2; tax rate: story 014, UX §2). */
+/** Exact texts of the UX design (story 013, UX §2; tax rate: 014, UX §2; retirement rate: 016, UX §2). */
 export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
   age: {
     label: 'Alter heute',
@@ -57,12 +58,24 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
     hint: 'Ein kombinierter Satz einschließlich Soli und Kirchensteuer, 0 bis 50 %, höchstens 2 Nachkommastellen.',
     range: '0,00 bis 50,00 % (höchstens 2 Nachkommastellen)',
   },
+  retirementRatePct: {
+    label: 'Steuersatz im Ruhestand',
+    suffix: '%',
+    hint: 'Für die Auszahlungen aus dem Altersvorsorgedepot. Ein kombinierter Satz einschließlich Soli und Kirchensteuer, 0 bis 50 %, höchstens 2 Nachkommastellen.',
+    range: '0,00 bis 50,00 % (höchstens 2 Nachkommastellen)',
+  },
 };
 
 /** The reinvest checkbox (story 015, UX §2); not a text field, so not a `FieldId`. */
 export const REINVEST_COPY = {
   label: 'Steuererstattung wieder anlegen',
   hint: `Angehakt: Die Erstattung eines Sparjahres wird am 1. Januar des Folgejahres ins Depot eingezahlt, höchstens bis ${formatWholeEuro(CONTRIBUTION_CAP_CENTS)} Beitrag pro Jahr. Nicht angehakt: Sie bleibt bei der steuerpflichtigen Person.`,
+} as const;
+
+/** The Pauschbetrag checkbox of the ETF comparison (story 016, UX §2); not a text field. */
+export const ALLOWANCE_COPY = {
+  label: `Sparerpauschbetrag (${formatWholeEuro(ALLOWANCE_CENTS)}/Jahr) für dieses Depot nutzen`,
+  hint: `Angehakt: Dem ETF-Depot steht jedes Jahr der volle Freibetrag von ${formatWholeEuro(ALLOWANCE_CENTS)} auf Kapitalerträge zu, auch in der Sparzeit. Nicht angehakt: kein Freibetrag, etwa weil andere Kapitalerträge ihn schon brauchen. Das Altersvorsorgedepot nutzt ihn nie.`,
 } as const;
 
 /** The field's error text; always names the field and its allowed range (AC6). */

@@ -181,7 +181,10 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   their dev-only probe (or reduced motion) before any `click()`; click by coordinates only
   when the live motion itself is under test. e2e specs look up table cells by their column
   header (header index or accessible name), never by position (`last()`, a fixed `nth`,
-  `$`-anchored text), because later stories add columns.
+  `$`-anchored text), because later stories add columns. e2e helpers that find values by
+  label (`dt` text, region name) are scoped to their region; `getByRole` matches `name` as a
+  case-insensitive substring unless `exact: true` is set, and later stories add blocks with
+  the same labels.
 - **Shared e2e helpers:** an app's shared e2e helpers live in one `e2e/<app>.helpers.ts`
   that every spec imports; never copy them.
 - **Time and randomness** never inside reducers: pass `now` or a seed in the action. e2e

@@ -3,7 +3,7 @@ import type { Projection } from './project.ts';
 import { MIN_CONTRIBUTION_CENTS } from './zulage.ts';
 
 /** § 10a Abs. 1 EStG (new): own contributions are deductible up to this amount per year. */
-const DEDUCTIBLE_LIMIT_CENTS = 180_000;
+export const DEDUCTIBLE_LIMIT_CENTS = 180_000;
 const BP = 10_000;
 const MONTHS = 12;
 

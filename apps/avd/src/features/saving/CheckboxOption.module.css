@@ -1,4 +1,4 @@
-/* The reinvest checkbox (story 015, UX §1, §6, §7): one 44 px row of box and label, hint below. */
+/* A checkbox option (story 015 reinvest, story 016 allowance; UX §1, §6, §7): one 44 px row of box and label, hint below. */
 .option {
   display: flex;
   flex-direction: column;

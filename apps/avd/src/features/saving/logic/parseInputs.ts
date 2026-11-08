@@ -9,6 +9,8 @@ export interface Inputs {
   readonly costsBp: number;
   /** Combined marginal tax rate (story 014), 0..5000, 1 % = 100. */
   readonly taxRateBp: number;
+  /** Combined retirement tax rate (story 016), 0..5000, 1 % = 100. Read only by compare.ts. */
+  readonly retirementRateBp: number;
 }
 
 export type FieldError =
@@ -71,7 +73,8 @@ export function parseInputs(raw: RawInputs): ParseResult {
     if (result.ok) values[field] = result.value;
     else errors[field] = result.error;
   }
-  const { age, payoutAge, monthly, children, returnPct, costsPct, taxRatePct } = values;
+  const { age, payoutAge, monthly, children, returnPct, costsPct, taxRatePct, retirementRatePct } =
+    values;
   if (age !== undefined && payoutAge !== undefined && payoutAge <= age) {
     errors.payoutAge = { kind: 'notAfterAge', age };
   }
@@ -83,6 +86,7 @@ export function parseInputs(raw: RawInputs): ParseResult {
     returnPct === undefined ||
     costsPct === undefined ||
     taxRatePct === undefined ||
+    retirementRatePct === undefined ||
     errors.payoutAge !== undefined
   ) {
     return { ok: false, errors };
@@ -97,6 +101,7 @@ export function parseInputs(raw: RawInputs): ParseResult {
       returnBp: returnPct,
       costsBp: costsPct,
       taxRateBp: taxRatePct,
+      retirementRateBp: retirementRatePct,
     },
   };
 }
