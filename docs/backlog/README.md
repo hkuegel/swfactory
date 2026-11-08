@@ -22,3 +22,4 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 013 | avd         | [Altersvorsorgedepot saving phase with Zulagen](../../apps/avd/docs/backlog/013-avd-saving-phase-zulagen.md)                                              | done   |
 | 014 | avd         | [Altersvorsorgedepot tax refund from the Günstigerprüfung](../../apps/avd/docs/backlog/014-avd-tax-refund.md)                                             | done   |
 | 015 | avd         | [Altersvorsorgedepot optional reinvestment of the tax refund](../../apps/avd/docs/backlog/015-avd-reinvest-tax-refund.md)                                 | done   |
+| 016 | avd         | [Altersvorsorgedepot comparison with a normal ETF depot](../../apps/avd/docs/backlog/016-avd-etf-comparison.md)                                           | ready  |
