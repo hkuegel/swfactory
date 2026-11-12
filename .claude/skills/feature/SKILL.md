@@ -34,6 +34,8 @@ every step in which one of them edited markdown, run
    Pass hak's request **verbatim** (the full text above) so it lands in "Original request",
    and say which one it is. If the idea doesn't make it obvious, ask hak first: the
    platform (sign-in, shell, tokens, tooling) or which app?
+   If hak's request or answers involve confidential material, tell the `product-owner` up
+   front which terms must not be written down.
    If the idea refers to real-world rules (a law, a product, a standard), research the primary
    sources first and pass them to `product-owner`; the story's Context cites them. For a
    third-party service (hosting, sign-in, analytics), the research also covers its terms of use

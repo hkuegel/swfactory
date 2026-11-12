@@ -28,10 +28,17 @@ export default defineConfig({
       testMatch: '*/e2e/pages/*.pages.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // The landing page at the site root: landing/e2e/pages/*.pages.spec.ts (story 021).
+      name: 'landing-pages',
+      testDir: '../../../landing/e2e/pages',
+      testMatch: '*.pages.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
   webServer: {
     command: `node "${serveScript}" "${SITE_DIR}" ${PAGES_BASE} ${PAGES_PORT}`,
-    // Port, not url: the site root has no index page, so a url would answer 404.
+    // Port, not url: a url would also work now (the root answers), but port needs no status rule.
     port: PAGES_PORT,
     reuseExistingServer: false,
   },

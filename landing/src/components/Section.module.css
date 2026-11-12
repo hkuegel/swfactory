@@ -1,0 +1,24 @@
+.section + .section {
+  margin-top: var(--space-7);
+}
+
+.heading {
+  margin: 0 0 var(--space-3);
+}
+
+.lead {
+  max-width: 40rem;
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+}
+
+@media (min-width: 600px) {
+  .section + .section {
+    margin-top: var(--space-8);
+  }
+
+  .heading {
+    font-size: calc(var(--text-h2) * 1.25);
+  }
+}

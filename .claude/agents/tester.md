@@ -26,7 +26,8 @@ to the code.
    design specifies dark-mode, forced-colours or reduced-motion behaviour, check each
    once with `page.emulateMedia(…)` and list the result there too. Show every new
    assertion failing once with a temporary mutation, and read computed styles only after
-   `document.getAnimations()` is empty.
+   `document.getAnimations()` is empty. Revert a mutation from a backup copy made before it,
+   never with `git checkout`, `git restore` or `git stash`.
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and

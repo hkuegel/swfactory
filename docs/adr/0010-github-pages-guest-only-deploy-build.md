@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-08
+- **Revised:** 2026-11-12 (story 021, ADR 0011): the site root gets the landing page (`_site/index.html` + `_site/_landing/`); `check-dist --out` accepts it as a required root unit, checked against the forbidden sign-in strings of both modes, and still fails on any other entry.
 - **Story:** docs/backlog/018-deploy-github-pages.md
 
 ## Context
