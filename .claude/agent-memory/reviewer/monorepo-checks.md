@@ -12,6 +12,7 @@ Things that are NOT covered by `npm run verify` in the platform/apps split and n
 - Path-suffix exemptions in the token rules (`endsWith('/tokens.css')`, `'/styles/base.css'`) are false-negative candidates for new apps.
 - Probe `new-app.mjs` from a scratchpad copy (`scripts/` + `templates/` + empty `apps/`), never in the repo; its ROOT comes from `import.meta.url`.
 - `git add -N .` to see untracked files in a diff mutates the index; undo with `git status --short | grep '^ A' | cut -c4- | xargs git reset -q --`. Prefer `git diff main -M --diff-filter=RM` (no pathspec: a pathspec breaks rename detection) and read untracked files directly.
+- Whole-repo scratch copy (story 021): `rsync -a --exclude node_modules --exclude .git` + symlink root and per-workspace `node_modules` runs `build-pages`, `check-dist --out`, `check-structure` and the pages Playwright config unchanged; without `.git` it also exercises every "no git" fallback for free.
 - Rename-heavy diffs: filter with `grep -E '^(diff|[-+][^-+])'` to see only the real content changes per file.
 
 **Why:** story 011 review found the skeleton unexercised, vacuous-by-default fixtures and an accidental index change from `git add -N`.

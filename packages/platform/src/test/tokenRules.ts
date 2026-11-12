@@ -206,12 +206,27 @@ export function readCss(srcDir: string): Record<string, string> {
 const TOKEN_FILES: ReadonlySet<string> = new Set(['src/tokens.css', 'src/styles/tokens.css']);
 const BASE_FILE = 'src/styles/base.css';
 
+/** The sign-in spinner: the platform's one stylesheet with an animation. */
+const SPINNER_FILE = 'src/auth/LoginView.module.css';
+
+export interface BypassOptions {
+  /**
+   * Exact keys of `readCss` of the stylesheets that may use `animation` (ADR 0011). Default: the
+   * sign-in spinner. A caller that names a file also checks that it switches the animation off
+   * under reduced motion.
+   */
+  readonly animationFiles?: readonly string[] | undefined;
+}
+
 /**
  * No stylesheet bypasses the tokens: no colour literal, `font-family`, own dark-mode block, free
  * radius, free transition or animation outside `tokens.css` (and `base.css`, the reduced-motion
- * reset and the font). The login spinner is the only animation.
+ * reset and the font). Only the files of `animationFiles` animate (default: the login spinner).
  */
-export function bypassProblems(cssByPath: Readonly<Record<string, string>>): string[] {
+export function bypassProblems(
+  cssByPath: Readonly<Record<string, string>>,
+  { animationFiles = [SPINNER_FILE] }: BypassOptions = {},
+): string[] {
   const problems: string[] = [];
   for (const [path, raw] of Object.entries(cssByPath)) {
     if (TOKEN_FILES.has(path)) continue;
@@ -260,9 +275,10 @@ export function bypassProblems(cssByPath: Readonly<Record<string, string>>): str
         if (/\ball\b/.test(propertyValue)) problems.push(`${path}: ${property} all`);
       }
       if (/^animation(-|$)/.test(property)) {
-        // Only the sign-in spinner (own static rule under reduced motion) and the global reset.
-        const spinner = path.endsWith('/auth/LoginView.module.css');
-        if (!spinner && !isBase) problems.push(`${path}: ${property} ${rawValue}`);
+        // Only the named files (own static rule under reduced motion) and the global reset.
+        if (!animationFiles.includes(path) && !isBase) {
+          problems.push(`${path}: ${property} ${rawValue}`);
+        }
       }
     }
   }

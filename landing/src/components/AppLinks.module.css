@@ -1,0 +1,60 @@
+.apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  min-width: 0;
+}
+
+/* The whole card is the link; the underlined title is the link cue, the arrow is decoration. */
+.card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.5rem;
+  padding: var(--space-4);
+  border: 1px solid var(--color-edge);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface);
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    background-color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease);
+}
+
+.card::after {
+  content: '→';
+  content: '→' / '';
+}
+
+.title {
+  min-width: 0;
+  text-decoration-line: underline;
+  text-underline-offset: 3px;
+}
+
+.none {
+  margin: 0;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    border-color: var(--color-accent);
+    background-color: var(--color-surface-subtle);
+  }
+}
+
+@media (forced-colors: active) {
+  .card {
+    border-color: ButtonText;
+  }
+}

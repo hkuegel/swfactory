@@ -63,3 +63,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Phrase a legal note for hak as "may need X; check it, e.g. with a legal review", never as a verdict or a rule (story 018, org instruction).
 - When `test:pages` gains a check, update the root README "Build and test the Pages site locally" paragraph and CHANGELOG "Fixed" or "Added" with the story id, since it describes what the command covers (bug 020).
 - Don't write a bug's CHANGELOG line as a separate "Pages" section; put it under "Fixed" in the Unreleased list, newest first (bug 020).
+- When a story adds a non-app workspace, name it in the README layout block and in the check:structure scan sentence, and state its content rules without listing the banned words (story 021).
+- Don't list banned words (e.g. internal tool names) in README or CHANGELOG, even as examples; say the rule and point to the check (story 021).
+- Take a figure's "as of" date in README from the ADR's consequences (commit date of the build), not from the story's example values (story 021).

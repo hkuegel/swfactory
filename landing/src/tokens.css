@@ -1,0 +1,29 @@
+/*
+ * Tokens of the landing page (story 021, UX design §4); they extend the platform's tokens. Every
+ * colour has a dark value (src/tokens.test.ts).
+ */
+:root {
+  /* The two human gates of the pipeline: diamond fill, 3:1 against every surface it sits on. */
+  --landing-gate: #b45309;
+
+  /* Entry rise of the hero: the one animation of the page, at most 2 s. */
+  --duration-entry: 900ms;
+
+  /* Width of the page column. */
+  --landing-width: 60rem;
+
+  /* Hero heading: 2 rem at 320 px, growing with the viewport to 3 rem. */
+  --landing-text-hero: clamp(2rem, 1.2rem + 3.2vw, 3rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --landing-gate: #fbbf24;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-entry: 0s;
+  }
+}

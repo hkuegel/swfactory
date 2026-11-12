@@ -1,0 +1,49 @@
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-6) 0 0;
+}
+
+/* The figure above its label (the markup reads label, then figure). */
+.tile {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-well);
+  background-color: var(--color-surface-subtle);
+  overflow-wrap: anywhere;
+}
+
+/* Dashed edge plus the word "estimate": not counted. */
+.estimate {
+  border: 1px dashed var(--color-edge);
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.figure {
+  margin: 0;
+  font-size: calc(var(--text-h1) * 1.25);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.note {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+@media (forced-colors: active) {
+  .tile {
+    border-color: CanvasText;
+  }
+}

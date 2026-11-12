@@ -5,7 +5,10 @@
 // Mode: `standard` (default) or `guestOnly` (--guest-only); the caller states it, the check never
 // reads VITE_GUEST_ONLY, and the rules are symmetric (a build checked in the wrong mode fails).
 // Where: without --out `apps/<app>/dist`; with --out `<dir>/<app>`, and then every top-level entry
-// of <dir> must be a checked app (the uploaded artefact is checked completely).
+// of <dir> must be a checked app or the root unit (the uploaded artefact is checked completely).
+// Root unit (story 021, ADR 0011): the landing page = `<dir>/index.html` + `<dir>/_landing/`. It is
+// required with --out, has no sign-in, so the forbidden strings of both modes apply to every one of
+// its files and no `required` string does; its entry assets must lie under `<base>_landing/`.
 // Base: URL prefix of the build (default `/`); with --out an app lives under `<base><app>/`.
 // Config: packages/platform/dist-check.json (shared by every app) and apps/<app>/dist-check.json
 // (optional): { forbidden, lazyChunks, standard: { forbidden, required }, guestOnly: { ... } }.
@@ -19,6 +22,9 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PLATFORM_CONFIG = join(ROOT, 'packages', 'platform', 'dist-check.json');
 const MODES = ['standard', 'guestOnly'];
 const TOP_KEYS = ['forbidden', 'lazyChunks', ...MODES];
+// Directory of the landing page's assets in the --out directory. Keep in sync with `assetsDir` in
+// landing/vite.config.ts and LANDING_ASSETS_DIR in packages/platform/config/pages.ts.
+const ROOT_ASSETS = '_landing';
 
 /** Every problem is collected per app; the process exits 1 if any app has one. */
 class CheckError extends Error {}
@@ -133,6 +139,30 @@ function entryUrls(html) {
   return urls;
 }
 
+/**
+ * The entry chunk: index.html's module scripts, modulepreloads and stylesheets. Each URL must lie
+ * under `prefix` and name an existing file of `dir`; else a subpath deploy would 404 (and the lazy
+ * chunk checks would resolve the wrong files and pass vacuously). Returns the entry files.
+ */
+function entryFiles(label, html, prefix, dir, contents) {
+  const urls = entryUrls(html);
+  if (!urls.some((u) => /\.m?js(\?|#|$)/.test(u))) {
+    fail(`${label}: index.html loads no module script; nothing meaningful to check.`);
+  }
+  const found = new Set();
+  for (const url of urls) {
+    const path = url.startsWith(prefix) ? join(dir, url.slice(prefix.length).split(/[?#]/)[0]) : '';
+    const inside = path !== '' && (path + sep).startsWith(dir + sep);
+    if (!inside || !contents.has(path)) {
+      fail(
+        `${label}: entry asset "${url}" is outside the base "${prefix}" or missing from the build`,
+      );
+    }
+    found.add(path);
+  }
+  return found;
+}
+
 /** Checks one app; returns the "ok" summary or throws a CheckError. */
 function checkApp(app, platform, options) {
   const { mode, out, base } = options;
@@ -178,33 +208,14 @@ function checkApp(app, platform, options) {
     );
   }
 
-  // The entry chunk: index.html's module scripts, modulepreloads and stylesheets. Each URL must
-  // lie under the base and name an existing file; else a subpath deploy would 404 (and the lazy
-  // chunk checks below would resolve the wrong files and pass vacuously).
   const prefix = out ? `${base}${app}/` : base;
   const html = contents.get(join(dist, 'index.html'));
-  const urls = entryUrls(html);
-  if (!urls.some((u) => /\.m?js(\?|#|$)/.test(u))) {
-    fail(`${app}: index.html loads no module script; nothing meaningful to check.`);
-  }
-  const entryFiles = new Set();
-  for (const url of urls) {
-    const path = url.startsWith(prefix)
-      ? join(dist, url.slice(prefix.length).split(/[?#]/)[0])
-      : '';
-    const inside = path !== '' && (path + sep).startsWith(dist + sep);
-    if (!inside || !contents.has(path)) {
-      fail(
-        `${app}: entry asset "${url}" is outside the base "${prefix}" or missing from the build`,
-      );
-    }
-    entryFiles.add(path);
-  }
+  const entries = entryFiles(app, html, prefix, dist, contents);
 
   const notes = [];
   for (const { marker, entry, gzipMaxKb } of own.lazyChunks) {
     // The marker must not be in the entry chunk (the code must be lazy-loaded only).
-    const entryHits = [...entryFiles].filter((f) => contents.get(f)?.includes(marker));
+    const entryHits = [...entries].filter((f) => contents.get(f)?.includes(marker));
     if (entryHits.length > 0) {
       fail(
         `"${marker}" found in the entry chunk of ${app} (must be lazy-loaded only):\n  ${entryHits.map(rel).join('\n  ')}`,
@@ -213,7 +224,7 @@ function checkApp(app, platform, options) {
     // The lazy chunk must exist once its entry exists in the source (no vacuous pass) and stay
     // within the gzip budget.
     const chunks = files.filter(
-      (f) => f.endsWith('.js') && !entryFiles.has(f) && contents.get(f).includes(marker),
+      (f) => f.endsWith('.js') && !entries.has(f) && contents.get(f).includes(marker),
     );
     if (chunks.length === 0) {
       if (existsSync(join(appDir, entry))) {
@@ -238,6 +249,51 @@ function checkApp(app, platform, options) {
 
   const extra = notes.length > 0 ? `, ${notes.join(', ')}` : '';
   return `check-dist: ok ${app} (${mode}, ${files.length} files${extra})`;
+}
+
+/** Checks the root unit (landing page) of the --out directory; throws a CheckError. */
+function checkRoot(platform, options) {
+  const { out, base } = options;
+  const rel = (f) => (f.startsWith(ROOT) ? f.slice(ROOT.length) : f);
+  const indexFile = join(out, 'index.html');
+  const assetsDir = join(out, ROOT_ASSETS);
+  if (!existsSync(indexFile) || !statSync(indexFile).isFile()) {
+    fail(`root unit: ${rel(indexFile)} not found (the landing page is required).`);
+  }
+  if (!existsSync(assetsDir) || !statSync(assetsDir).isDirectory()) {
+    fail(`root unit: ${rel(assetsDir)} not found (the landing page is required).`);
+  }
+  const files = [indexFile, ...listFiles(assetsDir)];
+  const contents = new Map(files.map((f) => [f, readFileSync(f, 'utf8')]));
+
+  // No sign-in on the landing page: neither the guest nor the Google strings may appear.
+  const forbidden = [
+    ...new Set([
+      ...platform.forbidden,
+      ...platform.standard.forbidden,
+      ...platform.guestOnly.forbidden,
+    ]),
+  ];
+  const hits = files.flatMap((file) =>
+    forbidden.filter((s) => contents.get(file).includes(s)).map((s) => `${rel(file)}: "${s}"`),
+  );
+  if (hits.length > 0) fail(`code that must not be on the landing page:\n  ${hits.join('\n  ')}`);
+
+  // ADR 0011: the root page has no inline script. Every <script> needs a src and no inline text.
+  const inline = [
+    ...contents
+      .get(indexFile)
+      .matchAll(/<script\b((?:"[^"]*"|'[^']*'|[^>"'])*)>([\s\S]*?)(?:<\/script\s*>|$)/gi),
+  ].filter(([, attrs, body]) => !/(?:^|\s)src\s*=/i.test(attrs) || body.trim() !== '');
+  if (inline.length > 0) {
+    fail(
+      `root unit: ${rel(indexFile)} has an inline <script> (ADR 0011: no inline script on the root page; ` +
+        `every script needs a src and no inline text): ${inline[0][0].slice(0, 80)}`,
+    );
+  }
+
+  entryFiles('landing', contents.get(indexFile), `${base}${ROOT_ASSETS}/`, assetsDir, contents);
+  return `check-dist: ok landing (root unit, ${files.length} files)`;
 }
 
 function usage(message) {
@@ -284,14 +340,19 @@ if (apps.length === 0) {
 
 let failed = false;
 if (out) {
-  // Every file of the artefact is checked: the directory exists and holds nothing but checked apps.
+  // Every file of the artefact is checked: the directory exists and holds nothing but checked apps
+  // and the root unit.
   if (!existsSync(out) || !statSync(out).isDirectory()) {
     console.error(`check-dist: --out ${relative(ROOT, out) || out} is not a directory`);
     process.exit(1);
   }
   for (const entry of readdirSync(out)) {
-    const isApp = apps.includes(entry) && statSync(join(out, entry)).isDirectory();
-    if (!isApp) {
+    const isDir = statSync(join(out, entry)).isDirectory();
+    const known =
+      (isDir && apps.includes(entry)) ||
+      (isDir && entry === ROOT_ASSETS) ||
+      (!isDir && entry === 'index.html');
+    if (!known) {
       failed = true;
       console.error(`check-dist: unchecked entry "${entry}" in ${relative(ROOT, out) || out}`);
     }
@@ -300,6 +361,15 @@ if (out) {
 for (const app of apps) {
   try {
     console.log(checkApp(app, platform, { mode, out, base }));
+  } catch (error) {
+    if (!(error instanceof CheckError)) throw error;
+    failed = true;
+    console.error(`check-dist: ${error.message}`);
+  }
+}
+if (out) {
+  try {
+    console.log(checkRoot(platform, { out, base }));
   } catch (error) {
     if (!(error instanceof CheckError)) throw error;
     failed = true;

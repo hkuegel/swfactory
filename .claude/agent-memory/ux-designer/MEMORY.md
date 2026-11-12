@@ -60,4 +60,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Comparison/result blocks, duplicate AC phrases, minus sign, sub-heading in forms: see [comparison-blocks-and-copy-collisions](feedback_comparison_blocks.md) (story 016).
 - Solid chart series colours: lightness ladder, all-pairs rule 1.35:1, 3:1 on surface; see [chart-colour-ladder](feedback_chart_colour_ladder.md) (story 017).
 - Login screen copy is English (LoginView.tsx); `.buttons .guest:not(:disabled)` forces `--color-text`, so a primary guest button needs the dashed/colour rules split into their own class (story 018).
+- Landing/content pages: word caps are measured on innerText with scripts off; avoid `text-transform` and put arrows in `::after` (not counted); choose caps lower than the AC and count words per section in the design (story 021).
+- Shared `Button` is a `<button>`: link-buttons need own CSS with the same tokens; in forced colours set the unselected edge to a 1 px ButtonText border and the selected edge to a 4 px Highlight edge plus a glyph (Canvas leaves the box open on one side), and give selected state a width or glyph difference, since tests compare non-colour computed styles (story 021).
+- Static-vs-interactive diagram: keep one wrapper node and equal row height (3 rem) so hydration does not jump; below 600 px a 3x3 chip grid keeps the tab panel on screen (story 021).
 - A variant for one build (deploy) must leave the standard build pixel-identical: spec the CSS split for the developer instead of editing a shared class (story 018).

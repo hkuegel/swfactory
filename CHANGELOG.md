@@ -7,6 +7,9 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
+  the factory's roles, pipeline and quality checks, and links to every published app and to
+  the repository (#021).
 - The apps are published on GitHub Pages at `hkuegel.github.io/swfactory/<app>/`. The
   published sites offer only guest sign-in, no Google sign-in (#018).
 - The avd calculator compares the Altersvorsorgedepot with a normal ETF depot. Both get the

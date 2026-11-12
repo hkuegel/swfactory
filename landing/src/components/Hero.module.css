@@ -1,0 +1,111 @@
+/*
+ * The only stylesheet of the page with an animation (named in src/tokens.test.ts): the hero rises
+ * in once. No animation under reduced motion (the token is 0s there as well).
+ */
+.hero {
+  padding-block: var(--space-7);
+  text-align: center;
+  animation: rise var(--duration-entry) var(--ease) backwards;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-4));
+  }
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--landing-text-hero);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.claim {
+  max-width: 40rem;
+  margin: var(--space-4) auto 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+}
+
+/* Stacked and full width on a phone, side by side from 600 px. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 20rem;
+  margin: var(--space-6) auto 0;
+}
+
+/* The look of the platform's button, for links (a button can't be a link). */
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease);
+}
+
+.primary {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-control);
+}
+
+.secondary {
+  border-color: var(--color-edge);
+  background-color: transparent;
+  color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .primary:hover {
+    background-color: var(--color-accent-hover);
+  }
+
+  .secondary:hover {
+    background-color: var(--color-accent-subtle);
+  }
+}
+
+@media (min-width: 600px) {
+  .hero {
+    padding-block: var(--space-8);
+  }
+
+  .actions {
+    flex-direction: row;
+    justify-content: center;
+    max-width: none;
+  }
+}
+
+/* Fills are dropped in forced colours: real borders keep the edges visible. */
+@media (forced-colors: active) {
+  .action {
+    border-color: ButtonText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    animation: none;
+  }
+}

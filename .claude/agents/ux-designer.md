@@ -40,6 +40,9 @@ Fill the **UX design** section of the story with:
 - Native HTML elements first (`<button>`, `<label>`, `<dialog>`, …).
 - Every interactive element reachable and operable by keyboard.
 - Texts must match the ACs exactly where the ACs quote them — tests will look for them.
+- Copy that states facts about the process (roles, steps, gates) is checked against `CLAUDE.md`.
+- A forced-colours value that paints an edge in its background colour counts as no border; look
+  at it on a screenshot before specifying it.
 - Rendered scenes (canvas, WebGL): the AC thresholds (contrast, sizes) are binding; your
   light and material numbers are starting values that the developer calibrates by pixel
   sampling, and the architect records the final values in the design.

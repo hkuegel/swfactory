@@ -1,0 +1,47 @@
+/* Visible on keyboard focus only; it still counts as text of the page. */
+.skip {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-4);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface);
+  color: var(--color-accent);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
+}
+
+/* The gradient fades into the page colour over the hero; below it the page is plain. */
+.page {
+  min-height: 100vh;
+  padding: 0 var(--space-4) var(--space-8);
+  background-color: var(--color-page);
+  background-image: linear-gradient(180deg, var(--color-accent-subtle), var(--color-page));
+  background-repeat: no-repeat;
+  background-size: 100% 36rem;
+}
+
+.main {
+  max-width: var(--landing-width);
+  margin: 0 auto;
+}
+
+@media (min-width: 600px) {
+  .page {
+    padding-inline: var(--space-6);
+  }
+}
+
+@media (forced-colors: active) {
+  .page {
+    background-image: none;
+  }
+}
