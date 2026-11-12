@@ -107,6 +107,8 @@ Four places assume `/` or a bare executable name, which breaks on Windows:
 - 2026-11-12 — Q: two stories share number 021 (the landing page is already on `origin/main`, this fix
   was committed locally only) — A: this fix story becomes 022, the landing page keeps 021; file,
   frontmatter and branch renamed (hak).
+- 2026-11-12 — Q: may this fix branch be merged into `main` (story 023 needs a base where the index and the
+  pages tests are green)? — A: yes, merged into `main`, still no push (hak).
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
