@@ -270,6 +270,14 @@ function checkStoryRecord(raw) {
   }
   const data = rows.slice(2); // skip header and separator
   const label = (c) => (c[0] ?? '').replace(/[*_]/g, '').trim();
+  // Labels are plain text (story 022, finding L4): three readers count these rows — this check,
+  // landing/src/lib/figures.ts and the pages oracle in landing/e2e/landing.helpers.ts, which does not
+  // strip emphasis. Only a plain label makes them agree.
+  for (const [i, c] of data) {
+    if (/[*_]/.test(c[0] ?? '')) {
+      out.push([lineOfRow(i), 'cost row label must be plain text (no markdown emphasis)']);
+    }
+  }
   const isTotal = ([, c]) => /^total/i.test(label(c));
   const isOrchestrator = ([, c]) => /^orchestrator \(main session\)/i.test(label(c));
   const runs = data.filter((r) => !isTotal(r) && !isOrchestrator(r));

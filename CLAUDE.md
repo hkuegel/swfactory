@@ -108,7 +108,8 @@ The backlog must be enough to rebuild the app without any chat history:
   After changing a status in `docs/backlog/README.md`, run `npx prettier --write docs/backlog/README.md`
   (the column width follows the longest status).
 - **Story record:** from story 013 on, a done story has a `### Cost` table in its
-  Retrospective (one row per agent run, orchestrator row "not measured" or "estimate"), a
+  Retrospective (one row per agent run, orchestrator row "not measured" or "estimate", row labels plain text
+  without `*` or `_` so every reader counts the same rows), a
   Review section that lists every item of the versioned `.claude/agents/reviewer-checklist.md`
   with its result, and a non-empty "Explanation" section (at most 15 lines of at most 120 characters, plain language;
   shown in German at gate 2). `npm run check:structure` enforces the Cost table and the

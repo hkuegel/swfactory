@@ -28,7 +28,9 @@ with Vite, Vitest, Playwright, ESLint and Prettier.
 - Local and CI behaviour must match: CI only calls npm scripts. Scripts that run a
   `node_modules/.bin` entry handle Windows: the `.cmd` name and `shell: true` (Node >= 23
   rejects `.cmd` without a shell), and the command path is quoted when a shell is used.
-  Names derived from a path use `basename()`, never `split('/')`.
+  Names derived from a path use `basename()`, never `split('/')`. A path resolved from a file URL uses
+  `fileURLToPath`, never `URL.pathname` (on Windows `pathname` keeps the leading slash, so `/C:/…` reads as
+  `C:\C:\…`).
 - Keep tooling boring and minimal; every new tool needs a reason.
 - After any change run `npm run verify` and, if test config changed, `npm run test:e2e`.
 

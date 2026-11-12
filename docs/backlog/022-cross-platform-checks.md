@@ -250,7 +250,8 @@ Two things the pages tests showed only on this machine, both after gate 2 (see L
 the landing oracle, and the emphasised `total` row of this story. `npm run test:pages` is green on Windows after
 both (23 tests). Note for reproducing here: `git` is on the machine PATH but not on the PATH of a session started
 before Git was installed, so the landing build and its oracle need the PATH refreshed; the build tolerates a
-missing git (`asOf: null`), the test does not.
+missing git (`asOf: null`), the test does not. `npm run test:pages` (23 tests) and `npm run test:e2e` after the
+merge are green on Windows: avd 80, minesweeper 110, as reported per workspace.
 
 ## Explanation
 
@@ -297,15 +298,19 @@ vacuous. The unquoted command path found in review (a path with a space) was fix
   it in the repository (`git config --local`), not globally."
 - **P4 (`.claude/agents/tester.md`):** "When a check or a harness bound is changed, run its failure path by
   hand once with a deliberately bad input, on the machine where the change is made."
-- **P5 (pending hak, found after gate 2):** "Resolve path names from a file URL with `fileURLToPath`, never with
-  `URL.pathname` (the latter keeps the leading slash on Windows). And: an oracle that re-implements a rule must
-  read the same labels as the code it checks — either both strip markdown emphasis or the templates forbid
-  emphasised labels in a Cost table."
+- **P5 (approved by hak on 2026-11-12, found after gate 2):** "Resolve path names from a file URL with
+  `fileURLToPath`, never with `URL.pathname` (the latter keeps the leading slash on Windows). And: an oracle
+  that re-implements a rule must read the same labels as the code it checks." Hak's decision for the second
+  half: enforce the convention by check, not by changing the oracle — `check-structure` now reports an
+  emphasised label in a Cost table (`cost row label must be plain text (no markdown emphasis)`), which is what
+  keeps the three readers of the table agreeing. Non-vacuity: a planted `**total**` row was reported
+  (`docs/backlog/022-cross-platform-checks.md:319`), then removed from a backup copy; green again.
+  `fileURLToPath` added to `.claude/agents/devops.md`, the plain-label convention to CLAUDE.md.
 
 **Outcome (gate 2):** approved by hak on 2026-11-12: P1–P4 applied (CLAUDE.md, `.claude/agents/`),
-finding L1 fixed in this story, commit on the fix branch without push. P5 is pending hak's decision;
-L3 was fixed on the branch, L4 was resolved by following the house convention (plain `total` row), not by
-changing the oracle.
+finding L1 fixed in this story, commit on the fix branch without push. P5 was decided after gate 2:
+the convention is enforced by `check-structure` (oracle unchanged); L3 fixed on the branch, L4 resolved by
+following the convention, not by changing the oracle.
 
 ### Cost
 
