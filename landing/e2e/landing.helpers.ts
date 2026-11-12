@@ -3,11 +3,14 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { SITE_DIR } from '@swfactory/platform/config/pages';
 
 // Shared by every spec of the landing page's published-build checks (story 021).
 
-const REPO_ROOT = new URL('../../', import.meta.url).pathname;
+// fileURLToPath, not URL.pathname: on Windows pathname keeps the leading slash of a
+// file URL (story 022), so '/C:/…' becomes 'C:\C:\…' and every read below it fails.
+const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
 // ---- The pipeline as the story describes it (UX design §2), independent of src/content.ts --------
 

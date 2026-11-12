@@ -229,6 +229,28 @@ _reviewer (checklist v2, read fresh):_ **APPROVED** — two low findings, nothin
 - **L2 (low)** `shell: true` with arguments prints Node's `DEP0190` deprecation warning on every Windows run of
   `check:template` and `build:pages` (arguments are concatenated, not escaped). Harmless with fixed literal
   arguments, but it is permanent noise in the output.
+- **L3 (low, found after gate 2, on Windows)** `landing/e2e/landing.helpers.ts:10` built the repository root
+  from `new URL('../../', import.meta.url).pathname`, which keeps the leading slash of a file URL on Windows, so
+  the figures oracle read `C:\C:\Users\…` and the pages test failed with `ENOENT … scandir`. The other path
+  constants of the factory use `fileURLToPath`, which is the same string on Linux. **Fixed** the same way, so the
+  rule is now uniform across the factory. Measured on Windows before the fix: 1 failed, 22 passed; after: 23
+  passed. On Linux the value is identical, so nothing changes there.
+- **L4 (low, decision pending with hak)** the pages oracle and the code it checks disagree on emphasised labels:
+  `costOfStory` strips `*` and `_` from the first cell before excluding the `total` row, the oracle
+  (`landing.helpers.ts`, AC8) excludes only a row that starts literally with `total`. A Cost table that writes
+  `**total**` is therefore counted as an agent run by the oracle and not by the code — measured on Windows:
+  oracle 141 vs page 140, the difference exactly the `**total**` row of this story. Every other story uses a
+  plain `total (measured)` row, so this story was the only one that differed. Its row was written plain (house
+  convention), which makes the test green without touching the oracle. The divergence remains latent: an
+  emphasised label in any future Cost table makes the test red. Proposal P5 below.
+
+### Post-gate follow-up (2026-11-12, after the merge of `main`)
+
+Two things the pages tests showed only on this machine, both after gate 2 (see L3 and L4): the file-URL path of
+the landing oracle, and the emphasised `total` row of this story. `npm run test:pages` is green on Windows after
+both (23 tests). Note for reproducing here: `git` is on the machine PATH but not on the PATH of a session started
+before Git was installed, so the landing build and its oracle need the PATH refreshed; the build tolerates a
+missing git (`asOf: null`), the test does not.
 
 ## Explanation
 
@@ -275,9 +297,15 @@ vacuous. The unquoted command path found in review (a path with a space) was fix
   it in the repository (`git config --local`), not globally."
 - **P4 (`.claude/agents/tester.md`):** "When a check or a harness bound is changed, run its failure path by
   hand once with a deliberately bad input, on the machine where the change is made."
+- **P5 (pending hak, found after gate 2):** "Resolve path names from a file URL with `fileURLToPath`, never with
+  `URL.pathname` (the latter keeps the leading slash on Windows). And: an oracle that re-implements a rule must
+  read the same labels as the code it checks — either both strip markdown emphasis or the templates forbid
+  emphasised labels in a Cost table."
 
 **Outcome (gate 2):** approved by hak on 2026-11-12: P1–P4 applied (CLAUDE.md, `.claude/agents/`),
-finding L1 fixed in this story, commit on the fix branch without push.
+finding L1 fixed in this story, commit on the fix branch without push. P5 is pending hak's decision;
+L3 was fixed on the branch, L4 was resolved by following the house convention (plain `total` row), not by
+changing the oracle.
 
 ### Cost
 
@@ -288,7 +316,7 @@ finding L1 fixed in this story, commit on the fix branch without push.
 | developer                   | 1     | n/a   | n/a          | n/a       | n/a      |
 | tester                      | 1     | n/a   | n/a          | n/a       | n/a      |
 | reviewer                    | 1     | n/a   | n/a          | n/a       | n/a      |
-| **total**                   | —     | n/a   | n/a          | n/a       | n/a      |
+| total                       | —     | n/a   | n/a          | n/a       | n/a      |
 | orchestrator (main session) | 1     | n/a   | not measured | n/a       | n/a      |
 
 _All roles were carried by the orchestrator (single session) on Windows; usage was not measured per role._
