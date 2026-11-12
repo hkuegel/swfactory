@@ -11,7 +11,7 @@
 // A common word as app name (e.g. "todo") causes false positives in rule 1: pick a distinctive
 // name, or add an exemption below in the same change.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -154,7 +154,7 @@ if (existsSync(indexPath)) {
 }
 const ids = new Map();
 for (const story of stories) {
-  const id = /^(\d{3})-/.exec(story.split('/').pop())[1];
+  const id = /^(\d{3})-/.exec(basename(story))[1];
   ids.set(id, [...(ids.get(id) ?? []), rel(story)]);
   const count = listed.get(story) ?? 0;
   if (count !== 1) {
@@ -343,7 +343,7 @@ function checkStoryRecord(raw) {
 for (const story of stories) {
   const raw = readFileSync(story, 'utf8');
   const status = /^status:\s*([a-z-]+)/m.exec(raw)?.[1];
-  const id = parseInt(/^(\d{3})-/.exec(story.split('/').pop())[1], 10);
+  const id = parseInt(/^(\d{3})-/.exec(basename(story))[1], 10);
   if (status !== 'done' || id <= 12) continue;
   for (const [line, message] of checkStoryRecord(raw)) report(story, line, message);
 }

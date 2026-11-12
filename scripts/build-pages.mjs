@@ -27,7 +27,11 @@ if (apps.length === 0) {
 // A stale _site must never be uploaded.
 rmSync(SITE, { recursive: true, force: true });
 
-const vite = join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'vite.cmd' : 'vite');
+const win = process.platform === 'win32';
+const vitePath = join(ROOT, 'node_modules', '.bin', win ? 'vite.cmd' : 'vite');
+// With a shell the command must be quoted: an unquoted path with a space reads as
+// command + arguments (story 021, finding L1).
+const vite = win ? `"${vitePath}"` : vitePath;
 for (const app of apps) {
   const result = spawnSync(
     vite,
@@ -36,6 +40,8 @@ for (const app of apps) {
       cwd: join(appsDir, app),
       env: { ...process.env, VITE_GUEST_ONLY: 'true' },
       stdio: 'inherit',
+      // Node >= 23 refuses to spawn .cmd shims without a shell (EINVAL on Windows).
+      shell: process.platform === 'win32',
     },
   );
   if (result.status !== 0) {

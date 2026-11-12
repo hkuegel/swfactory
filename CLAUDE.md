@@ -115,6 +115,8 @@ The backlog must be enough to rebuild the app without any chat history:
   `git mv`; they never stage, unstage, commit or reset. Throw-away diagnostic commits
   (`chore(diag) … drop me`) are squashed or dropped before merge; temporary workflows and
   their runs are removed.
+- **Git identity:** before the first commit on a machine, the orchestrator asks hak for the
+  identity and sets it in the repository (`git config --local`), never globally.
 - **Definition of Done:** all ACs covered by passing tests, `npm run verify` green,
   reviewer verdict APPROVED, README/CHANGELOG updated where user-visible, and a green CI
   run of the story branch on GitHub (run id in the Test report). While a push doesn't
@@ -177,7 +179,9 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   Counters and state prove that code ran, not that pixels changed: every check of a visual
   effect includes at least one pixel or frame comparison, and logic that depends on real
   frame timing gets one real-loop test that proves the effect plays, not only that it ends.
-  A pixel-diff tolerance is backed by the measured maximum noise (stated in a comment).
+  A pixel-diff tolerance is backed by the measured maximum noise (stated in a comment),
+  measured on every platform the tests run on, not only the CI runner; a bound that is
+  loosened must show a non-vacuity measurement in the Test report.
   Tests never write into DOM the app renders (e.g. live regions); they reset state through
   the UI or the clock. When existing cases are rerun for a new option, or a rule is
   mutation-checked, at least one case must actually move the result (a strict difference);

@@ -25,7 +25,10 @@ with Vite, Vitest, Playwright, ESLint and Prettier.
 
 ## Principles
 
-- Local and CI behaviour must match: CI only calls npm scripts.
+- Local and CI behaviour must match: CI only calls npm scripts. Scripts that run a
+  `node_modules/.bin` entry handle Windows: the `.cmd` name and `shell: true` (Node >= 23
+  rejects `.cmd` without a shell), and the command path is quoted when a shell is used.
+  Names derived from a path use `basename()`, never `split('/')`.
 - Keep tooling boring and minimal; every new tool needs a reason.
 - After any change run `npm run verify` and, if test config changed, `npm run test:e2e`.
 

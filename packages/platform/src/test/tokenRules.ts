@@ -198,7 +198,10 @@ export function readCss(srcDir: string): Record<string, string> {
   return Object.fromEntries(
     readdirSync(srcDir, { recursive: true, encoding: 'utf8' })
       .filter((path) => path.endsWith('.css'))
-      .map((path) => [`${basename(srcDir)}/${path}`, readFileSync(join(srcDir, path), 'utf8')]),
+      .map((path) => [
+        `${basename(srcDir)}/${path.split('\\').join('/')}`,
+        readFileSync(join(srcDir, path), 'utf8'),
+      ]),
   );
 }
 

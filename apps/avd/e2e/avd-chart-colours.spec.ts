@@ -143,11 +143,16 @@ test('AC4: in forced colours every series differs by pattern, border or outline,
   // The last bar's centre column: solid, then stripes, ..., then a hollow (Canvas) top for the loss.
   const bars = await barRuns(page, { text: 'CanvasText', canvas: 'Canvas' });
   const runs = bars[bars.length - 1] ?? [];
-  expect(runs[0]).toMatchObject({ label: 'text' });
-  expect(runs[0]?.length).toBeGreaterThan(20);
-  const middle = runs.slice(1, -1);
+  // A run of at most 4 px at the top edge is anti-aliasing of a bar top that falls between pixels
+  // (measured: 3 px on Windows, none on Linux, where such runs are already dropped as < 3 px).
+  // It is not a fill, so the fills below it are what this AC reads (story 021).
+  const top = runs[runs.length - 1];
+  const fills = top?.label === 'other' && top.length <= 4 ? runs.slice(0, -1) : runs;
+  expect(fills[0]).toMatchObject({ label: 'text' });
+  expect(fills[0]?.length).toBeGreaterThan(20);
+  const middle = fills.slice(1, -1);
   const changes = middle.filter((run, i) => i > 0 && run.label !== middle[i - 1]?.label);
   expect(changes.length, 'stripe alternations').toBeGreaterThanOrEqual(4);
-  expect(runs[runs.length - 1]).toMatchObject({ label: 'canvas' });
-  expect(runs[runs.length - 1]?.length).toBeGreaterThan(5);
+  expect(fills[fills.length - 1]).toMatchObject({ label: 'canvas' });
+  expect(fills[fills.length - 1]?.length).toBeGreaterThan(5);
 });

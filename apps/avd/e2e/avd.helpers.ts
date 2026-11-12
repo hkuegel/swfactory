@@ -147,7 +147,11 @@ export async function chartSeriesPixels(page: Page) {
 }
 
 /** Pixels whose channels differ by more than `tolerance` between two PNGs (base64); raster noise stays below it. */
-// Measured noise of identical charts: <= 1/255 over 984 pixels; a real change differs in 43.333 pixels.
+// Measured noise of identical charts: <= 1/255 over 984 pixels on the Linux runner, and <= 3/255
+// on Windows (2 pixels at tolerance 2; the worst is 248,247,245 -> 246,244,244). A re-render of an
+// unchanged chart can reach that floor on Windows, never on Linux. A real change differs in
+// 43.333 pixels, so the assertions compare against the floor of both platforms (story 021).
+const RASTER_NOISE_FLOOR = 4;
 export async function differingPixels(page: Page, a: string, b: string, tolerance = 2) {
   return page.evaluate(
     async ([x, y, tol]) => {
@@ -209,7 +213,7 @@ export async function savingSnapshot(page: Page) {
   };
 }
 
-/** Figures, table, chart pixels (no differing pixel) and chart markup equal `before`. */
+/** Figures, table, chart pixels (within the raster noise floor) and chart markup equal `before`. */
 export async function expectSavingUnchanged(
   page: Page,
   before: Awaited<ReturnType<typeof savingSnapshot>>,
@@ -218,7 +222,9 @@ export async function expectSavingUnchanged(
   expect(after.figures).toBe(before.figures);
   expect(after.table).toBe(before.table);
   expect(after.chartHtml).toBe(before.chartHtml);
-  expect(await differingPixels(page, after.chart, before.chart)).toBe(0);
+  expect(await differingPixels(page, after.chart, before.chart)).toBeLessThanOrEqual(
+    RASTER_NOISE_FLOOR,
+  );
 }
 
 // ---- Story 017: chart colours -------------------------------------------------------------

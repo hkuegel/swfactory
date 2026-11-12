@@ -1,7 +1,7 @@
 ---
 id: 021
 title: Factory checks pass on Windows
-status: in-review
+status: done
 type: bug
 app: platform
 branch: fix/021-cross-platform-checks
@@ -101,6 +101,9 @@ Four places assume `/` or a bare executable name, which breaks on Windows:
   `git config --local`, not globally (hak).
 - 2026-11-12 — Tester after the harness change: full verify green and e2e 80/80 (avd) and
   110/110 (minesweeper) on Windows in one run.
+- 2026-11-12 — Gate 2 (hak): all four retro proposals P1–P4 approved and applied to CLAUDE.md and
+  `.claude/agents/`. Finding L1 (unquoted command path under `shell: true`, measured on Windows)
+  fixed in this story. Commit: on the fix branch, no push (hak).
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -177,12 +180,108 @@ _tester:_
 
 ## Review
 
-_reviewer: verdict pending._
+_reviewer (checklist v2, read fresh):_ **APPROVED** — two low findings, nothing that blocks the commit.
+
+| Item  | Result | Reason                                                                                                                                                                                                                                                                                                                                                                    |
+| ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1    | pass   | AC1 `scripts/check-structure.mjs` `basename()` (both rules) — green run plus the planted dead link; AC2 `scripts/check-template.mjs` `.cmd` + `shell` — green run plus the planted failing test; AC3 `tokenRules.ts` `readCss()` key normalization — `tokens.test.ts` reads the key `src/zz-probe.css` during the hand probe; AC4 full `npm run verify` green on Windows. |
+| C2    | n.a.   | no network call or pending state in the diff.                                                                                                                                                                                                                                                                                                                             |
+| C3    | n.a.   | no hook or component logic changed.                                                                                                                                                                                                                                                                                                                                       |
+| C4    | n.a.   | no render loop or imperative controller changed.                                                                                                                                                                                                                                                                                                                          |
+| C5    | n.a.   | no reducer changed.                                                                                                                                                                                                                                                                                                                                                       |
+| C6    | pass   | `run()` returns false when the spawn fails (status is null, not 0) and the check prints `FAILED` + exit 1; `build-pages.mjs` reports a non-zero status. Probed by hand, see S5.                                                                                                                                                                                           |
+| S1    | pass   | no user input reaches a sink; the shell call takes fixed literal arguments (finding L1).                                                                                                                                                                                                                                                                                  |
+| S2    | pass   | no secrets; `config/vite.ts` adds only a path.                                                                                                                                                                                                                                                                                                                            |
+| S3    | n.a.   | `package.json` dependencies unchanged.                                                                                                                                                                                                                                                                                                                                    |
+| S4    | n.a.   | no dev-only code added.                                                                                                                                                                                                                                                                                                                                                   |
+| S5    | pass   | touched scripts exercised by `verify` and hand-run on Windows: planted failing test (vitest path) → `check-template: FAILED`; planted `Type 'string' is not assignable to type 'number'` (tsc path) → `check-template: FAILED`; planted colour literal → reported as `src/zz-probe.css: colour literal`; planted dead link → reported. All probes removed.                |
+| T1    | pass   | `npm run verify` run by the reviewer on Windows: green.                                                                                                                                                                                                                                                                                                                   |
+| T2    | pass   | no new test files; one test per AC, the changed assertions stay in the existing specs.                                                                                                                                                                                                                                                                                    |
+| T3    | pass   | the loosened bounds stay non-vacuous: planted change = 1749 px against the floor of 4; a real recoloured segment reads as `other:20`, above the 4 px filter.                                                                                                                                                                                                              |
+| T4    | pass   | no counted Tab sequences or coordinates of moving elements added; specs still named after ACs.                                                                                                                                                                                                                                                                            |
+| T5    | pass   | the new branch logic is in the check scripts, which the story records as having no test (the checks are the oracle) plus the recorded hand probes.                                                                                                                                                                                                                        |
+| K1    | pass   | matches the design; the harness deviation is recorded in Implementation notes. During review `RASTER_NOISE_FLOOR` was changed from an unused export to a module-local constant.                                                                                                                                                                                           |
+| K2    | pass   | no `any`, no `!`, named exports.                                                                                                                                                                                                                                                                                                                                          |
+| K3    | n.a.   | no CSS changed.                                                                                                                                                                                                                                                                                                                                                           |
+| K4    | pass   | platform files stay generic (no app named); `check:structure` green.                                                                                                                                                                                                                                                                                                      |
+| K6    | pass   | status `in-review` equals the index row.                                                                                                                                                                                                                                                                                                                                  |
+| K7    | pass   | one entry per answer from hak, append only.                                                                                                                                                                                                                                                                                                                               |
+| K8    | n.a.   | nothing user-visible for an app user; the root README makes no platform claim.                                                                                                                                                                                                                                                                                            |
+| K9    | pass   | prettier green.                                                                                                                                                                                                                                                                                                                                                           |
+| K10   | n.a.   | no workspace script or tsconfig changed.                                                                                                                                                                                                                                                                                                                                  |
+| K11   | n.a.   | no env variable added.                                                                                                                                                                                                                                                                                                                                                    |
+| A1–A4 | n.a.   | no control, colour, UI, animation or canvas code changed.                                                                                                                                                                                                                                                                                                                 |
+
+**Findings**
+
+- **L1 (low)** `scripts/check-template.mjs:20` — with `shell: true` the command path is passed unquoted, so a
+  checkout under a path containing a space fails. Measured on Windows: unquoted `status 1`
+  (`Der Befehl "…opencode/with" ist entweder falsch geschrieben`), the same path quoted → `status 0`.
+  Hak's path has no space, so nothing fails today. **Fixed at gate 2** (hak's decision): the command is
+  quoted when the shell is used, in `check-template.mjs` and `build-pages.mjs`; verify green after the fix.
+- **L2 (low)** `shell: true` with arguments prints Node's `DEP0190` deprecation warning on every Windows run of
+  `check:template` and `build:pages` (arguments are concatenated, not escaped). Harmless with fixed literal
+  arguments, but it is permanent noise in the output.
 
 ## Explanation
 
-_To be written at gate 2._
+The factory checks were written on Linux and assumed two things that are not true on Windows: that path
+names use `/`, and that a command in `node_modules/.bin` can be started directly. Story paths come out
+with `\`, so the story-id rule read a whole path instead of the file name; the `.bin` entries are `.cmd`
+files, which Node 23 and newer refuse to start without a shell; the token test stored CSS files under
+their raw Windows name, so `src/…` lookups found nothing; and the app skeleton setup file was not servable.
+All fixed, so `npm run verify` is green on Windows, exactly as on Linux.
+
+Two avd tests were green on Linux and red on Windows, both on pixel comparisons. Identical captures are
+identical on both machines; but a re-render reaches 3/255 in two pixels on Windows, and in forced colours
+a bar ending between pixels leaves a 3 px blend the test read as fill. Those numbers were measured on the
+runner only. With hak's decision both bounds are now the floor of the two platforms (4 px; blends of at
+most 4 px count as anti-aliasing), which keeps Windows green and Linux unchanged, and both still catch a
+planted change.
+
+The reviewer ran the checks themselves and probed their failure paths on Windows by planting one bad input
+per check: a failing test, a type error, a colour literal, a dead link — all were reported, so no check is
+vacuous. The unquoted command path found in review (a path with a space) was fixed in this story.
 
 ## Retrospective
 
-_To be written at gate 2._
+**Why the bug got through**
+
+- **The factory was built on one machine.** Every rule that compares paths or starts a `.bin` command was
+  written against Linux behaviour, and the CI oracle was Linux only. Nothing in the Definition of Done asked
+  for a green run on hak's machine, so the Windows gap stayed invisible until the first run there.
+- **Measured numbers were treated as universal.** The pixel tolerances carry their measurement, but the
+  measurement was taken on the runner only, and a machine with a different rasterisation reached that number
+  legitimately. The harness had no way to say "this is the floor of this platform".
+- **This fix:** four one-line-level changes, plus the two harness bounds, which are a decision about an
+  oracle and therefore needed hak.
+
+**Proposed changes**
+
+- **P1 (CLAUDE.md, test rules):** "A pixel tolerance in a shared harness is the measured noise floor of every
+  machine the tests run on (CI runner and hak's machine), stated with its measurement. A bound that is
+  loosened must show a non-vacuity measurement in the Test report."
+- **P2 (`.claude/agents/devops.md` / factory scripts):** "Scripts that run `node_modules/.bin` entries must
+  handle Windows: the `.cmd` name and `shell: true` (Node >= 23 rejects `.cmd` without a shell), and the
+  command path is quoted when a shell is used. Names derived from a path use `basename()`, never `split('/')`."
+- **P3 (process, orchestrator):** "Before the first commit on a machine, ask hak for the git identity and set
+  it in the repository (`git config --local`), not globally."
+- **P4 (`.claude/agents/tester.md`):** "When a check or a harness bound is changed, run its failure path by
+  hand once with a deliberately bad input, on the machine where the change is made."
+
+**Outcome (gate 2):** approved by hak on 2026-11-12: P1–P4 applied (CLAUDE.md, `.claude/agents/`),
+finding L1 fixed in this story, commit on the fix branch without push.
+
+### Cost
+
+| Role                        | Round | Model | Tokens       | Tool uses | Duration |
+| --------------------------- | ----- | ----- | ------------ | --------- | -------- |
+| product-owner               | 1     | n/a   | n/a          | n/a       | n/a      |
+| architect                   | 1     | n/a   | n/a          | n/a       | n/a      |
+| developer                   | 1     | n/a   | n/a          | n/a       | n/a      |
+| tester                      | 1     | n/a   | n/a          | n/a       | n/a      |
+| reviewer                    | 1     | n/a   | n/a          | n/a       | n/a      |
+| **total**                   | —     | n/a   | n/a          | n/a       | n/a      |
+| orchestrator (main session) | 1     | n/a   | not measured | n/a       | n/a      |
+
+_All roles were carried by the orchestrator (single session) on Windows; usage was not measured per role._
