@@ -1,0 +1,342 @@
+/*
+ * The pipeline diagram (UX design §3). One grid wrapper holds either the static list or the tab
+ * rail with its panel, so the wrapper node survives the switch. Shapes: a step is a circle, a
+ * human gate a diamond. Selected tab: a 4 px leading edge instead of 1 px (the padding makes up
+ * for it, so nothing moves) and a pointer glyph, never colour alone.
+ */
+.pipeline {
+  --marker-slot: 1.75rem; /* column of the markers: the turned diamond is wider than its square */
+  --marker-height: 1.25rem; /* every marker takes the height of the circle, so labels line up */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+/* Markers (decorative; the label says "Gate n"). */
+.marker {
+  --marker-size: 1.25rem;
+  position: relative; /* above the spine */
+  z-index: 1;
+  display: block;
+  flex: none;
+  width: var(--marker-size);
+  height: var(--marker-size);
+  margin: calc((var(--marker-height) - var(--marker-size)) / 2)
+    calc((var(--marker-slot) - var(--marker-size)) / 2);
+  transition: background-color var(--duration) var(--ease);
+}
+
+.step {
+  border: 2px solid var(--color-edge);
+  border-radius: 50%;
+  background-color: var(--color-surface);
+}
+
+.gate {
+  --marker-size: 1.125rem;
+  border-radius: 0;
+  background-color: var(--landing-gate);
+  transform: rotate(45deg);
+}
+
+/* Static form: a list of rows. Phone: marker, then label and owner on one line, output below. */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--marker-slot) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: center;
+  min-height: 3rem;
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.row + .row {
+  margin-top: -1px;
+}
+
+.row:first-child,
+.tab:first-child {
+  border-start-start-radius: var(--radius-control);
+  border-start-end-radius: var(--radius-control);
+}
+
+.row:last-child,
+.tab:last-child {
+  border-end-start-radius: var(--radius-control);
+  border-end-end-radius: var(--radius-control);
+}
+
+/* The spine: a line through the markers, from the first to the last one. */
+.row::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: calc(var(--space-3) + var(--marker-slot) / 2 - 1px);
+  width: 2px;
+  background-color: var(--color-edge);
+}
+
+.row:first-child::before,
+.tab:first-child::before {
+  top: 50%;
+}
+
+.row:last-child::before,
+.tab:last-child::before {
+  bottom: 50%;
+}
+
+.row .marker {
+  grid-row: 1 / span 2;
+}
+
+.rowHead,
+.rowOutput {
+  grid-column: 2;
+}
+
+.rowLabel {
+  font-weight: 600;
+}
+
+.rowRole {
+  color: var(--color-text-muted);
+}
+
+/* Interactive form. Phone: a 3 x 3 grid of chips (marker above the label), the panel below. */
+.rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.tab {
+  --tab-edge-width: 1px;
+  --tab-border: var(--color-border);
+  --tab-edge: var(--color-border);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 4rem;
+  padding: calc(var(--space-2) + 1px - var(--tab-edge-width)) var(--space-2) var(--space-2);
+  border: 1px solid var(--tab-border);
+  border-block-start: var(--tab-edge-width) solid var(--tab-edge);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition:
+    background-color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease);
+}
+
+/* Inside the tab: neighbours touch. */
+.tab:focus-visible {
+  outline-offset: -2px;
+}
+
+/* :where() keeps the state out of the specificity, so the forced-colours block below wins. */
+.tab:where([aria-selected='true']) {
+  --tab-edge-width: 4px;
+  --tab-edge: var(--color-accent);
+  background-color: var(--color-accent-subtle);
+}
+
+.tab:where([aria-selected='true']) .step {
+  background-color: var(--color-accent);
+}
+
+.tab:where([aria-selected='true'])::after {
+  content: '▸';
+  content: '▸' / '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: var(--space-2);
+  color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .tab:where([aria-selected='false']):hover {
+    background-color: var(--color-surface-subtle);
+  }
+}
+
+.panel {
+  min-width: 0;
+  min-height: 8rem;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+  overflow-wrap: anywhere;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-h2);
+  font-weight: 600;
+}
+
+/* Every step's details in one cell; the inactive ones only give the height. */
+.detailStack {
+  display: grid;
+}
+
+.detailStack > * {
+  grid-area: 1 / 1;
+}
+
+.sizer {
+  visibility: hidden;
+}
+
+.details {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.details dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.details dd {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+@media (min-width: 600px) {
+  /* Rail and panel side by side; the panel stretches to the rail, as tall as the static list. */
+  .pipeline {
+    grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
+    column-gap: var(--space-5);
+  }
+
+  .list {
+    grid-column: 1 / -1;
+  }
+
+  /* marker | label | owner | output */
+  .row {
+    grid-template-columns: var(--marker-slot) 5.5rem 11rem minmax(0, 1fr);
+  }
+
+  .row .marker {
+    grid-row: auto;
+  }
+
+  .rowHead {
+    display: contents;
+  }
+
+  .rowOutput {
+    grid-column: auto;
+  }
+
+  .rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tab {
+    flex-direction: row;
+    gap: var(--space-3);
+    justify-content: flex-start;
+    min-height: 3rem;
+    padding: 0 var(--space-6) 0 calc(var(--space-3) + 1px - var(--tab-edge-width));
+    border-block-start: 1px solid var(--tab-border);
+    border-inline-start: var(--tab-edge-width) solid var(--tab-edge);
+    border-radius: 0;
+    font-size: var(--text-base);
+    text-align: start;
+  }
+
+  .tab + .tab {
+    margin-top: -1px;
+  }
+
+  /* The spine of the rail; measured from the padding box, which the leading edge moves. */
+  .tab::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: calc(var(--space-3) + var(--marker-slot) / 2 - var(--tab-edge-width));
+    width: 2px;
+    background-color: var(--color-edge);
+  }
+
+  .tab:where([aria-selected='true'])::after {
+    inset-block-start: 50%;
+    inset-inline-end: var(--space-3);
+    transform: translateY(-50%);
+  }
+
+  .panel {
+    padding: var(--space-5);
+  }
+}
+
+/* System colours, written out: every state keeps its shape, edge or glyph. */
+@media (forced-colors: active) {
+  .row,
+  .panel {
+    border-color: ButtonText;
+  }
+
+  .row::before,
+  .tab::before {
+    background-color: CanvasText;
+  }
+
+  /* The leading edge of an unselected tab stays an edge, so no box is open on one side. */
+  .tab {
+    --tab-border: ButtonText;
+    --tab-edge: ButtonText;
+  }
+
+  .tab:where([aria-selected='true']) {
+    --tab-edge: Highlight;
+  }
+
+  .tab:where([aria-selected='true'])::after {
+    color: Highlight;
+  }
+
+  .step {
+    border-color: ButtonText;
+    background-color: Canvas;
+  }
+
+  .gate {
+    background-color: CanvasText;
+  }
+
+  .tab:where([aria-selected='true']) .step,
+  .tab:where([aria-selected='true']) .gate {
+    background-color: Highlight;
+  }
+}

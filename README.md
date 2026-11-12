@@ -157,13 +157,19 @@ This comes with story 003 (`docs/backlog/003-stay-signed-in.md`).
 
 ## Deployment
 
+The site root is the factory page. It explains the factory, needs no sign-in and links to
+the published apps and the repository. It is built by the same `npm run build:pages` and
+deployed with the apps. See [Factory landing page](#factory-landing-page).
+
+- https://hkuegel.github.io/swfactory/ (factory page)
+
 Every app under `apps/` is published on GitHub Pages:
 
 - https://hkuegel.github.io/swfactory/avd/
 - https://hkuegel.github.io/swfactory/minesweeper/
 
-The root address `https://hkuegel.github.io/swfactory/` has no page. A new app is
-published on its first merge to `main`. You change nothing else for it.
+A new app is published on its first merge to `main`. The factory page gets a link to it
+on the same deploy. You change nothing else for it.
 
 ### One-time setup
 
@@ -173,8 +179,8 @@ Pages → Build and deployment → Source**. Choose **GitHub Actions**. Without 
 
 ### When it deploys
 
-The `CI` workflow publishes the apps after a push to `main`, when verify, the e2e tests
-and the Pages check are green. Pull requests and other branches never publish.
+The `CI` workflow publishes the factory page and the apps after a push to `main`, when
+verify, the e2e tests and the Pages check are green. Pull requests and other branches never publish.
 
 To publish without a push, open the **Actions** tab, choose **CI**, then **Run workflow**
 and select the branch `main`. The run publishes only if all checks pass. On any other
@@ -187,14 +193,15 @@ this way after each merge, or with `gh workflow run CI --ref main`.
 npm run build:pages
 ```
 
-This builds every app under its Pages address into `_site/<app>/` and runs the dev-only
-check on the result. `npm run verify` runs it too.
+This builds every app under its Pages address into `_site/<app>/`, builds the factory page
+into `_site/`, and runs the dev-only check on the result. `npm run verify` runs it too.
 
 ```bash
 npm run test:pages
 ```
 
-This builds the site again and opens each app under its address in Chromium. Run
+This builds the site again and opens the factory page and each app under its address in
+Chromium. It also runs the checks of the factory page in `landing/e2e/pages/`. Run
 `npx playwright install chromium` once first, as in [Getting started](#getting-started).
 Neither command needs a client ID.
 
@@ -205,7 +212,7 @@ platform's checks.
 ### What is online
 
 The deployed apps offer only **Sign in as guest**. There is no Google sign-in online, so
-the sites need no client ID and no Google setup. Guest sign-in keeps nothing in the
+the sites need no client ID and no Google setup. The factory page has no sign-in at all. Guest sign-in keeps nothing in the
 browser and makes no network request. A reload signs you out.
 
 `VITE_GUEST_ONLY` is set to `true` only by the deploy build. It turns Google sign-in off
@@ -218,6 +225,38 @@ By your decision, the sites have no Impressum and no privacy page. GitHub logs t
 addresses of visitors. The factory makes no legal assessment. A public site from Germany
 may need an Impressum and a privacy statement. Whether this is enough is for you to check,
 for example with a legal review.
+
+## Factory landing page
+
+The factory page at the site root is the `landing/` workspace (`@swfactory/landing`). It is
+React code that is rendered to plain HTML at build time and then hydrated in the browser.
+With scripts off you still get the full text. With scripts on, the pipeline diagram
+becomes interactive. See [ADR 0011](docs/adr/0011-landing-page-workspace-prerendered-react.md).
+
+To work on the page, run its own dev server:
+
+```bash
+npm run dev -w landing
+```
+
+This dev server renders the page in the browser only. The HTML form exists only in the
+built site in `_site/`, so check it with `npm run build:pages` or `npm run test:pages`.
+
+The checks of the page are in `landing/e2e/pages/`. `npm run test:pages` runs them on the
+built site, together with the platform's checks.
+
+The page shows two figures from the repository, read at build time: the number of stories
+with status `done`, and the number of agent runs in the cost tables of those stories. The
+page states the date of the commit it was built from. Without git, the date and the
+figures are left out. The estimated cost is static text with its own date.
+
+Rules for the content of the page:
+
+- It names no internal tools or material of other organisations.
+- Its code names no app. The app links come from the folders in `apps/` at build time, so
+  a new app gets its link without a change in `landing/`.
+- It makes no request to a third party, sets no cookie and stores nothing.
+- It says nothing about an Impressum or a privacy page.
 
 ## Creating an app
 
@@ -349,6 +388,10 @@ apps/<name>/           one app
   docs/                the app's stories and ADRs
   dist-check.json      the app's own dev-only strings and size budgets (optional)
 templates/app/         the app skeleton that /new-app copies
+landing/               the factory page at the site root (@swfactory/landing)
+  src/                 the page: React, rendered to HTML at build time
+  build/               build-time data: app list, backlog and cost figures
+  e2e/pages/           checks of the published factory page
 scripts/               check-dist.mjs, check-structure.mjs, new-app.mjs
 ```
 
@@ -423,8 +466,8 @@ chunks.
 
 `npm run check:structure` fails when:
 
-- an app name appears as a whole word in `CLAUDE.md`, the agents, skills, templates or the
-  platform, or the platform imports an app,
+- an app name appears as a whole word in `CLAUDE.md`, the agents, skills, templates, the
+  platform or `landing/`, or the platform imports an app,
 - a relative link in the Markdown files is dead,
 - a story is missing from `docs/backlog/README.md`, is listed twice, or has an id that
   another story already uses,

@@ -11,7 +11,8 @@
     "./lib/*": "./src/lib/*.ts",
     "./test/*": "./src/test/*.ts",
     "./config/vite": "./config/vite.ts",
-    "./config/playwright": "./config/playwright.ts"
+    "./config/playwright": "./config/playwright.ts",
+    "./config/pages": "./config/pages.ts"
   },
   "peerDependencies": {
     "react": "^19.3.1",

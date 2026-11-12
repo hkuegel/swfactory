@@ -67,3 +67,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Before promising "no request to X on load", find where the client is created: the GIS script loads at `createAuthClient()` in main.tsx, not on click (story 018).
 - When a build gets a URL base other than `/`, grep scripts that map index.html URLs to files: a strip-leading-`/` resolver makes entry/lazy-chunk checks vacuous under a subpath (story 018).
 - Pin GitHub Actions to current majors via `gh api repos/<owner>/<action>/releases/latest` (works from the sandbox); research notes and docs pages lag behind (story 018).
+- For build-time prerendering (SSR build + client build + hydrate), give both builds the same `--base`: the SSR bundle bakes `BASE_URL` in, and without it links pointed to `/<app>/` (story 021).
+- For a page that must work without scripts but enhance with them, switch forms via `useSyncExternalStore` with a static server snapshot: hydration matches, then the client re-renders; animate only nodes that survive the switch (story 021).
+- When adding a non-app entry to `_site`, name it so the new-app name pattern can't produce it (leading `_`), and list every place that iterates `_site` dirs (`listSiteApps`, check-dist `--out`) (story 021).
