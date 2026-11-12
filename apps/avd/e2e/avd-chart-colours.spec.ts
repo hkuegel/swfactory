@@ -145,7 +145,7 @@ test('AC4: in forced colours every series differs by pattern, border or outline,
   const runs = bars[bars.length - 1] ?? [];
   // A run of at most 4 px at the top edge is anti-aliasing of a bar top that falls between pixels
   // (measured: 3 px on Windows, none on Linux, where such runs are already dropped as < 3 px).
-  // It is not a fill, so the fills below it are what this AC reads (story 021).
+  // It is not a fill, so the fills below it are what this AC reads (story 022).
   const top = runs[runs.length - 1];
   const fills = top?.label === 'other' && top.length <= 4 ? runs.slice(0, -1) : runs;
   expect(fills[0]).toMatchObject({ label: 'text' });

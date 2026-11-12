@@ -11,7 +11,7 @@ export function createAppViteConfig(overrides: ViteUserConfig = {}): ViteUserCon
     plugins: [react()],
     envDir: repoRoot,
     resolve: { dedupe: ['react', 'react-dom'] },
-    // The shared setup file lives outside a project's own root (story 021): on Windows the
+    // The shared setup file lives outside a project's own root (story 022): on Windows the
     // default allow list does not cover the repo root for `templates/app`, which is not a
     // workspace. On Linux this is already the effective default, so nothing changes there.
     server: { fs: { allow: [repoRoot] } },

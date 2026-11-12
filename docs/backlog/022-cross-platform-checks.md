@@ -1,16 +1,16 @@
 ---
-id: 021
+id: 022
 title: Factory checks pass on Windows
 status: done
 type: bug
 app: platform
-branch: fix/021-cross-platform-checks
+branch: fix/022-cross-platform-checks
 supersedes: []
 changes: [011]
 superseded-by:
 ---
 
-# 021 – Factory checks pass on Windows
+# 022 – Factory checks pass on Windows
 
 ## Original request
 
@@ -104,6 +104,9 @@ Four places assume `/` or a bare executable name, which breaks on Windows:
 - 2026-11-12 — Gate 2 (hak): all four retro proposals P1–P4 approved and applied to CLAUDE.md and
   `.claude/agents/`. Finding L1 (unquoted command path under `shell: true`, measured on Windows)
   fixed in this story. Commit: on the fix branch, no push (hak).
+- 2026-11-12 — Q: two stories share number 021 (the landing page is already on `origin/main`, this fix
+  was committed locally only) — A: this fix story becomes 022, the landing page keeps 021; file,
+  frontmatter and branch renamed (hak).
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 

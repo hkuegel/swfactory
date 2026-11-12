@@ -150,7 +150,7 @@ export async function chartSeriesPixels(page: Page) {
 // Measured noise of identical charts: <= 1/255 over 984 pixels on the Linux runner, and <= 3/255
 // on Windows (2 pixels at tolerance 2; the worst is 248,247,245 -> 246,244,244). A re-render of an
 // unchanged chart can reach that floor on Windows, never on Linux. A real change differs in
-// 43.333 pixels, so the assertions compare against the floor of both platforms (story 021).
+// 43.333 pixels, so the assertions compare against the floor of both platforms (story 022).
 const RASTER_NOISE_FLOOR = 4;
 export async function differingPixels(page: Page, a: string, b: string, tolerance = 2) {
   return page.evaluate(

@@ -17,7 +17,7 @@ function run(command, args, cwd) {
   const win = process.platform === 'win32';
   // Node >= 23 refuses to spawn .cmd shims without a shell (EINVAL hardening), so on
   // Windows run the shim through shell: true. With a shell the command must be quoted:
-  // an unquoted path with a space reads as command + arguments (story 021, finding L1).
+  // an unquoted path with a space reads as command + arguments (story 022, finding L1).
   const target = join(BIN, win ? `${command}.cmd` : command);
   const result = spawnSync(win ? `"${target}"` : target, args, {
     cwd,

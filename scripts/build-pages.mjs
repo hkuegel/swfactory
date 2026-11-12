@@ -31,7 +31,7 @@ rmSync(SITE, { recursive: true, force: true });
 const win = process.platform === 'win32';
 const vitePath = join(ROOT, 'node_modules', '.bin', win ? 'vite.cmd' : 'vite');
 // With a shell the command must be quoted: an unquoted path with a space reads as
-// command + arguments (story 021, finding L1).
+// command + arguments (story 022, finding L1).
 const vite = win ? `"${vitePath}"` : vitePath;
 for (const app of apps) {
   const result = spawnSync(
@@ -61,7 +61,7 @@ const landingBuilds = [
 ];
 rmSync(join(landingDir, 'dist'), { recursive: true, force: true });
 for (const args of landingBuilds) {
-  // Same as the app builds above: on Windows the .cmd shim needs a shell (story 021).
+  // Same as the app builds above: on Windows the .cmd shim needs a shell (story 022).
   const result = spawnSync(vite, args, { cwd: landingDir, stdio: 'inherit', shell: win });
   if (result.status !== 0) {
     console.error('build-pages: build of the landing page failed');
