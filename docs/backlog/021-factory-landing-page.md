@@ -975,6 +975,8 @@ announcement, skip link). **Open:** green CI run of the branch (run id to be add
 
 CI on GitHub (DoD), cleaned branch: run 43282345557 at 28747d4 – verify, pages (23 passed), e2e (avd 80 passed, minesweeper 110 passed, no flaky) all green; deploy skipped (not main).
 
+After the merge (2026-11-12): the squash merge 1650dfc pushed to `main` started CI (run 43285225798, event `push`): verify, pages (23 passed), e2e (avd 80 passed, minesweeper 110 passed, no flaky) and deploy all green. The site root answers 200 with the factory page (h1, the corrected sentence, links to both apps, as-of date 2026-11-12, the repository as the only external address, none of the client-internal names); both apps still answer 200 (checked with curl; the browser pane blocks github.io). Open: hak's own look at the live page, a real phone, a real screen reader.
+
 ## Review
 
 _reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
