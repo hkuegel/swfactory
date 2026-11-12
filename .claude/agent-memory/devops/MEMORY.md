@@ -18,3 +18,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - `npm run test:e2e` takes about 2 minutes (minesweeper 110 specs): run it in the background, not in a foreground call with a 120 s timeout (story 018).
 - Check factory-file diffs with explicit paths (zsh does not word-split a path variable) and expect CLAUDE.md to hold earlier uncommitted changes from other stories; report those separately (story 018 retro).
 - Check the 120-char limit on added lines only (`git diff -U0 | grep '^+' | awk`) because CLAUDE.md has older long lines; zsh has no `${PIPESTATUS}`, use `${pipestatus}` (retro P1-P4, 019).
+- Start long verify/e2e chains as one script file with `run_in_background`, never `( ... ) &` inside a tool call: the shell reports "completed" at once while the job runs on, and a second chain then fights over ports 5174/5175 (avd e2e failed against another run's minesweeper server) (story 021).
+- A new workspace outside `apps/*` (e.g. `landing/`) extends `../tsconfig.*.base.json` and needs `--ignore-path ../.prettierignore`; vitest and Playwright exit 1 without any test/spec file, so a scaffold needs one placeholder each (story 021).

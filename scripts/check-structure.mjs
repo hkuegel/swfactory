@@ -60,6 +60,7 @@ const FACTORY = [
   'docs/templates',
   'templates',
   'packages/platform',
+  'landing',
 ];
 const factoryFiles = textFiles(...FACTORY);
 for (const name of apps) {

@@ -1,0 +1,19 @@
+{
+  "name": "@swfactory/landing",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Factory landing page at the site root (story 021, ADR 0011). Built only by scripts/build-pages.mjs.",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --build",
+    "lint": "eslint .",
+    "format:check": "prettier --check . --ignore-path ../.prettierignore",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@swfactory/platform": "*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

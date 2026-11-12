@@ -62,3 +62,55 @@ for (const app of listSiteApps()) {
     expect(requests.filter((url) => new URL(url).origin !== origin)).toEqual([]);
   });
 }
+
+// Story 021 AC1/AC3/AC5/AC7: the site root (the factory page) on the real deploy build. The app links
+// must be exactly the apps of `_site/` (the platform names no app), and each one must open its login.
+test('021 AC3/AC5/AC7: the site root links every published app', async ({ page, baseURL }) => {
+  const base = new URL(baseURL ?? '');
+  const requests: string[] = [];
+  const responses: { status: number; url: string; type: string }[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  page.on('response', (response) =>
+    responses.push({
+      status: response.status(),
+      url: response.url(),
+      type: response.request().resourceType(),
+    }),
+  );
+
+  const document = await page.goto('');
+  expect(document?.status()).toBe(200);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+
+  // AC5: no sign-in, only the page's own origin, nothing failing, scripts and styles really loaded.
+  await expect(page.getByRole('button', { name: /sign in/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /sign in/i })).toHaveCount(0);
+  expect(requests.length).toBeGreaterThan(0);
+  expect(requests.filter((url) => new URL(url).origin !== base.origin)).toEqual([]);
+  expect(responses.filter((response) => response.status >= 400)).toEqual([]);
+  expect(new Set(responses.map((response) => response.type))).toContain('script');
+  expect(new Set(responses.map((response) => response.type))).toContain('stylesheet');
+
+  // AC3: the repository, and one link per published app (same tab), as a set.
+  await expect(
+    page.locator('a[href="https://github.com/hkuegel/swfactory"]').first(),
+  ).toBeVisible();
+  const links = page.locator(`main a[href^="${base.pathname}"]`);
+  const hrefs = await links.evaluateAll((anchors) =>
+    anchors.map((a) => [a.getAttribute('href'), a.getAttribute('target')]),
+  );
+  expect(hrefs.map(([href]) => href).sort()).toEqual(
+    listSiteApps().map((app) => `${base.pathname}${app}/`),
+  );
+  expect(hrefs.filter(([, target]) => target !== null)).toEqual([]);
+
+  // AC3/AC7: following each link reaches that app's login screen.
+  for (const app of listSiteApps()) {
+    await page.locator(`main a[href="${base.pathname}${app}/"]`).click();
+    await expect(page).toHaveURL(`${base.origin}${base.pathname}${app}/`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(pageTitle(app));
+    await expect(page.getByRole('button', { name: 'Sign in as guest' })).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/software factory/i);
+  }
+});

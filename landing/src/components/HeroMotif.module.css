@@ -1,0 +1,41 @@
+.motif {
+  display: block;
+  width: min(20rem, 100%);
+  margin: var(--space-6) auto 0;
+}
+
+.line {
+  fill: none;
+  stroke: var(--color-edge);
+  stroke-width: 2px;
+}
+
+.step {
+  fill: var(--color-surface);
+  stroke: var(--color-edge);
+  stroke-width: 2px;
+}
+
+.gate {
+  fill: var(--landing-gate);
+}
+
+/* System colours, kept as written: the shapes stay visible and the gates stand out. */
+@media (forced-colors: active) {
+  .motif {
+    forced-color-adjust: none;
+  }
+
+  .line {
+    stroke: CanvasText;
+  }
+
+  .step {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .gate {
+    fill: Highlight;
+  }
+}

@@ -79,13 +79,19 @@ The backlog must be enough to rebuild the app without any chat history:
   earlier behaviour only while enabled, `changes:` lists every earlier AC that is false in
   the enabled state, and those ACs are annotated "holds while <option> is off".
 - **Commit early** — the approved story is committed on `main` at gate 1, before any code.
+- **Public repository** — names of clients, their internal tools and other confidential terms
+  never appear in plain text in a tracked file (stories, Decision-log quotes, tests, comments,
+  memory): quotes are shortened with `[… withheld]`, checks keep such words as hashes. Before
+  the first push of a story branch the orchestrator searches the branch for the terms hak
+  named as confidential.
 - **Tests as oracle** — e2e tests named after ACs verify that a rebuild behaves the same.
 
 ## Learning
 
 - **Agent memory** — each agent has `memory: project` and keeps its own lessons in
   `.claude/agent-memory/<agent>/MEMORY.md` (in git, so every lesson is reviewable
-  and revertable). Role-specific lessons only.
+  and revertable). Role-specific lessons only. Before handing over, an agent checks its new
+  memory lines against the story's recorded deviations; a recipe the story disproved is reworded.
 - **Team knowledge** — lessons that apply to everyone go into this file or an ADR,
   never into one agent's memory. Agents propose them as "Suggested for CLAUDE.md".
 - **Retro** — after each story the orchestrator analyses what went wrong and proposes
@@ -155,10 +161,11 @@ apps/<name>/            one app
   e2e/pages/            checks of the published build (npm run test:pages)
   docs/backlog, docs/adr  the app's stories and ADRs
   dist-check.json       the app's own dev-only strings and budgets (optional)
+landing/                factory page at the site root: own workspace, rendered to HTML at build time, ADR 0011
+  e2e/pages/            checks of the published root page (npm run test:pages)
 templates/app/          app skeleton, copied by /new-app (scripts/new-app.mjs)
-_site/                  deploy output of `npm run build:pages` (gitignored)
-scripts/                check-dist.mjs, check-structure.mjs, new-app.mjs
-scripts/                build-pages.mjs, serve-pages.mjs (GitHub Pages deploy, see Commands)
+_site/                  deploy output of `npm run build:pages` (gitignored): root page + one directory per app
+scripts/                check-dist.mjs, check-structure.mjs, new-app.mjs, build-pages.mjs, serve-pages.mjs
 ```
 
 Platform code never names or imports an app (`npm run check:structure` fails on it). A
@@ -204,6 +211,8 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   it as DOM/text; computed styles are read only after transitions ended (`getAnimations()`
   empty); software-GL specs run with one worker on CI. Playwright `testIgnore`/`testMatch` globs
   are matched against absolute paths and are anchored (e.g. `**/e2e/pages/**`).
+- **No-script pages:** a page that must work without scripts is checked on the built site
+  (`npm run test:pages`), never on the dev server.
 - **Shared e2e helpers:** an app's shared e2e helpers live in one `e2e/<app>.helpers.ts`
   that every spec imports; never copy them. Helpers that read pixels or resolve colours share
   one resolver; values are resolved outside `page.evaluate` and passed in, never re-resolved per
@@ -285,6 +294,7 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
 ```bash
 npm run dev         # dev server of the default app (root package.json) (http://localhost:5173 — part of the Google OAuth origins)
 npm run dev -w apps/<name>          # dev server of one app (one at a time: port 5173)
+npm run dev -w landing              # dev server of the landing page (client-only; the static form exists only in _site)
 npm run typecheck   # tsc --build, every workspace
 npm run lint        # eslint (whole repo)
 npm run format      # prettier --write

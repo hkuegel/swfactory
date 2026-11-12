@@ -28,7 +28,8 @@ to the code.
    assertion failing once with a temporary mutation, and read computed styles only after
    `document.getAnimations()` is empty. When a check script or a harness bound is changed,
    run its failure path by hand once with a deliberately bad input, on the machine where the
-   change is made.
+   change is made. Revert a mutation from a backup copy made before it, never with `git checkout`,
+   `git restore` or `git stash`.
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and

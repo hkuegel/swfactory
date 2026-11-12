@@ -142,6 +142,10 @@ loosened to the measured noise floor of both platforms — `RASTER_NOISE_FLOOR =
 `avd-chart-colours.spec.ts` AC4. Both are documented with their measurements, and both
 stay non-vacuous (Test report)._
 
+_Post follow-up at the merge of `main` (2026-11-12, the landing page story): the landing build added a
+second direct `vite` spawn in `build-pages.mjs`; it inherits the same `.cmd` + `shell: true` handling,
+because the L1 quoting needs the shell. Green on Windows after the merge._
+
 ## Test report
 
 _tester:_

@@ -1,0 +1,13 @@
+.more {
+  margin: var(--space-5) 0 0;
+}
+
+/* As tall as a control, so it is an easy target. */
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  color: var(--color-accent);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}

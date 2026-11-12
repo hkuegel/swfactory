@@ -1,0 +1,53 @@
+/* One column on a phone, 2 x 2 from 600 px. The numbers are the list's own markers. */
+.layers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: decimal inside;
+}
+
+.layer {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.layer::marker {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.text {
+  display: block;
+  margin-top: var(--space-2);
+}
+
+.learning {
+  max-width: 40rem;
+  margin: var(--space-5) 0 0;
+}
+
+@media (min-width: 600px) {
+  .layers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .layer {
+    padding: var(--space-5);
+  }
+}
+
+@media (forced-colors: active) {
+  .layer {
+    border-color: CanvasText;
+  }
+}
