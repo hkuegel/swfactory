@@ -64,3 +64,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Shared `Button` is a `<button>`: link-buttons need own CSS with the same tokens; in forced colours set the unselected edge to a 1 px ButtonText border and the selected edge to a 4 px Highlight edge plus a glyph (Canvas leaves the box open on one side), and give selected state a width or glyph difference, since tests compare non-colour computed styles (story 021).
 - Static-vs-interactive diagram: keep one wrapper node and equal row height (3 rem) so hydration does not jump; below 600 px a 3x3 chip grid keeps the tab panel on screen (story 021).
 - A variant for one build (deploy) must leave the standard build pixel-identical: spec the CSS split for the developer instead of editing a shared class (story 018).
+- A control inside a table cell needs its own label (the column header does not name it): visually hidden label naming column + row value (story 024).
+- A shared hint that must be the accessible description of several figures: write it once as a paragraph and reference it with aria-describedby from each figure; never put the header text inside the hint, or the header becomes a substring of it (story 024).
+- Two-direction calculator: one radiogroup plus one amount field whose label follows the direction, so no field is ever disabled and no unused field exists (story 024).
+- Empty state needs its own string, separate from the invalid-input string, and field errors appear only after the first edit; keep the empty-state live text empty (story 024).
