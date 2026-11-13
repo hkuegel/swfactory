@@ -1,7 +1,7 @@
 ---
 id: 033
 title: Phase months without an invented range, typed as a month
-status: ready # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: in-review # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<name>/docs/backlog)
 size: S # S | M | L (story 026). S = at most three ACs: needs only the Explanation, no Review section and no Cost table.
@@ -87,25 +87,69 @@ _architect: affected modules, new files, data flow, types/interfaces, dependenci
 
 ## Implementation notes
 
-_developer: what was built, deviations from the design and why._
+- The phase fields have no bound of their own: `FieldSpec.min` and `max` are nullable and a phase field
+  carries `null` for both, so the copy and the parser read the same rules (030 made the money fields
+  nullable first, this story did the same for a month).
+- A new three-state month parser: partial (still typing), invalid (a complete entry that is not a real
+  month), month (a whole month). The wrapper that returns a month name is kept for the callers, so the
+  typing state can name no error. A result may carry `error: null`, and both the form and the fund-row
+  override skip such a field instead of marking it.
+- Defaults are hak's example phase, 01.2028 and 03.2034.
+- The phase copy names the shape of the input and shows `MM.JJJJ` as the example; no copy line quotes a
+  range any more.
+- Deviation from the design: `type="month"` stays rejected (its displayed format is browser-locale
+  dependent and its value is empty for a partial entry, which makes an error wording unreachable), so
+  the field stays a text input.
 
 ## Test report
 
-_tester: AC → test mapping, results, defects found._
+| AC  | Test(s)                                                                                                                                                                                                                                                                                                                                                                              | Result |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| AC1 | `parseInputs.test.ts` (hand month keys: 1.1.2026 → 24313 and 1.1.2035 → 24421, outside the range 024 had); `phase.test.ts` "033 AC1: a phase outside the fund list keeps every phase year and totals 0,00 €" (before the list: one year kept, all rows null, total 0,00 €; after the list: two years, 12 and 2 months); e2e "033 AC1, AC2"                                           | pass   |
+| AC2 | `parseInputs.test.ts` (hand states: `1`, `2028`, `1.`, `1.2`, `1.2.`, `01.20`, `20` are partial and name no error; `31.13.2028`, `29.2.2027`, `13.2028`, `1.0.2028`, `abc.2028` are refused as a complete input); e2e "033 AC1, AC2": `13.` shows no `aria-invalid` and no error text, `13.2028` shows the hand error string, `01.2026` and `12.2026` are accepted in the short form | pass   |
+| AC3 | e2e "033 AC3": the fields start with `01.2028` and `03.2034` as hand values in the field's own format, the keyboard reaches them in the form order, none is disabled; `fieldCopy.test.ts` "033 AC1, AC3": the phase copy quotes the shape, not a range                                                                                                                               | pass   |
 
-| AC  | Test(s) | Result |
-| --- | ------- | ------ |
+Counts as printed: laz vitest 14 passed (6 files); laz Playwright 48 passed, including the two new tests.
+Full run green, 12 steps.
+
+Non-vacuity: a copy of the parser was changed so that `1.` counted as a complete invalid input; the AC2
+assertion went red with that change, which shows it can fail. The copy was deleted afterwards, not
+restored with git.
+
+Checked, OK: a month that is still being typed (`20`) is not refused; a month label prints no day
+(e2e asserts the caption against hand month names); the trailing separator case is the same state as
+`1`. No defects found.
 
 ## Review
 
-_reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
+Size S, so no review round (story 026).
 
 ## Explanation
 
-_orchestrator: plain-language explanation shown at gate 2, at most 15 lines of at most 120 characters. No code, no file names._
+The phase fields no longer refuse a month because of a range. That range was the design's own
+convenience, not a rule: a phase year the fund list cannot fund is already shown as a missing year
+with no amount, so a phase before or after the fund list stays expressible and no year is dropped.
+A month can be typed in the short form, month and year; a day may still be typed and must be a real
+day of that month, and a month label never shows a day.
+An entry that is not finished yet is a typing state, so nothing is marked as an error while typing;
+an error appears only for a complete entry that is actually wrong.
+The defaults are the example phase you gave, so the app shows a plan on first opening.
+The field copy names the shape of the input instead of quoting a bound.
+Checks this change can affect are green: 14 unit tests, 48 e2e tests, full run 12 steps.
+Manual check: the look in the browser after the merge is yours; nothing else is open.
 
 ## Retrospective
 
-_orchestrator: what went wrong (review rounds, defects, corrections at the gates), proposed changes
-to agents/CLAUDE.md/templates, and which ones hak approved. Include a `### Cost` table (see the retro
-step of `/feature`)._
+What went wrong: nothing in this story's own work — no review round (size S), no defect in the code,
+no correction at the gates, no hand value corrected.
+
+One tooling defect was found while running this story's checks: the check runner stopped when no full
+run had been recorded yet, because it read the recorded run as a list and the caller passed nothing.
+It is fixed on branch `fix/verify-full-run-without-a-record` (2026-11-13), which is not merged and
+awaits hak's go; until it is merged, a full run is called with an explicit base. The fix was proven
+through its caller with a hand test, and a mutation on a copy made that test red as required.
+
+Proposed changes: none beyond that fix — the rule it implements (an optional value from a caller must
+be handled, and a fix is tested through its caller) is already in the tester's rules.
+
+No Cost table: size S (story 026, R8).
