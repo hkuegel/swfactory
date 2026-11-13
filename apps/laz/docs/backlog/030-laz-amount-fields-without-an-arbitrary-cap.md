@@ -70,8 +70,10 @@ the chat. Append only._
 - 2026-11-13 — Decision (orchestrator): the copy that quoted a maximum is rewritten to state the
   rule, so `{R}` in the error pattern is a rule, not a number.
 - 2026-11-13 — Gate 2: accept the result, merge in the order 024 → 025 → 030, and continue with the
-  next story on this branch's tip. P21 is not answered yet, so it stays a proposal. — A: "ja, mach"
+  next story on this branch's tip. P21 is not answered yet, so it stays a proposal. - A: "ja, mach"
   (hak, gate 2). Consequence: status done, merged on `main`. (orchestrator)
+- 2026-11-13 - Gate 2 follow-up: hak confirmed all open gates, which approves P21. Applied to
+  `.claude/agents/tester.md`. (orchestrator)
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -146,8 +148,11 @@ step of `/feature`)._
 What went wrong: one wrong hand value (the raw digit string read as the whole part), found by my own
 test. No review round, no correction at the gates. Size S, so no Cost table (story 026, R8).
 
-- **P21 (`.claude/agents/tester.md`, hand-oracle rule; proposed, not approved):** the rule keeps "never
-  read from the same source", and adds that a hand value is written in the field's own format — the text
-  a user would type, with its decimal separator — and that a test may check the digit string and the
+- **P21 (`.claude/agents/tester.md`, hand-oracle rule):** the rule keeps "never
+  read from the same source", and adds that a hand value is written in the field's own format - the text
+  a user would type, with its decimal separator - and that a test may check the digit string and the
   parsed value as two separate assertions. This is the form that caught my mistake here: my wrong value
   was not read from the code, it was the wrong format.
+  **Outcome:** approved by hak on 2026-11-13 with the confirmation of all open gates, applied to
+  `.claude/agents/tester.md`. The proposal number P21 continues the numbering of story 024 (P13-P20); the
+  numbers used by story 025 were a duplicate of those and are recorded there as P22-P26.

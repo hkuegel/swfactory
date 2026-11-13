@@ -1,7 +1,7 @@
 ---
 id: 025
 title: Fund list data-file writer (devops), triggered from the UI, tested in fixture mode
-status: in-review # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: chore # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 branch: feature/025-laz-fund-list-writer
@@ -217,6 +217,9 @@ _Append only._
   table in Context becomes the fund list and the product page ids of those seven accumulating pages are
   measured and stored. The fixture response of the distributing 2028 page was replaced, and the committed
   data file was rewritten by the writer in fixture mode from the seven stored responses.
+- 2026-11-13 — Gate 2: hak confirmed all open gates, which approves this story's Explanation and its five
+  proposals (renumbered P22–P26, see the Retrospective). Story set to done, index row in the same commit.
+  The live run against the site and the fund identifiers against the depot stay hak's manual checks.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -527,19 +530,28 @@ What went wrong:
    factory-adjacent directory, so the name had to be neutral.
 6. AC5 cannot be measured in this environment; only its failure path was proved here, by a planted
    violation run through the command line. The live run is hak's after the push.
+7. These proposals were numbered P13–P17, which story 024 had already used for approved proposals, so the
+   same letters named two different rules. Renumbered to P22–P26 when recorded here. **P27 (proposed,
+   pending hak):** proposal numbers continue across the backlog and are never reused, so an approved rule
+   can be named unambiguously.
 
-Proposed changes (for hak at gate 2, none approved yet):
+Proposed changes — hak confirmed all open gates on 2026-11-13, so all five are approved and applied:
 
-- P13 (developer, tester): a unit is chosen from the value the source carries in its own data, never from
-  a figure the source formats for display; measure it before the decision is recorded.
-- P14 (tester): for a parser that converts text by string arithmetic, include the case where the input has
-  more digits than the unit's precision — that is where a silent wrong value appears.
-- P15 (developer): when a unit changes, re-derive every bound a copy line quotes in that unit, and prove it
-  through the function that reads the field, not by asserting the constant.
-- P16 (devops): a path taken from `git status --porcelain` may name a directory; expand it to the files
-  inside before hashing.
-- P17 (tech-writer): a directory that holds fixtures for the factory's checks must not name an app, so
+- **P22** (developer, tester): a unit is chosen from the value the source carries in its own data, never
+  from a figure the source formats for display; measure it before the decision is recorded.
+- **P23** (tester): for a parser that converts text by string arithmetic, include the case where the input
+  has more digits than the unit's precision — that is where a silent wrong value appears.
+- **P24** (developer): when a unit changes, re-derive every bound a copy line quotes in that unit, and
+  prove it through the function that reads the field, not by asserting the constant.
+- **P25** (devops): a path taken from `git status --porcelain` may name a directory; expand it to the
+  files inside before hashing.
+- **P26** (tech-writer): a directory that holds fixtures for the factory's checks must not name an app, so
   prettier-ignored fixture folders get a neutral name.
+
+Outcome (gate 2, 2026-11-13): applied — P22 in `developer.md` and `tester.md`, P23 in `tester.md`,
+P24 in `developer.md`, P25 in `devops.md`, P26 in `tech-writer.md`. Story set to done, index row in the
+same commit. Manual checks open: one live run against the site after the push, and the fund identifiers
+against the depot (hak's).
 
 ### Cost
 

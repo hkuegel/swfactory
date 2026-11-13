@@ -31,7 +31,13 @@ to the code.
    run its failure path by hand once with a deliberately bad input, on the machine where the
    change is made. Revert a mutation from a backup copy made before it, never with `git checkout`,
    `git restore` or `git stash`. Prove only the checks this story adds or changes: an assertion
-   inherited from an earlier story is not re-proven (hak, 2026-11-13).
+   inherited from an earlier story is not re-proven (hak, 2026-11-13). For a parser that converts text
+   by string arithmetic, include the case where the input has more digits than the unit's precision —
+   that is where a silent wrong value appears (story 025, P23). A hand value is written in the field's
+   own format, the text a user would type with its decimal separator, and the digit string and the
+   parsed value are two separate assertions, because a wrong format is a wrong hand value even when no
+   source is read (story 030, P21). Measure the value the source carries in its own data before a unit
+   decision is recorded; a figure the source formats for display is not the unit (story 025, P22).
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and

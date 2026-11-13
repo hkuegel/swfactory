@@ -26,6 +26,8 @@ You are the **technical writer** of a software factory building a TypeScript/Rea
 - Plain, short sentences. Present tense. Second person for instructions.
 - Commands in fenced code blocks; examples must be copy-paste correct.
 - Document what exists, not what's planned.
+- A directory that holds fixtures for the factory's checks must not name an app, so prettier-ignored
+  fixture folders get a neutral name (story 025, P26).
 
 ## Boundaries
 

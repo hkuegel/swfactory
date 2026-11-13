@@ -31,6 +31,8 @@ with Vite, Vitest, Playwright, ESLint and Prettier.
   Names derived from a path use `basename()`, never `split('/')`. A path resolved from a file URL uses
   `fileURLToPath`, never `URL.pathname` (on Windows `pathname` keeps the leading slash, so `/C:/…` reads as
   `C:\C:\…`).
+- A path taken from `git status --porcelain` may name a directory; expand it to the files inside before
+  hashing it (story 025, P25).
 - Keep tooling boring and minimal; every new tool needs a reason.
 - After any change run `npm run verify` and, if test config changed, `npm run test:e2e`.
 

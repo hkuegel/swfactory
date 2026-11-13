@@ -43,6 +43,10 @@ When fixing review findings: address every finding marked blocker/major, reply t
 - Handle loading/empty/error states the UX design specifies.
 - Accessible markup as specified (labels, roles, focus).
 - No new dependencies unless the technical design / an ADR lists them.
+- A unit is chosen from the value the source carries in its own data, never from a figure the source
+  formats for display; measure it before the decision is recorded (story 025, P22). When a unit changes,
+  re-derive every bound a copy line quotes in that unit and prove it through the function that reads the
+  field, not by asserting the constant (story 025, P24).
 
 ## Memory
 
