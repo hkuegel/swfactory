@@ -4,65 +4,65 @@
     {
       "year": 2028,
       "isin": "IE0008UEVOE0",
-      "name": "iBonds EUR Corporate UCITS 2028 (pending confirmation, unconfirmed values)",
-      "navMicroEur": 5113521,
+      "name": "iBonds EUR Corporate UCITS 2028",
+      "navMicroEur": 5677761,
       "ytmBp": 376,
       "avgMaturityHundredths": 162,
-      "sharesOutstanding": 269922969
+      "sharesOutstanding": 191664314
     },
     {
       "year": 2029,
       "isin": "IE000SNLFDR7",
-      "name": "iBonds EUR Corporate UCITS 2029 (pending confirmation, unconfirmed values)",
-      "navMicroEur": 40000000,
-      "ytmBp": 250,
-      "avgMaturityHundredths": 262,
-      "sharesOutstanding": 1100000
+      "name": "iBonds EUR Corporate UCITS 2029",
+      "navMicroEur": 5289621,
+      "ytmBp": 388,
+      "avgMaturityHundredths": 263,
+      "sharesOutstanding": 103380392
     },
     {
       "year": 2030,
       "isin": "IE000Y2BJVK9",
-      "name": "iBonds EUR Corporate UCITS 2030 (pending confirmation, unconfirmed values)",
-      "navMicroEur": 42000000,
-      "ytmBp": 300,
-      "avgMaturityHundredths": 362,
-      "sharesOutstanding": 1200000
+      "name": "iBonds EUR Corporate UCITS 2030",
+      "navMicroEur": 5269117,
+      "ytmBp": 402,
+      "avgMaturityHundredths": 358,
+      "sharesOutstanding": 114818826
     },
     {
       "year": 2031,
       "isin": "IE000D9WMGF0",
-      "name": "iBonds EUR Corporate UCITS 2031 (pending confirmation, unconfirmed values)",
-      "navMicroEur": 44000000,
-      "ytmBp": 350,
-      "avgMaturityHundredths": 462,
-      "sharesOutstanding": 1300000
+      "name": "iBonds EUR Corporate UCITS 2031",
+      "navMicroEur": 5198319,
+      "ytmBp": 415,
+      "avgMaturityHundredths": 465,
+      "sharesOutstanding": 69977351
     },
     {
       "year": 2032,
       "isin": "IE000I660ZF8",
-      "name": "iBonds EUR Corporate UCITS 2032 (pending confirmation, unconfirmed values)",
-      "navMicroEur": 46000000,
-      "ytmBp": 400,
+      "name": "iBonds EUR Corporate UCITS 2032",
+      "navMicroEur": 5156756,
+      "ytmBp": 421,
       "avgMaturityHundredths": 562,
-      "sharesOutstanding": 1400000
+      "sharesOutstanding": 37633425
     },
     {
       "year": 2033,
       "isin": "IE000ZBGZQM8",
-      "name": "iBonds EUR Corporate UCITS 2033 (pending confirmation, unconfirmed values)",
-      "navMicroEur": 48000000,
-      "ytmBp": 450,
+      "name": "iBonds EUR Corporate UCITS 2033",
+      "navMicroEur": 5119107,
+      "ytmBp": 433,
       "avgMaturityHundredths": 662,
-      "sharesOutstanding": 1500000
+      "sharesOutstanding": 9681372
     },
     {
       "year": 2034,
       "isin": "IE000UY6XF65",
-      "name": "iBonds EUR Corporate UCITS 2034 (pending confirmation, unconfirmed values)",
-      "navMicroEur": 50000000,
-      "ytmBp": 500,
-      "avgMaturityHundredths": 762,
-      "sharesOutstanding": 1600000
+      "name": "iBonds EUR Corporate UCITS 2034",
+      "navMicroEur": 5103452,
+      "ytmBp": 438,
+      "avgMaturityHundredths": 763,
+      "sharesOutstanding": 14561449
     }
   ]
 }

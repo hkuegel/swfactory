@@ -17,22 +17,52 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
  * The fund table: the researched ISINs of story 025's Context, plus the product page id the source
- * needs. The ISINs are not confirmed against hak's depot (open question 2), and only the 2028 page id is
- * measured, so a live run reports the funds it cannot read instead of guessing them.
+ * The fund table: hak's answer of 2026-11-13 is the accumulating share class for every fund, and each
+ * accumulating ISIN resolves to the product page id stored as a response, so a live run can read all seven.
  */
 export const FUND_TABLE = [
   {
     year: 2028,
     isin: 'IE0008UEVOE0',
     name: 'iBonds EUR Corporate UCITS 2028',
-    productId: '331717',
+    productId: '332876',
   },
-  { year: 2029, isin: 'IE000SNLFDR7', name: 'iBonds EUR Corporate UCITS 2029', productId: null },
-  { year: 2030, isin: 'IE000Y2BJVK9', name: 'iBonds EUR Corporate UCITS 2030', productId: null },
-  { year: 2031, isin: 'IE000D9WMGF0', name: 'iBonds EUR Corporate UCITS 2031', productId: null },
-  { year: 2032, isin: 'IE000I660ZF8', name: 'iBonds EUR Corporate UCITS 2032', productId: null },
-  { year: 2033, isin: 'IE000ZBGZQM8', name: 'iBonds EUR Corporate UCITS 2033', productId: null },
-  { year: 2034, isin: 'IE000UY6XF65', name: 'iBonds EUR Corporate UCITS 2034', productId: null },
+  {
+    year: 2029,
+    isin: 'IE000SNLFDR7',
+    name: 'iBonds EUR Corporate UCITS 2029',
+    productId: '338575',
+  },
+  {
+    year: 2030,
+    isin: 'IE000Y2BJVK9',
+    name: 'iBonds EUR Corporate UCITS 2030',
+    productId: '338576',
+  },
+  {
+    year: 2031,
+    isin: 'IE000D9WMGF0',
+    name: 'iBonds EUR Corporate UCITS 2031',
+    productId: '339093',
+  },
+  {
+    year: 2032,
+    isin: 'IE000I660ZF8',
+    name: 'iBonds EUR Corporate UCITS 2032',
+    productId: '339174',
+  },
+  {
+    year: 2033,
+    isin: 'IE000ZBGZQM8',
+    name: 'iBonds EUR Corporate UCITS 2033',
+    productId: '339299',
+  },
+  {
+    year: 2034,
+    isin: 'IE000UY6XF65',
+    name: 'iBonds EUR Corporate UCITS 2034',
+    productId: '339290',
+  },
 ];
 
 const labelOf = (fund) => `fund ${String(fund.year)} (${fund.isin})`;

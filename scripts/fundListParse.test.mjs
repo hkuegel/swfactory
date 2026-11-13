@@ -19,10 +19,10 @@ const HAND_RECORD = {
   year: 2028,
   isin: 'IE0008UEVOE0',
   name: 'iBonds EUR Corporate UCITS 2028',
-  navMicroEur: 5113521,
+  navMicroEur: 5677761,
   ytmBp: 376,
   avgMaturityHundredths: 162,
-  sharesOutstanding: 269922969,
+  sharesOutstanding: 191664314,
 };
 
 const readFixture = (name) =>
@@ -34,7 +34,7 @@ const noRequest = () => {
 
 describe('fund list writer (fixture mode)', () => {
   it('AC1: the values of one stored response are the values the response prints, and asOf is the run date given', async () => {
-    const result = parseFundResponse(readFixture('331717.html'), fund);
+    const result = parseFundResponse(readFixture('332876.html'), fund);
     expect(result.ok).toBe(true);
     expect(result.record).toEqual(HAND_RECORD);
 
@@ -49,7 +49,7 @@ describe('fund list writer (fixture mode)', () => {
       ['missing-nav.html', 'navMicroEur', 'value missing'],
       ['bad-ytm.html', 'ytmBp', 'not a number: n/a'],
       ['zero-shares.html', 'sharesOutstanding', 'out of range: 0'],
-      ['extra-decimals.html', 'navMicroEur', 'more decimals than the field allows (6): 5.1234567'],
+      ['extra-decimals.html', 'navMicroEur', 'more decimals than the field allows (6): 5.6777612'],
     ];
     for (const [file, field, problem] of cases) {
       const result = parseFundResponse(readFixture(file), fund);
@@ -78,7 +78,7 @@ describe('fund list writer (fixture mode)', () => {
       mode: 'fixture',
       runDate: '2026-11-13',
       table: [fund],
-      read: () => readFixture('331717.html'),
+      read: () => readFixture('332876.html'),
       request: () => {
         called += 1;
         throw new Error('the request module was reached in fixture mode');

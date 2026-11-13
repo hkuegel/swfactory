@@ -57,25 +57,30 @@ instead of the hand-picked fixture values, without the app itself ever making a 
 
 ### The fund list for this story (ISINs, EUR Corporate UCITS iBonds, as researched 2026-11-13)
 
-| Maturity year | ISIN (accumulating) | Note                                |
-| ------------- | ------------------- | ----------------------------------- |
-| 2028          | `IE0008UEVOE0`      | distributing variant `IE000264WWY0` |
-| 2029          | `IE000SNLFDR7`      |                                     |
-| 2030          | `IE000Y2BJVK9`      | distributing variant `IE000LX17BP9` |
-| 2031          | `IE000D9WMGF0`      | distributing variant `IE000I2WYEU9` |
-| 2032          | `IE000I660ZF8`      |                                     |
-| 2033          | `IE000ZBGZQM8`      | distributing variant `IE000E0NL9T3` |
-| 2034          | `IE000UY6XF65`      |                                     |
+| Maturity year | ISIN (accumulating) | Product page id |
+| ------------- | ------------------- | --------------- |
+| 2028          | `IE0008UEVOE0`      | 332876          |
+| 2029          | `IE000SNLFDR7`      | 338575          |
+| 2030          | `IE000Y2BJVK9`      | 338576          |
+| 2031          | `IE000D9WMGF0`      | 339093          |
+| 2032          | `IE000I660ZF8`      | 339174          |
+| 2033          | `IE000ZBGZQM8`      | 339299          |
+| 2034          | `IE000UY6XF65`      | 339290          |
 
-The accumulating/distributing choice must be confirmed against hak's actual depot (Open question 2).
-No 2027 fund, which matches 024's assumption.
+Every fund is the accumulating share class (hak, 2026-11-13: "immer die thesaurierenden"), so the table
+lists one ISIN per year and the product page id that page resolves to. The distributing variants exist but
+are not used here. No 2027 fund, which matches 024's assumption.
 
 ### Measured facts (2026-11-13, with their caveats)
 
 - The iShares product page renders all five values in its HTML (NAV, Weighted Average YTM, Weighted Avg
   Maturity, Shares Outstanding, each with its own as-of date), so a Node script can parse them without a
-  browser and without a key. Example for the 2028 fund as measured on 2026-11-13: NAV 5,1152 €; YTM
-  3,76 %; Weighted Avg Maturity 1,62; Shares Outstanding 269.922.969.
+  browser and without a key. Example for the 2028 fund, measured on the accumulating page (id 332876) on
+  2026-11-13: NAV 5,677761 €; YTM 3,76 %; Weighted Avg Maturity 1,62; Shares Outstanding 191.664.314.
+- The seven accumulating pages were fetched once on 2026-11-13 and stored as the fixture responses, each
+  carrying the ISIN the table names, so live mode can read all seven funds. The first stored response was
+  the distributing variant of the 2028 fund (page 331717, ISIN `IE000264WWY0`); it was replaced when hak
+  answered that the accumulating class is always the one in his depot.
 - That page carried **no `access-control-allow-origin` header**, so a browser app on GitHub Pages cannot
   read it. The probe ran in a context not subject to page CORS, which does not prove the browser would be
   blocked; the absence of the header is the fact this story relies on.
@@ -143,8 +148,9 @@ Open questions, and both would reopen ADR 0013.
 1. Who commits the produced file — answered 2026-11-13: the runner commits it, with a write permission in
    this story's own workflow (hak). The commit must not come from the CI verify job, so the writer runs in
    its own workflow with `contents: write`, not in the existing read-only CI job.
-2. **Still open:** confirm the ISINs against hak's depot, including the accumulating or distributing share
-   class per fund (the table in Context is the researched candidate list, not a confirmed one).
+2. ISINs and share class — answered 2026-11-13: "immer die thesauerierenden", so the accumulating variant is
+   the fund for every maturity year, and the researched table is the fund list, not a candidate list. The
+   product page ids were read from those pages and are in the table in Context.
 3. Price unit for NAV — answered 2026-11-13: stored as an integer in the source's own precision,
    micro-euro (5,113521 € = 5113521), so the writer does not round inside the data file and ADR 0012's
    "round once at display" keeps holding (hak). The first answer, price basis points, was based on the
@@ -207,6 +213,10 @@ _Append only._
   would round 5113521 inside the data file, so the unit is micro-euro (`navMicroEur`). The decision log is
   append-only and the earlier entry stands as the answer as it was given; ADR 0013 and the technical design
   below are written with micro-euro.
+- 2026-11-13 — Q: accumulating or distributing per fund? — A: "immer die thesauerierenden" (hak), so the
+  table in Context becomes the fund list and the product page ids of those seven accumulating pages are
+  measured and stored. The fixture response of the distributing 2028 page was replaced, and the committed
+  data file was rewritten by the writer in fixture mode from the seven stored responses.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -376,8 +386,8 @@ Deviations from the technical design:
    six funds it cannot read rather than stopping at the first.
 4. Defect found in the parse and fixed: a value with more decimals than the field's unit was converted by
    string arithmetic into a wrong integer, because the extra digits were added as whole units
-   (7 decimals with a 6-decimal unit). The parse now refuses it, and a fourth stored response proves the
-   refusal through the run, not only through the parse.
+   (measured: `5.6777612` with a 6-decimal unit became 11777612). The parse now refuses it, and a fourth
+   stored response proves the refusal through the run, not only through the parse.
 5. Defect found in the app and fixed: after the unit change the NAV input cell's upper bound was still the
    cent bound, so the copy quoted 200.000,00 € while the field refused anything above 20,00 €. The bound
    is now derived in the field's own unit, and the test goes through the parse function, not the constant.
@@ -394,7 +404,7 @@ _tester (2026-11-13): AC → test mapping, results, defects found._
 
 | AC  | Test(s)                                                                                                                                                                                                                                                                                                                                  | Result           |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| AC1 | `scripts/fundListParse.test.mjs`, test 1: the four values of the stored response against hand-pinned numbers, and the file-level asOf equals the run date passed in                                                                                                                                                                      | PASS             |
+| AC1 | `scripts/fundListParse.test.mjs`, test 1: the four values of the stored response (2028, accumulating page 332876) against hand-pinned numbers 5677761 / 376 / 162 / 191664314, and the file-level asOf equals the run date passed in                                                                                                     | PASS             |
 | AC2 | same file, test 2: four stored responses (missing value, not a number, out of range, too many decimals), each names fund and field; the same failure through the run, which produces no content at all                                                                                                                                   | PASS             |
 | AC3 | same file, test 3: fixture mode reads only, with a request stub that throws when called; the call count is 0                                                                                                                                                                                                                             | PASS             |
 | AC4 | `scripts/fundListWriter.test.mjs`: the produced file equals the hand-written shape (key order, funds by year, refused run date, refused empty record list), plus `apps/laz/src/features/plan/logic/fund.test.ts`, which compares the app's import with hand values that are not the fixture copy's values; the app's e2e run stays green | PASS             |
@@ -421,8 +431,8 @@ removed, run through the command line in fixture mode → exit code 1, names fun
 file is created.
 
 Measured durations (reported, not asserted, story 026 rule): `test:scripts` 50 tests green, 0.21 s inside
-the suite and 1.0 s as a runner step; `test -w apps/laz` 9 tests green, 2.53 s; `test:e2e -w apps/laz` 44
-tests green, 6.1 s; the full run 12 steps, 2 levels, 73.9 s wall clock. The app's own e2e run does not read
+the suite and 1.1 s as a runner step; `test -w apps/laz` 9 tests green, 1.4 s; `test:e2e -w apps/laz` 44
+tests green, 5.5 s; the full run 12 steps, 2 levels, 76.7 s wall clock. The app's own e2e run does not read
 the network; the writer's live path is never executed by a test.
 
 ## Review
@@ -501,8 +511,9 @@ _what went wrong, proposed changes, and which ones hak approved._
 What went wrong:
 
 1. The NAV unit was answered from the page's rounded display (`5,1152 €`) before the unrounded value in
-   the page's own data was read (`5.113521`), so the answer had to be corrected at gate 1 and ADR 0013
-   changed for it. A unit choice must rest on the value the source carries, not on a figure it formats.
+   the page's own data was read (`5.113521` on the distributing page, `5.677761` on the accumulating one
+   hak uses), so the answer had to be corrected at gate 1 and ADR 0013 changed for it. A unit choice must
+   rest on the value the source carries, not on a figure it formats.
 2. After the unit change the NAV input cell kept its old bound, so the copy and the constant disagreed:
    the copy quoted 200.000,00 €, the field refused anything above 20,00 €. No existing test covered it; it
    was found by reading the copy against the constant.
@@ -539,10 +550,10 @@ Proposed changes (for hak at gate 2, none approved yet):
 | developer                   | 1     | n/a   | not measured (code written by the orchestrator)         | not measured (code written by the orchestrator)         | not measured (code written by the orchestrator)         |
 | tester                      | 1     | n/a   | not measured (no per-run counters in this harness)      | not measured (no per-run counters in this harness)      | not measured (no per-run counters in this harness)      |
 | tech-writer                 | 1     | n/a   | not measured (README and CHANGELOG by the orchestrator) | not measured (README and CHANGELOG by the orchestrator) | not measured (README and CHANGELOG by the orchestrator) |
-| reviewer                    | 1     | n/a   | not measured (no per-run counters in this harness)      | not measured (no per-run counters in this harness)      | 1:14                                                    |
-| total (measured)            | -     | -     | n/a                                                     | n/a                                                     | 1:14                                                    |
+| reviewer                    | 1     | n/a   | not measured (no per-run counters in this harness)      | not measured (no per-run counters in this harness)      | 1:17                                                    |
+| total (measured)            | -     | -     | n/a                                                     | n/a                                                     | 1:17                                                    |
 | orchestrator (main session) | 1     | n/a   | not measured                                            | n/a                                                     | n/a                                                     |
 
-The measured duration is the verification run the reviewer executed (12 steps, 2 levels, 73.9 s wall
+The measured duration is the verification run the reviewer executed (12 steps, 2 levels, 76.7 s wall
 clock). The shorter figures in the Test report are measured check durations, not role durations, and no
 role's thinking time is counted here.
