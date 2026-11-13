@@ -179,8 +179,9 @@ Pages → Build and deployment → Source**. Choose **GitHub Actions**. Without 
 
 ### When it deploys
 
-The `CI` workflow is one job: one install, one build, one run. `node_modules` comes from the
-cache, keyed on the lockfile hash, and is installed only on a cache miss. For a pull request
+The `CI` workflow is one job: one install, one build, one run. `node_modules`, the vitest cache
+of each workspace and the Playwright browser directory come from the cache, keyed on the
+lockfile hash; `npm ci` and the browser install run only on a cache miss. For a pull request
 the job may run only the checks the change can affect; a run on `main` or a **Run workflow**
 run is always a full run, and only such a run publishes. It starts a browser only when the
 plan has a browser step, and the Pages artifact is uploaded by the same run that built
