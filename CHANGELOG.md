@@ -89,6 +89,10 @@ All notable changes to this project are documented here, following
   durations, and records a full run in `.tmp/last-full-run.json`. Modes are named
   `--mode=affected` and `--mode=full`; `--plan-only`, `--format=github-output`,
   `--base=<ref>`, `--paths=a,b` and `--no-record` are for a CI step (#026).
+- `npm run verify` runs `test` and `test:e2e` only in the workspaces the plan names, with
+  `-w <workspace>`, so a change in one app does not start another app's suite. A change the plan
+  cannot put in one workspace, and every full run, still run in all workspaces; the plan prints the
+  workspaces it uses (#027).
 - `npm run test:pages` no longer builds the site: `npm run build:pages` produces `_site/`, and
   `test:pages` only tests it, so `_site/` is built once per pipeline. Run `npm run build:pages`
   before `npm run test:pages` when you call them separately (#026).

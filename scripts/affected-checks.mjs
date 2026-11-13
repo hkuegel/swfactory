@@ -106,12 +106,47 @@ export function appsIn(changedPaths, allApps) {
   return [...found].sort();
 }
 
+/**
+ * Story 027: the steps that run per workspace. A test step must not run in a workspace that cannot see
+ * the change, so the plan names the workspaces it runs in. `lint` and `format:check` read the whole tree
+ * and are not scoped.
+ */
+export const WORKSPACE_STEPS = Object.freeze(['test', 'test:e2e']);
+
+/**
+ * The workspaces a change can reach, read from the path prefix `apps/<name>/` or `packages/<name>/`. A
+ * path the mapping cannot put in a workspace answers with all of them: a scope that runs nothing is not
+ * a scope (story 026, AC3).
+ */
+export function workspacesOf(changedPaths, allWorkspaces) {
+  const found = new Set();
+  for (const path of changedPaths) {
+    const match = /^(apps|packages)\/[^/]+\//.exec(path);
+    if (match === null) continue;
+    const workspace = path.slice(0, match[0].length - 1);
+    found.add(workspace);
+    // The platform is consumed as source by every app (ADR 0006), so a platform change reaches every app
+    // workspace too; the platform's own tests must not be lost by the scoping.
+    if (groupsOf(path).includes('platform')) {
+      for (const workspace of allWorkspaces) {
+        if (workspace.startsWith('apps/')) found.add(workspace);
+      }
+    }
+  }
+  return found.size === 0 ? [...allWorkspaces].sort() : [...found].sort();
+}
+
 /** AC1: the checks that can see the change. */
-export function affectedPlan(changedPaths, allApps) {
+export function affectedPlan(changedPaths, allApps, allWorkspaces = []) {
   const groups = new Set(changedPaths.flatMap(groupsOf));
   const ungrouped = changedPaths.some((path) => groupsOf(path).length === 0);
   if (groups.has('tooling') || ungrouped) {
-    return { mode: 'affected', steps: [...STEPS].sort(), apps: [...allApps].sort() };
+    return {
+      mode: 'affected',
+      steps: [...STEPS].sort(),
+      apps: [...allApps].sort(),
+      workspaces: [...allWorkspaces].sort(),
+    };
   }
 
   const steps = new Set();
@@ -142,16 +177,26 @@ export function affectedPlan(changedPaths, allApps) {
   // AC5: a check is never planned without the step that writes what it reads.
   for (const step of [...steps]) for (const need of NEEDS[step] ?? []) steps.add(need);
 
-  return { mode: 'affected', steps: [...steps].sort(), apps: appsIn(changedPaths, allApps) };
+  return {
+    mode: 'affected',
+    steps: [...steps].sort(),
+    apps: appsIn(changedPaths, allApps),
+    workspaces: workspacesOf(changedPaths, allWorkspaces),
+  };
 }
 
 /**
  * AC2: with no recorded full run every check runs. A check is skipped only when its inputs did not
  * change since a recorded full run, never because a pattern calls it unimportant.
  */
-export function plan(changedPaths, record, mode, allApps) {
+export function plan(changedPaths, record, mode, allApps, allWorkspaces = []) {
   if (mode === 'full' || record === undefined || record === null) {
-    return { mode: 'full', steps: [...STEPS].sort(), apps: [...allApps].sort() };
+    return {
+      mode: 'full',
+      steps: [...STEPS].sort(),
+      apps: [...allApps].sort(),
+      workspaces: [...allWorkspaces].sort(),
+    };
   }
-  return affectedPlan(changedPaths, allApps);
+  return affectedPlan(changedPaths, allApps, allWorkspaces);
 }
