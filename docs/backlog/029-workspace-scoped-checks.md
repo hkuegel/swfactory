@@ -124,13 +124,13 @@ The rerun of that step alone was green (80 tests in `avd`, 110 in the platform, 
 not named here because the rerun replaced its result file, so the name is lost; it is reported as observed, not
 as a defect.
 
-CI of this branch: run 29 green (430 s), the `checks` step ran the plan as an affected run; `npm ci` and the
-browser install were skipped because the cache hit (story 028). Run 28 of the same branch was cancelled by the
-concurrency rule (a newer pull-request run cancels an older one). Runs of the merged stories: 026 green
-(run 20), 027 green (run 21), 028 red (run 25) — that run failed on the landing figures test AC8 because the
-index row for 027 said `ready` while the story said `done`, so the build counted the index and the oracle
-counted the files. The run of the index fix on `main` (run 27, 2026-11-13) is green, which is the proof that the
-two counts agree again after the fix.
+CI of this branch: run 29 green (430 s), run 30 green (the record commit) — the `checks` step ran the plan as an
+affected run, `npm ci` and the browser install were skipped because the cache hit (story 028). Run 28 was
+cancelled by the concurrency rule (a newer pull-request run cancels an older one). Runs of the merged stories:
+026 green (run 20), 027 green (run 21), 028 red (run 25) — that run failed on the landing figures test AC8
+because the index row for 027 said `ready` while the story said `done`, so the build counted the index and the
+oracle counted the files. The run of the index fix on `main` (run 27, 2026-11-13) is green, which is the proof
+that the two counts agree again after the fix.
 
 ## Review
 
