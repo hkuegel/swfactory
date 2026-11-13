@@ -29,3 +29,4 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 020 | minesweeper | [Minesweeper 3D loads in the production build](../../apps/minesweeper/docs/backlog/020-minesweeper-3d-production-palette.md)                              | done   |
 | 021 | platform    | [Factory landing page at the site root](021-factory-landing-page.md)                                                                                      | done   |
 | 022 | platform    | [Factory checks pass on Windows](022-cross-platform-checks.md)                                                                                            | done   |
+| 024 | laz         | [Lebensarbeitszeitkonto iBonds payout phase, both directions (projection)](../../apps/laz/docs/backlog/024-laz-ibonds-phase-plan.md)                      | ready  |
