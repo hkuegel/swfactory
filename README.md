@@ -179,8 +179,12 @@ Pages → Build and deployment → Source**. Choose **GitHub Actions**. Without 
 
 ### When it deploys
 
-The `CI` workflow publishes the factory page and the apps after a push to `main`, when
-verify, the e2e tests and the Pages check are green. Pull requests and other branches never publish.
+The `CI` workflow is one job: one install, one build, one run. `node_modules` comes from the
+cache, keyed on the lockfile hash, and is installed only on a cache miss. For a pull request
+the job may run only the checks the change can affect; a run on `main` or a **Run workflow**
+run is always a full run, and only such a run publishes. It starts a browser only when the
+plan has a browser step, and the Pages artifact is uploaded by the same run that built
+`_site/`, so the site is built once. Pull requests and other branches never publish.
 
 To publish without a push, open the **Actions** tab, choose **CI**, then **Run workflow**
 and select the branch `main`. The run publishes only if all checks pass. On any other
@@ -194,16 +198,19 @@ npm run build:pages
 ```
 
 This builds every app under its Pages address into `_site/<app>/`, builds the factory page
-into `_site/`, and runs the dev-only check on the result. `npm run verify` runs it too.
+into `_site/`, and runs the dev-only check on the result. A full `npm run verify` run builds
+it too.
 
 ```bash
 npm run test:pages
 ```
 
-This builds the site again and opens the factory page and each app under its address in
-Chromium. It also runs the checks of the factory page in `landing/e2e/pages/`. Run
-`npx playwright install chromium` once first, as in [Getting started](#getting-started).
-Neither command needs a client ID.
+This tests the site that `npm run build:pages` built; it does not build again. `_site/` is
+built once per pipeline, and `npm run verify` builds it and tests it in the same run. When you
+call the two commands separately, run `npm run build:pages` before `npm run test:pages`.
+`test:pages` opens the factory page and each app under its address in Chromium, and runs the
+checks of the factory page in `landing/e2e/pages/`. Run `npx playwright install chromium` once
+first, as in [Getting started](#getting-started). Neither command needs a client ID.
 
 An app can add its own checks for the published site. Put them in
 `apps/<name>/e2e/pages/*.pages.spec.ts`. `npm run test:pages` runs them together with the
@@ -359,7 +366,9 @@ It is no longer the start of a rebuild. Move it only on hak's decision.
 Each agent keeps its own lessons in `.claude/agent-memory/<agent>/MEMORY.md`, loaded
 on every run. After each story a retro proposes improvements to the agents and
 `CLAUDE.md`; you decide which ones are applied. All of it is in git, so you can review
-and revert what the agents learned.
+and revert what the agents learned. While a story runs, the orchestrator writes the
+progress in the chat, one short line per step, and a story is one checkable behaviour so
+that progress can be tracked (story 026).
 
 ## Project layout
 
@@ -392,7 +401,8 @@ landing/               the factory page at the site root (@swfactory/landing)
   src/                 the page: React, rendered to HTML at build time
   build/               build-time data: app list, backlog and cost figures
   e2e/pages/           checks of the published factory page
-scripts/               check-dist.mjs, check-structure.mjs, new-app.mjs
+scripts/               check-dist.mjs, check-structure.mjs, new-app.mjs,
+                       affected-checks.mjs, verify.mjs
 ```
 
 ## Styling
@@ -429,18 +439,36 @@ Root scripts run over the platform and all apps:
 | `npm run lint`            | Lint the whole repo (ESLint)                |
 | `npm run format`          | Format all files with Prettier              |
 | `npm test`                | Unit tests of every workspace (Vitest)      |
+| `npm run test:scripts`    | Unit tests of `scripts/` (Vitest)           |
 | `npm run test:e2e`        | End-to-end tests of every app (Playwright)  |
 | `npm run check:dist`      | Fail if dev-only code is in an app's dist/  |
 | `npm run check:structure` | Structure and link guard                    |
 | `npm run check:template`  | Unit tests and typecheck of `templates/app` |
 | `npm run build:pages`     | Build the GitHub Pages site into `_site/`   |
 | `npm run test:pages`      | Test the Pages site in Chromium             |
-| `npm run verify`          | Run all checks except e2e (order below)     |
+| `npm run verify`          | Run the checks the change can affect        |
 
-`npm run verify` runs the checks in this order: typecheck, lint, format check, structure
-check, skeleton check (`check:template`), unit tests, build, `check:dist`, and
-`build:pages`. It does not run the e2e tests or `test:pages`. It fails if the platform or
-any app fails.
+`npm run verify` (`scripts/verify.mjs`) asks `scripts/affected-checks.mjs` which checks can
+see the change and runs that plan. Independent checks run at the same time, in levels, and a
+check that depends on another is never in the same level: `check:dist` waits for `build` and
+`test:pages` for `build:pages`, so the longest chain is three levels. Without a recorded full
+run every check runs, and a check is skipped only when its files are unchanged since that
+run, never because a pattern says it is unimportant. A successful full run records itself in
+`.tmp/last-full-run.json` (gitignored). The runner reports the plan, the levels and the
+duration of each check; durations are reported, not asserted.
+
+The checks the plan can hold are: typecheck, lint, format check, structure check
+(`check:template`), the unit tests (`npm test` and `npm run test:scripts`), build,
+`check:dist`, `build:pages`, `test:pages` and the e2e tests. The mapping answers per kind of
+change: markdown and template files get prettier and `check:structure`; an app's `src/` gets
+that app's unit tests, `check:dist` and its e2e; platform `src/` gets every app's tests and
+e2e; a token file gets the token tests plus the e2e that compares pixels; a `scripts/` check
+or `package.json` gets a full run. The run fails if the platform or any app fails.
+
+Modes are named: `--mode=affected` uses the mapping, `--mode=full` runs everything (the
+default when nothing is recorded). `--plan-only` prints the plan without running it, and
+`--format=github-output`, `--base=<ref>`, `--paths=a,b` and `--no-record` are the options a
+CI step uses.
 
 To work on one app, add `-w apps/<name>`:
 
@@ -475,6 +503,14 @@ chunks.
   frontmatter,
 - a story with `status: done` and an id from 013 on lacks the cost table in its
   Retrospective or the "Explanation" section. Stories 001 to 012 are not checked.
+- a story from 026 on without `size: S`, `M` or `L` in its frontmatter, or a `size: S` story
+  with more than three acceptance criteria. `docs/templates/story.md` has the field.
+- a done `size: S` story from 026 on that lacks the "Explanation" section. A `size: S` story
+  needs only that section: no Review, no Cost table and no UX design section. A `size: M` or
+  `size: L` story still needs all of them.
+- a Cost table of a done `size: M` or `size: L` story from 026 on that says `n/a` in every
+  row. A row is measured or says `not measured` with the reason. Stories before 026 keep the
+  record as written, and their `size:` is read as `M`.
 
 ## Testing
 

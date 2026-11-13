@@ -20,13 +20,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "npm run test --workspaces --if-present",
+    "test:scripts": "vitest run -c vitest.scripts.config.ts",
     "test:e2e": "npm run test:e2e --workspaces --if-present",
     "build:pages": "node scripts/build-pages.mjs",
-    "test:pages": "npm run build:pages && playwright test -c packages/platform/config/playwright.pages.ts",
+    "test:pages": "playwright test -c packages/platform/config/playwright.pages.ts",
     "check:dist": "node scripts/check-dist.mjs",
     "check:structure": "node scripts/check-structure.mjs",
     "check:template": "node scripts/check-template.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run check:structure && npm run check:template && npm test && npm run build && npm run check:dist && npm run build:pages"
+    "verify": "node scripts/verify.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

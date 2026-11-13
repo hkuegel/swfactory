@@ -4,6 +4,7 @@ title: Short title
 status: draft # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: platform # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<name>/docs/backlog)
+size: M # S | M | L (story 026). S = at most three ACs: needs only the Explanation, no Review section and no Cost table. M and L keep the required sections and a Cost table that carries measured values or "not measured" with the reason.
 branch: feature/NNN-slug
 supersedes: [] # stories this one fully replaces, e.g. [004]
 changes: [] # stories whose behaviour this one modifies, e.g. [004/AC2, 007]
