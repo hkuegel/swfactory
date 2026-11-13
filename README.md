@@ -458,9 +458,12 @@ run, never because a pattern says it is unimportant. A successful full run recor
 `.tmp/last-full-run.json` (gitignored). The runner reports the plan, the levels and the
 duration of each check; durations are reported, not asserted.
 
-The two test steps run only in the workspaces the plan names (`-w <workspace>`), so a change in
-one app does not start another app's suite. A change that cannot be put into one workspace, and
-every full run, run in all workspaces; the plan prints the workspaces it uses (story 027).
+Every step that a workspace defines in its own `package.json` (`typecheck`, `build`, `test`,
+`test:e2e`, `lint`, `format:check`, `check:dist`) runs only in the workspaces the plan names
+(`-w <workspace>`, with `--if-present`), so a change in one app does not read the other apps. A
+step that is not a workspace script, a change with a file that belongs to no workspace, and every
+full run keep the whole-tree command, so a root file is never skipped. The plan prints the
+workspaces it uses and which steps are scoped (story 027, story 029).
 
 The checks the plan can hold are: typecheck, lint, format check, structure check
 (`check:template`), the unit tests (`npm test` and `npm run test:scripts`), build,

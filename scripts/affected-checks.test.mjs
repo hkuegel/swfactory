@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   STEPS,
-  WORKSPACE_STEPS,
   affectedPlan,
   appsIn,
   checkLevels,
   groupsOf,
   levelsOf,
   plan,
+  runsPerWorkspace,
   workspacesOf,
 } from './affected-checks.mjs';
 
@@ -166,9 +166,9 @@ describe('story 027 AC1-AC3: the workspaces a test step runs in', () => {
       'affected',
     );
     expect(answer.workspaces).toEqual(['apps/x']);
-    // Hand expectation: the scoped steps are the two test steps, `lint` and `format:check` read the tree.
-    expect(WORKSPACE_STEPS).toEqual(['test', 'test:e2e']);
-    expect(answer.steps.includes('lint')).toBe(true);
+    // Hand expectation: the test steps are in the plan, so the scoping decides where they run.
+    expect(answer.steps.includes('test')).toBe(true);
+    expect(answer.steps.includes('test:e2e')).toBe(true);
   });
 
   it('AC2: a platform change scopes to the platform and to every app, so its own tests are not lost', () => {
@@ -193,6 +193,106 @@ describe('story 027 AC1-AC3: the workspaces a test step runs in', () => {
     expect(answer.mode).toBe('full');
     expect(answer.workspaces).toEqual(ALL);
     expect(answer.workspaces.length).toBe(4);
+  });
+});
+
+describe('story 029 AC1-AC3: whether a step can run in one workspace', () => {
+  // Hand expectation, as data: the scripts the hand data says each workspace defines. The module must not
+  // be checked against the table it reads, so this map is written here and not read from package.json.
+  const SCRIPTS = {
+    'apps/x': {
+      typecheck: 'tsc --build',
+      lint: 'eslint .',
+      'format:check': 'prettier --check .',
+      test: 'vitest run',
+      'test:e2e': 'playwright test',
+      build: 'vite build',
+      'check:dist': 'node check-dist.mjs x',
+    },
+    'apps/y': {
+      typecheck: 'tsc --build',
+      lint: 'eslint .',
+      'format:check': 'prettier --check .',
+      test: 'vitest run',
+      'test:e2e': 'playwright test',
+      build: 'vite build',
+      'check:dist': 'node check-dist.mjs y',
+    },
+    landing: {
+      typecheck: 'tsc --build',
+      lint: 'eslint .',
+      'format:check': 'prettier --check .',
+      test: 'vitest run',
+    },
+    'packages/platform': {
+      typecheck: 'tsc --build',
+      lint: 'eslint .',
+      'format:check': 'prettier --check .',
+      test: 'vitest run',
+    },
+  };
+  const answerFor = (paths, mode = 'affected') =>
+    plan(paths, { head: 'abc', files: {} }, mode, ['x', 'y'], Object.keys(SCRIPTS));
+
+  it('AC1: a step the workspace defines in its own package.json runs in the affected workspace only', () => {
+    const answer = answerFor(['apps/x/src/features/plan/logic/fund.ts']);
+    // Hand expectation: one workspace, and every step in the plan that this workspace defines.
+    expect(answer.workspaces).toEqual(['apps/x']);
+    for (const step of [
+      'typecheck',
+      'lint',
+      'format:check',
+      'test',
+      'test:e2e',
+      'build',
+      'check:dist',
+    ]) {
+      expect(runsPerWorkspace(answer, step, SCRIPTS), `step ${step}`).toBe(true);
+    }
+  });
+
+  it('AC2: a step that is not defined per workspace is never scoped, and check:dist runs where build ran', () => {
+    const answer = answerFor(['apps/x/src/tokens.css']);
+    // Hand expectation: `test:scripts` is a root script, no workspace defines it, so the root command runs.
+    expect(runsPerWorkspace(answer, 'test:scripts', SCRIPTS)).toBe(false);
+    // Hand expectation: the check reads what build writes, so both use the same scope.
+    expect(runsPerWorkspace(answer, 'check:dist', SCRIPTS)).toBe(
+      runsPerWorkspace(answer, 'build', SCRIPTS),
+    );
+  });
+
+  it('AC2: a changed path in no workspace keeps the whole-tree command', () => {
+    // Hand expectation: a run that only visits workspaces cannot see `docs/`, so the root command runs.
+    const answer = answerFor(['docs/backlog/README.md']);
+    expect(runsPerWorkspace(answer, 'format:check', SCRIPTS)).toBe(false);
+    expect(runsPerWorkspace(answer, 'check:structure', SCRIPTS)).toBe(false);
+    // Hand expectation, as data: the plan names the app workspace, but a change list that mixes a
+    // workspace file with a root file cannot be scoped - the root file would be missed.
+    const mixed = answerFor(['apps/x/src/tokens.css', 'docs/backlog/README.md']);
+    expect(mixed.workspaces).toEqual(['apps/x']);
+    expect(runsPerWorkspace(mixed, 'format:check', SCRIPTS)).toBe(false);
+    expect(runsPerWorkspace(mixed, 'test', SCRIPTS)).toBe(false);
+  });
+
+  it('AC3: planted violation - a full run is never scoped, so nothing outside the workspaces is missed', () => {
+    const answer = answerFor(['apps/x/src/tokens.css'], 'full');
+    // Hand expectation: the full run checks the whole tree, including a file in no workspace.
+    expect(runsPerWorkspace(answer, 'test', SCRIPTS)).toBe(false);
+    // Hand expectation: an empty hand map cannot say a workspace defines a step, so nothing is scoped.
+    expect(runsPerWorkspace(answerFor(['apps/x/src/tokens.css']), 'test', {})).toBe(false);
+  });
+
+  it('AC1: a workspace without the script is skipped, not failed', () => {
+    // Hand expectation: a platform change reaches the platform and both apps (the platform is source for
+    // every app), and the hand data says `packages/platform` defines no `test:e2e`, so the scoped command
+    // needs `--if-present`; the step is still scoped, because the apps define the script.
+    const answer = answerFor(['packages/platform/src/lib/date.ts']);
+    // Hand expectation, as data: landing is not reached by a platform change.
+    expect(answer.workspaces).toEqual(['apps/x', 'apps/y', 'packages/platform']);
+    expect(SCRIPTS['packages/platform']['test:e2e'], 'hand data: platform has no e2e script').toBe(
+      undefined,
+    );
+    expect(runsPerWorkspace(answer, 'test:e2e', SCRIPTS)).toBe(true);
   });
 });
 

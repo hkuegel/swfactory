@@ -57,10 +57,38 @@ describe('the runner never plans a check without the step that writes what it re
   });
 });
 
-describe('story 027: the command runs the scoped step in the planned workspace only', () => {
+describe('story 029: the command runs a step in the affected workspaces, or in the whole tree', () => {
   const ALL = ['apps/x', 'apps/y', 'packages/platform'];
+  // Hand data, written here and not read from the `package.json` files the runner reads: the scripts each
+  // workspace defines in its own package.json. `test:scripts` is defined by no workspace.
+  const SCRIPTS = {
+    'apps/x': {
+      typecheck: 'tsc --build',
+      lint: 'eslint .',
+      'format:check': 'prettier --check .',
+      test: 'vitest run',
+      'test:e2e': 'playwright test',
+      build: 'vite build',
+      'check:dist': 'node check-dist.mjs x',
+    },
+    'apps/y': {
+      typecheck: 'tsc --build',
+      lint: 'eslint .',
+      'format:check': 'prettier --check .',
+      test: 'vitest run',
+      'test:e2e': 'playwright test',
+      build: 'vite build',
+      'check:dist': 'node check-dist.mjs y',
+    },
+    'packages/platform': {
+      typecheck: 'tsc --build',
+      lint: 'eslint .',
+      'format:check': 'prettier --check .',
+      test: 'vitest run',
+    },
+  };
 
-  it('AC1: a scoped test step names the planned workspace, not the other app', () => {
+  it('AC1: a step the workspace defines runs in the planned workspace, with --if-present', () => {
     // Hand expectation: the app the plan names, and `--if-present` so a workspace without the script is
     // skipped instead of failing the run.
     const answer = plan(
@@ -70,24 +98,30 @@ describe('story 027: the command runs the scoped step in the planned workspace o
       ['x', 'y'],
       ALL,
     );
-    expect(commandForStep('test', answer, ALL)).toEqual([
+    expect(commandForStep('test', answer, ALL, SCRIPTS)).toEqual([
       'run',
       'test',
       '--if-present',
       '-w',
       'apps/x',
     ]);
-    expect(commandForStep('test:e2e', answer, ALL)).toEqual([
+    expect(commandForStep('test:e2e', answer, ALL, SCRIPTS)).toEqual([
       'run',
       'test:e2e',
       '--if-present',
       '-w',
       'apps/x',
     ]);
+    expect(commandForStep('lint', answer, ALL, SCRIPTS)).toEqual([
+      'run',
+      'lint',
+      '--if-present',
+      '-w',
+      'apps/x',
+    ]);
   });
 
-  it('AC1: a step that reads the whole tree keeps the root command', () => {
-    // Hand expectation: `eslint .` and prettier cannot be scoped by a path, so they are not scoped.
+  it("AC2: a step no workspace defines keeps the root command, and check:dist uses build's scope", () => {
     const answer = plan(
       ['apps/x/src/tokens.css'],
       { head: 'abc', files: {} },
@@ -95,8 +129,33 @@ describe('story 027: the command runs the scoped step in the planned workspace o
       ['x', 'y'],
       ALL,
     );
-    expect(commandForStep('lint', answer, ALL)).toEqual(['run', 'lint']);
-    expect(commandForStep('format:check', answer, ALL)).toEqual(['run', 'format:check']);
+    // Hand expectation: no entry in the hand map says a workspace defines `test:scripts`, so the root
+    // command runs; `check:dist` is defined in `apps/x`, the workspace build ran in.
+    expect(commandForStep('test:scripts', answer, ALL, SCRIPTS)).toEqual(['run', 'test:scripts']);
+    expect(commandForStep('check:dist', answer, ALL, SCRIPTS)).toEqual([
+      'run',
+      'check:dist',
+      '--if-present',
+      '-w',
+      'apps/x',
+    ]);
+  });
+
+  it('AC2: a changed path in no workspace keeps the whole-tree command', () => {
+    // Hand expectation: `docs/` belongs to no workspace, so a run that only visits workspaces cannot see
+    // it; the root command runs, and a root file is never skipped.
+    const answer = plan(
+      ['docs/backlog/README.md'],
+      { head: 'abc', files: {} },
+      'affected',
+      ['x', 'y'],
+      ALL,
+    );
+    expect(commandForStep('format:check', answer, ALL, SCRIPTS)).toEqual(['run', 'format:check']);
+    expect(commandForStep('check:structure', answer, ALL, SCRIPTS)).toEqual([
+      'run',
+      'check:structure',
+    ]);
   });
 
   it('AC2: a platform change runs the platform workspace and every app workspace', () => {
@@ -108,7 +167,7 @@ describe('story 027: the command runs the scoped step in the planned workspace o
       ['x', 'y'],
       ALL,
     );
-    expect(commandForStep('test', answer, ALL)).toEqual([
+    expect(commandForStep('test', answer, ALL, SCRIPTS)).toEqual([
       'run',
       'test',
       '--if-present',
@@ -121,22 +180,14 @@ describe('story 027: the command runs the scoped step in the planned workspace o
     ]);
   });
 
-  it('AC3: planted violation - an empty scope names every workspace, never runs nowhere', () => {
-    // Hand expectation: an empty list cannot mean "run nothing in no workspace"; the fallback names all
-    // three, which is the same work the root script does today.
-    expect(commandForStep('test', { workspaces: [] }, ALL)).toEqual([
-      'run',
-      'test',
-      '--if-present',
-      '-w',
-      'apps/x',
-      '-w',
-      'apps/y',
-      '-w',
-      'packages/platform',
-    ]);
-    // Hand expectation: the full plan names all three workspaces, the same answer as before this story.
+  it('AC3: planted violation - a full run and an empty scope are never executed as a scope', () => {
+    // Hand expectation: an empty list cannot mean "run nothing in no workspace"; the whole-tree command
+    // covers the same work as naming all three.
+    expect(commandForStep('test', { workspaces: [] }, ALL, SCRIPTS)).toEqual(['run', 'test']);
+    // Hand expectation: the full plan names all three workspaces and is not scoped, so a file in no
+    // workspace cannot be missed by a full run.
     const answer = plan(['apps/x/src/tokens.css'], undefined, 'full', ['x', 'y'], ALL);
     expect(answer.workspaces).toEqual(ALL);
+    expect(commandForStep('test', answer, ALL, SCRIPTS)).toEqual(['run', 'test']);
   });
 });
