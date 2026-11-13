@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { COPY, overrideCopy, projectionLabel } from './fieldCopy.ts';
-import { formatEuro, fundValueText } from './logic/format.ts';
+import { formatEuroMicroEur, fundValueText } from './logic/format.ts';
 import type { OverrideField } from './logic/fields.ts';
 import type { Fund } from './logic/fund.ts';
 import type { FieldError } from './logic/parseInputs.ts';
@@ -9,7 +9,7 @@ import styles from './FundTable.module.css';
 
 export interface FundTableProps {
   readonly fundList: readonly Fund[];
-  /** Fund year → the projection shown for it, in cents (override value when present). */
+  /** Fund year → the projection shown for it, in micro-euro (override value when present). */
   readonly projections: ReadonlyMap<number, number>;
   /** Raw texts as typed, never reformatted; parsed values are derived, not stored (C3). */
   readonly overrides: ReadonlyMap<number, Readonly<Partial<Record<OverrideField, string>>>>;
@@ -81,7 +81,7 @@ export function FundTable({
                   ))}
                   <td>
                     <span className={styles.figure} aria-describedby={labelId}>
-                      {formatEuro(projections.get(fund.year) ?? 0)}
+                      {formatEuroMicroEur(projections.get(fund.year) ?? 0)}
                     </span>
                   </td>
                 </tr>

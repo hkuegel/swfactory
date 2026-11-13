@@ -41,25 +41,29 @@ export type ParseResult =
 
 const WHOLE = /^-?\d+$/;
 // Comma is the decimal separator, a dot is accepted too; no grouping; `5,` and `,5` are typing
-// states and valid.
-const DECIMAL = /^-?(\d+([.,]\d{0,2})?|[.,]\d{1,2})$/;
+// states and valid. The number of decimals is the field's unit, so the NAV cell takes up to 6
+// (story 025) and the other numeric fields keep 2.
+const DECIMAL_DECIMALS = (decimals: number): RegExp =>
+  new RegExp(`^-?(\\d+([.,]\\d{0,${decimals}})?|[.,]\\d{1,${decimals}})$`);
+const DECIMAL = DECIMAL_DECIMALS(2);
+const DECIMAL_6 = DECIMAL_DECIMALS(6);
 /** `TT.MM.JJJJ`, as UX types the phase (not `type="date"`, which is browser-locale dependent). */
 const DATE = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
 
 /**
  * Text already matched by WHOLE or DECIMAL → integer in the field's unit, by string arithmetic
- * (`"9,99"` → 999), never `parseFloat · 100`. `-0` gives 0.
+ * (`"9,99"` → 999, `"5,113521"` → 5113521), never `parseFloat · 100`. `-0` gives 0.
  */
-export function toUnits(text: string, decimals: 0 | 2): number {
+export function toUnits(text: string, decimals: 0 | 2 | 6): number {
   // U+2212 (typed minus) reads as the minus sign, as avd's parser does.
   const normalized = text.replace(/−/g, '-');
   const negative = normalized.startsWith('-');
   const unsigned = negative ? normalized.slice(1) : normalized;
   const [whole = '', fraction = ''] = unsigned.split(/[.,]/);
-  const scale = decimals === 2 ? 100 : 1;
+  const scale = decimals === 0 ? 1 : decimals === 2 ? 100 : 1_000_000;
   const magnitude =
     Number(whole === '' ? '0' : whole) * scale +
-    (decimals === 2 ? Number(fraction.padEnd(2, '0')) : 0);
+    (decimals === 0 ? 0 : Number(fraction.padEnd(decimals, '0')));
   return negative && magnitude !== 0 ? -magnitude : magnitude;
 }
 
@@ -89,6 +93,8 @@ export type FieldResult =
   | { readonly ok: true; readonly value: number }
   | { readonly ok: false; readonly error: FieldError };
 
+const PATTERN: Readonly<Record<0 | 2 | 6, RegExp>> = { 0: WHOLE, 2: DECIMAL, 6: DECIMAL_6 };
+
 /** One field against its spec; `parseInputs` and the fund-row overrides share this. */
 export function parseField(spec: FieldSpec, raw: string): FieldResult {
   const text = raw.trim().replace(/−/g, '-');
@@ -100,7 +106,7 @@ export function parseField(spec: FieldSpec, raw: string): FieldResult {
     if (key < spec.min || key > spec.max) return { ok: false, error: { kind: 'range' } };
     return { ok: true, value: key };
   }
-  if (!(spec.decimals === 0 ? WHOLE : DECIMAL).test(text)) {
+  if (!PATTERN[spec.decimals].test(text)) {
     return { ok: false, error: { kind: 'format' } };
   }
   const value = toUnits(text, spec.decimals);

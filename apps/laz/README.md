@@ -14,3 +14,10 @@ npm run test:e2e -w apps/laz     # the platform's sign-in specs plus this app's 
 ```
 
 App-specific design tokens go in `src/tokens.css`, stories in `docs/backlog/`, ADRs in `docs/adr/`.
+
+The fund list in `src/features/plan/data/fund-list.json` is written by `scripts/write-fund-list.mjs`,
+not fetched by the app. Its default mode reads stored responses, so a test run never reaches the
+network; live mode is an explicit `--mode=live`, run from the command line or from the workflow's
+Run workflow button, which commits the file. The run date is an argument of the writer, not a clock
+read. The app's own tests read a fixture copy of the file, so a refresh cannot move an expected
+value.

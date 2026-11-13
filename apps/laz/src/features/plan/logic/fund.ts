@@ -6,12 +6,12 @@ export interface Fund {
   readonly year: number;
   readonly isin: string;
   readonly name: string;
-  /** integer cents */
-  readonly navCents: number;
+  /** NAV in micro-euro (1 = 0,000001 EUR): the source's own precision, so the file never rounds (ADR 0013 as amended by 025) */
+  readonly navMicroEur: number;
   /** weighted average YTM, basis points (1 % = 100) */
   readonly ytmBp: number;
-  /** display only, not read by the calculation (ADR 0012: the horizon is the liquidation date) */
-  readonly avgMaturity: string;
+  /** hundredths of a year as the source publishes it; display only, not read by the calculation (ADR 0012: the horizon is the liquidation date) */
+  readonly avgMaturityHundredths: number;
   /** integer, display only */
   readonly sharesOutstanding: number;
 }
@@ -42,7 +42,7 @@ export function liquidationDate(fund: Fund): string {
 
 /** A fund row typed in the UI, in the units of the calculation; an empty cell is no override. */
 export interface FundOverride {
-  navCents?: number;
+  navMicroEur?: number;
   ytmBp?: number;
 }
 
@@ -50,7 +50,7 @@ export interface FundOverride {
 export function effectiveFund(fund: Fund, override: FundOverride): Fund {
   return {
     ...fund,
-    navCents: override.navCents ?? fund.navCents,
+    navMicroEur: override.navMicroEur ?? fund.navMicroEur,
     ytmBp: override.ytmBp ?? fund.ytmBp,
   };
 }

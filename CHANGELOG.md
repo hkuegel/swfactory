@@ -15,6 +15,13 @@ All notable changes to this project are documented here, following
   the year before; a year without a funding fund is shown without an amount. Tax on the gain
   is a parameter, on/off plus a rate. The payout per share is a projection from YTM and NAV,
   read from a committed data file, and the app labels it as a projection (#024).
+- The fund list of `laz` is written by a script, not typed. Its default mode reads stored responses, so a
+  test run never contacts the source, and a test fails if the network path is reached; live mode is an
+  explicit argument, run from the command line or from this story's workflow, which is the only workflow
+  with a write permission and commits the file. A fund that cannot be read names the fund and the field and
+  nothing is written, so a partial file cannot be committed. The date in the file is the run date given to
+  the script, never a clock reading, and the values are stored in the source's own precision, so the file
+  does not round (#025).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).

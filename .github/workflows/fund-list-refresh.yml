@@ -1,0 +1,40 @@
+name: Fund list refresh
+
+# Story 025: the UI trigger hak asked for is this workflow's Run workflow button. It is the only
+# workflow with a write permission, so the CI verify job stays read-only (open question 1). The writer
+# runs in live mode here; every test run stays in fixture mode.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # The run date is passed as an argument, not read from the file (AC1); a fund that cannot be read
+      # makes the step fail with the fund and the field named, so nothing is committed (AC2).
+      - name: read the fund pages
+        run: |
+          node scripts/write-fund-list.mjs \
+            --mode=live \
+            --run-date="$(date -u +%Y-%m-%d)" \
+            --out=apps/laz/src/features/plan/data/fund-list.json
+      - name: commit the file when it changed
+        run: |
+          if git diff --quiet -- apps/laz/src/features/plan/data/fund-list.json; then
+            echo "no fund value changed, nothing committed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41978044+github-actions[bot]@users.noreply.github.com"
+          git commit -m "data(fund list): writer run of $(date -u +%Y-%m-%dT%H:%M:%SZ)" -- \
+            apps/laz/src/features/plan/data/fund-list.json
+          git push
+      # A commit on main starts the normal CI run, which is what makes the refreshed data visible on the
+      # published site.

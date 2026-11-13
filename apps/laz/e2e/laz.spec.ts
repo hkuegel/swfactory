@@ -4,8 +4,8 @@ import { expect, test, type Locator } from '@playwright/test';
 import {
   amountInput,
   cellByHeader,
-  dataFileAsOf,
-  dataFileFunds,
+  fixtureAsOf,
+  fixtureFunds,
   euro,
   figure,
   fundInput,
@@ -134,7 +134,7 @@ test('AC5: the projection label is the accessible description of the figures, na
   // Finding 6 as resolved (ADR 0013): `asOf` belongs to the file, not to a fund, so the helper reads
   // the top-level value. The displayed string stays `Stand der Daten: 31.12.2026.`: the hand value is
   // pinned, and the shown date is compared with the file's own `asOf` so it cannot be a copy of itself.
-  const fileAsOf = dataFileAsOf();
+  const fileAsOf = fixtureAsOf();
   expect(fileAsOf, 'committed data file asOf (hand value)').toBe('2026-12-31');
   const label = `Diese Beträge sind eine Hochrechnung aus YTM und NAV und kein veröffentlichter Marktwert. Stand der Daten: ${germanDate(fileAsOf)}.`;
 
@@ -154,7 +154,7 @@ test('AC5: the projection label is the accessible description of the figures, na
   await expect(page.getByRole('region', { name: 'Fondsplan', exact: true })).toContainText(label);
 
   // Every projection figure of the column carries the label as its accessible description (AC5).
-  for (const fund of dataFileFunds()) {
+  for (const fund of fixtureFunds()) {
     const cell = await cellByHeader(
       fundTable(page),
       rowByHeader(fundTable(page), String(fund.year)),
@@ -216,9 +216,10 @@ test('AC6: a guest session makes no request of its own, writes nothing to storag
   // The data file reaches the app as a build-time import (ADR 0013), so no `fund-list.json` request is
   // asserted here: that holds only on the dev server, while a built site bundles the values
   // (finding 9). What holds in both modes is that no request of its own is made and the rows shown
-  // come from the repo data file, which this test reads from disk.
+  // come from the fixture copy, which this test reads from disk and which the app is built with in
+  // `--mode e2e` (story 025).
   const shownYears = await fundTable(page).locator('tbody tr th').allInnerTexts();
-  expect(shownYears).toEqual(dataFileFunds().map((fund) => String(fund.year)));
+  expect(shownYears).toEqual(fixtureFunds().map((fund) => String(fund.year)));
 
   // Nothing written, measured after a full interaction (risk 5), not only on load.
   const storage = await page.evaluate(() => ({
