@@ -71,6 +71,9 @@ _none._
 - 2026-11-13 — Gate 1: hak approves the improvement ("die offenen performance verbesserungen bitte
   umsetzen").
 - 2026-11-13 — Gate 2: hak approves the story ("ich gebe 27/28 frei"), so the status is `done`.
+- 2026-11-13 — The merge of the two pull requests resolved the backlog index conflict in favour of the 028
+  branch, so the row for 027 said `ready` while this story said `done`; `check:structure` was red on `main`,
+  so the row is set to `done` here (the index must equal the story status).
 - 2026-11-13 — Q: does the scoped command need `--if-present` — A: yes, a workspace may not have the
   script (`landing` has no `test:e2e`), so a scoped run would otherwise fail on that workspace; checked by
   running `npm run test:e2e --if-present -w landing`, which skips it.
