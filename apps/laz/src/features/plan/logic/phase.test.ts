@@ -13,7 +13,7 @@ const TAX_25: Tax = { on: true, rateBp: 2500 };
 describe('phase (ADR 0012, the one closed form)', () => {
   it('AC3: the round trip depot → monthly payout → depot differs by at most one cent', () => {
     for (const tax of [TAX_OFF, TAX_25]) {
-      for (const depotCents of [0, 1000000, 20000000]) {
+      for (const depotCents of [0, 1000000, 20000000, 100000000]) {
         // The unrounded internal value is fed back, not the shown text (risk 1).
         const monthlyCents = payoutFromDepotCents(depotCents, FUND_LIST, PHASE, tax);
         const back = depotFromPayoutCents(monthlyCents, FUND_LIST, PHASE, tax);
@@ -22,14 +22,19 @@ describe('phase (ADR 0012, the one closed form)', () => {
     }
 
     // Hand oracles: F = 55,125236 (tax off) and F = 56,844419 (tax on, r 25 %), so depot 10.000,00 €
-    // gives 18140,512 cents = 181,41 € and 17591,876 cents = 175,92 €; the largest depot the list
-    // covers, 200.000,00 €, gives 362810,239 cents = 3.628,10 € (tax off).
+    // gives 18140,512 cents = 181,41 € and 17591,876 cents = 175,92 €; the value 024 measured at its
+    // old cap, 200.000,00 €, gives 362810,239 cents = 3.628,10 € (tax off).
+    // Story 030, AC3: a value above that cap follows the same rule. Hand: 100.000.000 cents / F
+    // (tax off) = 1.814.051,19 cents = 18.140,51 € for 1.000.000,00 €.
     const monthlyOff = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_OFF);
     const monthlyTaxed = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_25);
     expect(formatEuro(monthlyOff)).toBe('181,41\u00a0€');
     expect(formatEuro(monthlyTaxed)).toBe('175,92\u00a0€');
     expect(formatEuro(payoutFromDepotCents(20000000, FUND_LIST, PHASE, TAX_OFF))).toBe(
       '3.628,10\u00a0€',
+    );
+    expect(formatEuro(payoutFromDepotCents(100000000, FUND_LIST, PHASE, TAX_OFF))).toBe(
+      '18.140,51\u00a0€',
     );
 
     // Finding 8, made falsifiable: `formatEuro(Math.round(x))` equals `formatEuro(x)` for every x, so

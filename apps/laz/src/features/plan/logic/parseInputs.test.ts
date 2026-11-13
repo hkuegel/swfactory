@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { OVERRIDE_SPECS, fieldSpec, monthKey, type FieldId, type RawInputs } from './fields.ts';
 import {
-  OVERRIDE_SPECS,
-  fieldSpec,
-  monthKey,
-  type Direction,
-  type FieldId,
-  type RawInputs,
-} from './fields.ts';
-import { parseField, parseInputs, parseMonth, toUnits } from './parseInputs.ts';
+  isExactInUnit,
+  parseField,
+  parseInputs,
+  parseMonth,
+  toUnits,
+  unitDigits,
+} from './parseInputs.ts';
 
 /** The example phase, so only the field under test can fail (T5: the parsing branches). */
 const BASE: RawInputs = {
@@ -17,13 +17,13 @@ const BASE: RawInputs = {
   taxRate: '25',
 };
 
-function errorsOf(changes: Partial<RawInputs>, direction: Direction = 'depot', taxOn = true) {
-  const result = parseInputs({ ...BASE, ...changes }, direction, taxOn);
+function errorsOf(changes: Partial<RawInputs>, taxOn = true) {
+  const result = parseInputs({ ...BASE, ...changes }, taxOn);
   return result.ok ? {} : result.errors;
 }
 
-function errorOf(field: FieldId, text: string, direction: Direction = 'depot', taxOn = true) {
-  return errorsOf({ [field]: text }, direction, taxOn)[field];
+function errorOf(field: FieldId, text: string, taxOn = true) {
+  return errorsOf({ [field]: text }, taxOn)[field];
 }
 
 describe('parseInputs', () => {
@@ -63,16 +63,34 @@ describe('parseInputs', () => {
     expect(toUnits('\u22122,5', 2)).toBe(-250);
     expect(parseField(OVERRIDE_SPECS.ytm, '\u22122,5')).toEqual({ ok: true, value: -250 });
 
-    // Range bounds: depot, monthly target, rate.
-    for (const [direction, inside, outside] of [
-      ['depot', '0', '-0,01'],
-      ['depot', '200000,00', '200000,01'],
-      ['payout', '0', '-0,01'],
-      ['payout', '10000,00', '10000,01'],
+    // Story 030, AC1: no maximum amount. The values 024 measured below its old cap keep working and
+    // the values above it are accepted and used for the result. Hand values in cents: 250.000,00 € is
+    // 25.000.000, 12.000,00 € per month is 1.200.000, 200.000,00 € is 20.000.000 — the same rule as
+    // 9,99 € = 999 above, so the direction cannot change it.
+    for (const [text, cents] of [
+      ['0', 0],
+      ['10000,00', 1000000],
+      ['200000,00', 20000000],
+      ['250000,00', 25000000],
+      ['12000,00', 1200000],
     ] as const) {
-      expect(errorOf('amount', inside, direction)).toBeUndefined();
-      expect(errorOf('amount', outside, direction)).toEqual({ kind: 'range' });
+      const result = parseInputs({ ...BASE, amount: text }, false);
+      if (!result.ok) throw new Error(`${text} must be accepted`);
+      expect(result.inputs.amountCents).toBe(cents);
     }
+
+    // AC2: the only upper limit left in a money field is what its unit holds exactly. Hand: the largest
+    // whole cent is 9007199254740991, typed as 90.071.992.547.409,91 €; one unit above it is refused.
+    // The check reads digits, so it sees the bound before the value becomes a Number that is no longer
+    // exact — `Number('90071992547409.92') · 100` would already be off by one cent.
+    expect(errorOf('amount', '90071992547409,91')).toBeUndefined();
+    expect(errorOf('amount', '90071992547409,92')).toEqual({ kind: 'exact' });
+    expect(unitDigits('90071992547409,92', 2)).toBe('9007199254740992');
+    expect(isExactInUnit('9007199254740992')).toBe(false);
+    // The sign is still its own rule.
+    expect(errorOf('amount', '-0,01')).toEqual({ kind: 'range' });
+    // The tax rate keeps the bound that belongs to what a percent means (0 – 50 %, until 031 replaces
+    // the field with the statutory rates); its unit is a basis point.
     for (const [inside, outside] of [
       ['0', '-0,01'],
       ['50,00', '50,01'],
@@ -81,8 +99,7 @@ describe('parseInputs', () => {
       expect(errorOf('taxRate', outside)).toEqual({ kind: 'range' });
     }
 
-    // The NAV cell in micro-euro (story 025): the bound the copy quotes, 200.000,00 €, is read in the
-    // field's own unit, so the range test is hand-written in micro-euro, not in cents.
+    // The NAV cell in micro-euro (story 025): the same rule in its own unit, 6 decimals.
     for (const [text, microEur] of [
       ['5,113521', 5113521],
       ['5,', 5000000],
@@ -96,13 +113,15 @@ describe('parseInputs', () => {
       ok: false,
       error: { kind: 'format' },
     });
-    expect(parseField(OVERRIDE_SPECS.nav, '200000,000000')).toEqual({
+    // The largest exact value in micro-euro is 9007199254740991, which in the field's own format is
+    // 9.007.199.254,740991 €; one micro-euro above it is refused.
+    expect(parseField(OVERRIDE_SPECS.nav, '9007199254,740991')).toEqual({
       ok: true,
-      value: 200000000000,
+      value: 9007199254740991,
     });
-    expect(parseField(OVERRIDE_SPECS.nav, '200000,000001')).toEqual({
+    expect(parseField(OVERRIDE_SPECS.nav, '9007199254,740992')).toEqual({
       ok: false,
-      error: { kind: 'range' },
+      error: { kind: 'exact' },
     });
     expect(parseField(OVERRIDE_SPECS.nav, '-0,000001')).toEqual({
       ok: false,
@@ -125,7 +144,7 @@ describe('parseInputs', () => {
       ['31.12.2034', '2034-12', monthKey(2034, 12)],
     ] as const) {
       expect(parseMonth(text)).toBe(month);
-      expect(parseField(fieldSpec('phaseStart', 'depot'), text)).toEqual({ ok: true, value: key });
+      expect(parseField(fieldSpec('phaseStart'), text)).toEqual({ ok: true, value: key });
     }
     for (const [text, kind] of [
       ['31.13.2028', 'format'],
@@ -134,22 +153,22 @@ describe('parseInputs', () => {
       ['1.1.2026', 'range'],
       ['1.1.2035', 'range'],
     ] as const) {
-      expect(parseField(fieldSpec('phaseEnd', 'depot'), text)).toEqual({
+      expect(parseField(fieldSpec('phaseEnd'), text)).toEqual({
         ok: false,
         error: { kind },
       });
     }
 
     // The conditional-required branch: the rate is read only while the checkbox is checked.
-    const off = parseInputs({ ...BASE, taxRate: 'abc' }, 'depot', false);
+    const off = parseInputs({ ...BASE, taxRate: 'abc' }, false);
     if (!off.ok) throw new Error('the rate should not be read while tax is off');
     expect(off.inputs.taxRateBp).toBe(0);
-    expect(errorsOf({ taxRate: 'abc' }, 'depot', false)).toEqual({});
+    expect(errorsOf({ taxRate: 'abc' }, false)).toEqual({});
     expect(errorOf('taxRate', 'abc')).toEqual({ kind: 'format' });
     expect(errorOf('taxRate', '')).toEqual({ kind: 'empty' });
 
     // The amount field is required in both directions.
     expect(errorsOf({ amount: '' })).toEqual({ amount: { kind: 'empty' } });
-    expect(errorsOf({ amount: '' }, 'payout', false)).toEqual({ amount: { kind: 'empty' } });
+    expect(errorsOf({ amount: '' }, false)).toEqual({ amount: { kind: 'empty' } });
   });
 });
