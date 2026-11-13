@@ -1,7 +1,7 @@
 ---
 id: 027
 title: The runner runs the test steps in the workspaces it planned
-status: in-review
+status: done
 type: chore
 app: platform
 size: S
@@ -70,6 +70,7 @@ _none._
   a branch must be reviewable on its own (story 024, P14).
 - 2026-11-13 — Gate 1: hak approves the improvement ("die offenen performance verbesserungen bitte
   umsetzen").
+- 2026-11-13 — Gate 2: hak approves the story ("ich gebe 27/28 frei"), so the status is `done`.
 - 2026-11-13 — Q: does the scoped command need `--if-present` — A: yes, a workspace may not have the
   script (`landing` has no `test:e2e`), so a scoped run would otherwise fail on that workspace; checked by
   running `npm run test:e2e --if-present -w landing`, which skips it.
