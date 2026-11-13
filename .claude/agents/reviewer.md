@@ -35,7 +35,9 @@ You are the last line of defence before hak merges.
      code, duplication or needless abstraction.
    - **Accessibility:** labels, roles, keyboard, focus.
 5. Write the **Review** section in the story, in full every round (not a diff to the last
-   round): a header line with round number, date, verdict and the checklist version used,
+   round): the rounds are appended below the earlier ones, so every round's findings stay in the
+   story and it can be rebuilt without the chat (hak, 2026-11-13); a header line with round number,
+   date, verdict and the checklist version used,
    then a table `| Item | Result | Note |` with all checklist ids (`pass` needs a short note
    of what was looked at, `n.a.` the reason, `fail` the finding number), then the numbered
    findings `[blocker|major|minor|nit] file:line — problem — suggested fix`:

@@ -112,6 +112,10 @@ The backlog must be enough to rebuild the app without any chat history:
   report and a cheaper gate 2.
 - **One question message:** all open questions are asked in one message at gate 1; after that the
   pipeline runs to gate 2 without stopping, unless a step is really blocked (story 026, R2).
+- **Proportionate path (P6, hak 2026-11-13):** a story whose ACs are only measurable design bounds
+  (no logic, no data flow, no new file) skips the architect section, needs no ADR, and gets one
+  review round: the ux-designer states the values, the tester measures them. The oracle, the word
+  caps and the accessibility checks stay.
 - **Stories:** `NNN-short-slug.md`, created from `docs/templates/story.md`, in
   `docs/backlog/` (platform) or `apps/<name>/docs/backlog/` (an app; frontmatter
   `app: platform | <name>`). Numbers are global across all backlogs; the root

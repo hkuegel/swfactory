@@ -83,6 +83,11 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- Hak's process rules of 2026-11-13 are recorded in `CLAUDE.md` and the role files, after the story
+  that produced them was discarded by hak: the proportionate path for a look-only story, review
+  rounds appended below the earlier ones so the story can be rebuilt without the chat, a test proves
+  only what its own story adds or changes, an AC asserts only what can regress, and a look-only
+  story takes at most three new tests.
 - `npm run verify` is a runner (`scripts/verify.mjs`) that asks which checks can see the
   change and runs only those, independent checks at the same time, with at most three levels.
   Without a recorded full run every check runs. The runner reports the levels and the
