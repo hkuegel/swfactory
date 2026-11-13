@@ -1,7 +1,7 @@
 ---
 id: 028
 title: CI caches the Playwright browsers, not only node_modules
-status: in-review
+status: done
 type: chore
 app: platform
 size: S
@@ -59,6 +59,8 @@ _none._
   lockfile (orchestrator, R1). A key that names only the version would still be right; the lockfile hash is
   chosen so both caches read the same source.
 - 2026-11-13 — Gate 1: hak approves the improvement (his request to implement the open improvements).
+- 2026-11-13 — Gate 2: hak approves the story ("ich gebe 27/28 frei"), so the status is `done`. The `done` status
+  of story 027 is recorded on its own branch, not here, because this branch does not carry its code (P14).
 - 2026-11-13 — Q: `restore-keys` or not — A: not, so a run cannot restore a browser of another version;
   the cost is one download on a miss (orchestrator, R1).
 - 2026-11-13 — The review was run by the orchestrator, not by the `reviewer` subagent, because this harness
