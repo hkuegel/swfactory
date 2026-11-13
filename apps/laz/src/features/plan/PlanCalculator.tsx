@@ -7,7 +7,6 @@ import { YearTable } from './YearTable.tsx';
 import { useSettledValue } from './useSettledValue.ts';
 import {
   OVERRIDE_SPECS,
-  fieldSpec,
   type Direction,
   type FieldId,
   type OverrideField,
@@ -18,18 +17,21 @@ import { formatEuro } from './logic/format.ts';
 import { parseField, parseInputs, type FieldError, type FieldErrors } from './logic/parseInputs.ts';
 import { buildPlan, type Phase, type Plan } from './logic/phase.ts';
 import { payoutPerShareMicroEur, type Tax } from './logic/projection.ts';
+import { DEFAULT_BUNDESLAND, taxFromState, type TaxState } from './logic/tax.ts';
 import styles from './PlanCalculator.module.css';
 
 /** The live region speaks only after typing has paused this long (UX §4). */
 const LIVE_REGION_DELAY_MS = 700;
 
-/** The first render: hak's example phase (story 033, AC3), nothing typed in the other fields, direction 1, tax off (UX §3). */
+/** The first render: hak's example phase (story 033, AC3), nothing typed in the other fields, direction 1, both tax checkboxes off (UX §3). */
 const DEFAULT_INPUTS: RawInputs = {
   phaseStart: '01.2028',
   phaseEnd: '03.2034',
   amount: '',
-  taxRate: '',
 };
+
+/** The tax start state story 031 defines: no checkbox checked, Bayern as the default Bundesland (hak, 2026-11-13). */
+const DEFAULT_TAX: TaxState = { kstOn: false, kistOn: false, bundesland: DEFAULT_BUNDESLAND };
 
 type OverrideTexts = ReadonlyMap<number, Readonly<Partial<Record<OverrideField, string>>>>;
 
@@ -51,7 +53,7 @@ interface Derived {
   readonly markers: ReadonlyMap<number, Readonly<Partial<Record<OverrideField, boolean>>>>;
   /** The phase has no year with a funding fund, so there is no result (risk 4). */
   readonly noFundingYear: boolean;
-  /** The tax the calculation uses, as far as the rate can be parsed. */
+  /** The tax the calculation uses, from the two checkboxes and the Bundesland. */
   readonly tax: Tax;
 }
 
@@ -63,18 +65,18 @@ interface Derived {
 export function PlanCalculator() {
   const [raw, setRaw] = useState<RawInputs>(DEFAULT_INPUTS);
   const [direction, setDirection] = useState<Direction>('depot');
-  const [taxOn, setTaxOn] = useState(false);
+  const [taxState, setTaxState] = useState<TaxState>(DEFAULT_TAX);
   // The first render is not announced and shows no error (UX §3).
   const [edited, setEdited] = useState(false);
   // The override state lives here, so FundTable stays presentational.
   const [overrides, setOverrides] = useState<OverrideTexts>(new Map());
 
   const derived: Derived = useMemo(() => {
-    const parsed = parseInputs(raw, taxOn);
+    const parsed = parseInputs(raw);
     const errors = parsed.ok ? {} : parsed.errors;
-    // The rate is read only while the checkbox is checked; while it cannot be parsed it is 0.
-    const rate = taxOn ? parseField(fieldSpec('taxRate'), raw.taxRate) : null;
-    const tax: Tax = { on: taxOn, rateBp: rate !== null && rate.ok ? rate.value : 0 };
+    // Story 031: the tax comes from the two checkboxes, not from a typed rate. The church tax counts only
+    // while the Kapitalertragsteuer checkbox is checked, because it is computed on that tax.
+    const tax = taxFromState(taxState);
 
     const projections = new Map<number, number>();
     const overrideErrors = new Map<number, Partial<Record<OverrideField, FieldError>>>();
@@ -124,7 +126,7 @@ export function PlanCalculator() {
       noFundingYear: plan !== null && plan.fundedYears.length === 0,
       tax,
     };
-  }, [raw, direction, taxOn, overrides]);
+  }, [raw, direction, taxState, overrides]);
 
   const firstInvalid = firstInvalidField(derived.errors);
   const invalid = firstInvalid !== undefined;
@@ -151,8 +153,8 @@ export function PlanCalculator() {
     setEdited(true);
   }
 
-  function handleTax(checked: boolean) {
-    setTaxOn(checked);
+  function handleTax(next: TaxState) {
+    setTaxState(next);
     setEdited(true);
   }
 
@@ -173,7 +175,7 @@ export function PlanCalculator() {
         direction={direction}
         raw={raw}
         errors={edited ? derived.errors : {}}
-        taxOn={taxOn}
+        tax={taxState}
         onDirection={handleDirection}
         onField={handleField}
         onTax={handleTax}

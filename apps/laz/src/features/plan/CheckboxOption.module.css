@@ -36,6 +36,13 @@
   outline-offset: 2px;
 }
 
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
 @media (forced-colors: active) {
   .row:has(.box:focus-visible) {
     outline-color: Highlight;

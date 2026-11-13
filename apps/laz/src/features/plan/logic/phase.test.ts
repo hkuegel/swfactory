@@ -10,11 +10,12 @@ import {
 } from './phase.ts';
 import type { Phase } from './phase.ts';
 import type { Tax } from './projection.ts';
+import { taxFromState } from './tax.ts';
 
 /** The example phase of the story (1.1.2028 – 31.3.2034). AC3 names the tax parameter, so both states. */
 const PHASE: Phase = { startMonth: '2028-01', endMonth: '2034-03' };
-const TAX_OFF: Tax = { on: false, rateBp: 0 };
-const TAX_25: Tax = { on: true, rateBp: 2500 };
+const TAX_OFF: Tax = { on: false, rateMillionths: 0 };
+const TAX_25: Tax = { on: true, rateMillionths: 250000 };
 
 describe('phase (ADR 0012, the one closed form)', () => {
   it('AC3: the round trip depot → monthly payout → depot differs by at most one cent', () => {
@@ -81,5 +82,24 @@ describe('phase (ADR 0012, the one closed form)', () => {
     expect(afterPlan.years.map((row) => row.fundingFund)).toEqual([null, null]);
     expect(displayYearCents(afterPlan)).toEqual([null, null]);
     expect(formatEuro(afterPlan.totalCents)).toBe('0,00\u00a0€');
+  });
+
+  it('031 AC3: the round trip of 024 AC3 holds within one cent for every checkbox state', () => {
+    // Hand states: the four the AC names. The rate is the hand value of `tax.test.ts`, so the round trip
+    // is checked with the rates the form can actually produce.
+    const states = [
+      { kstOn: false, kistOn: false, bundesland: 'bayern' },
+      { kstOn: true, kistOn: false, bundesland: 'bayern' },
+      { kstOn: true, kistOn: true, bundesland: 'bayern' },
+      { kstOn: true, kistOn: true, bundesland: 'berlin' },
+    ] as const;
+    for (const state of states) {
+      const tax = taxFromState(state);
+      for (const depotCents of [0, 1000000, 20000000, 100000000]) {
+        const monthly = payoutFromDepotCents(depotCents, FUND_LIST, PHASE, tax);
+        const back = depotFromPayoutCents(monthly, FUND_LIST, PHASE, tax);
+        expect(Math.abs(back - depotCents)).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });

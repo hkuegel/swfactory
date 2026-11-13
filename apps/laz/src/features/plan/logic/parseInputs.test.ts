@@ -10,21 +10,20 @@ import {
   unitDigits,
 } from './parseInputs.ts';
 
-/** The example phase, so only the field under test can fail (T5: the parsing branches). */
+/** The example phase, so only the field under test can fail (T5: the parsing branches). Story 031 removed the rate field, so `BASE` has no rate. */
 const BASE: RawInputs = {
   phaseStart: '1.1.2028',
   phaseEnd: '31.3.2034',
   amount: '10000,00',
-  taxRate: '25',
 };
 
-function errorsOf(changes: Partial<RawInputs>, taxOn = true) {
-  const result = parseInputs({ ...BASE, ...changes }, taxOn);
+function errorsOf(changes: Partial<RawInputs>) {
+  const result = parseInputs({ ...BASE, ...changes });
   return result.ok ? {} : result.errors;
 }
 
-function errorOf(field: FieldId, text: string, taxOn = true) {
-  return errorsOf({ [field]: text }, taxOn)[field];
+function errorOf(field: FieldId, text: string) {
+  return errorsOf({ [field]: text })[field];
 }
 
 describe('parseInputs', () => {
@@ -46,7 +45,6 @@ describe('parseInputs', () => {
       ['150 €', 'format'],
     ] as const) {
       expect(errorOf('amount', text)).toEqual({ kind });
-      expect(errorOf('taxRate', text)).toEqual({ kind });
     }
 
     // Typing states and the dot as decimal separator; `-0` stays 0 (never -0).
@@ -75,7 +73,7 @@ describe('parseInputs', () => {
       ['250000,00', 25000000],
       ['12000,00', 1200000],
     ] as const) {
-      const result = parseInputs({ ...BASE, amount: text }, false);
+      const result = parseInputs({ ...BASE, amount: text });
       if (!result.ok) throw new Error(`${text} must be accepted`);
       expect(result.inputs.amountCents).toBe(cents);
     }
@@ -90,14 +88,17 @@ describe('parseInputs', () => {
     expect(isExactInUnit('9007199254740992')).toBe(false);
     // The sign is still its own rule.
     expect(errorOf('amount', '-0,01')).toEqual({ kind: 'range' });
-    // The tax rate keeps the bound that belongs to what a percent means (0 – 50 %, until 031 replaces
-    // the field with the statutory rates); its unit is a basis point.
-    for (const [inside, outside] of [
-      ['0', '-0,01'],
-      ['50,00', '50,01'],
+    // Story 031: no field of the form has a percent bound of its own, because the rates come from the
+    // checkboxes. The fund-row YTM cell keeps the range a percent means, -100 % to 100 %.
+    for (const [inside, value, outside] of [
+      ['0', 0, '-100,01'],
+      ['100,00', 10000, '100,01'],
     ] as const) {
-      expect(errorOf('taxRate', inside)).toBeUndefined();
-      expect(errorOf('taxRate', outside)).toEqual({ kind: 'range' });
+      expect(parseField(OVERRIDE_SPECS.ytm, inside)).toEqual({ ok: true, value });
+      expect(parseField(OVERRIDE_SPECS.ytm, outside)).toEqual({
+        ok: false,
+        error: { kind: 'range' },
+      });
     }
 
     // The NAV cell in micro-euro (story 025): the same rule in its own unit, 6 decimals.
@@ -174,16 +175,12 @@ describe('parseInputs', () => {
       });
     }
 
-    // The conditional-required branch: the rate is read only while the checkbox is checked.
-    const off = parseInputs({ ...BASE, taxRate: 'abc' }, false);
-    if (!off.ok) throw new Error('the rate should not be read while tax is off');
-    expect(off.inputs.taxRateBp).toBe(0);
-    expect(errorsOf({ taxRate: 'abc' }, false)).toEqual({});
-    expect(errorOf('taxRate', 'abc')).toEqual({ kind: 'format' });
-    expect(errorOf('taxRate', '')).toEqual({ kind: 'empty' });
-
-    // The amount field is required in both directions.
+    // Story 031: there is no rate to parse any more, so the conditional-required branch is gone; the
+    // rates come from `taxFromState`, which has no error state because a checkbox cannot hold an
+    // invalid value. The amount field is required.
+    const ok = parseInputs(BASE);
+    if (!ok.ok) throw new Error('the base inputs should parse');
+    expect(ok.inputs.amountCents).toBe(1000000);
     expect(errorsOf({ amount: '' })).toEqual({ amount: { kind: 'empty' } });
-    expect(errorsOf({ amount: '' }, false)).toEqual({ amount: { kind: 'empty' } });
   });
 });
