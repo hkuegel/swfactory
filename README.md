@@ -458,6 +458,10 @@ run, never because a pattern says it is unimportant. A successful full run recor
 `.tmp/last-full-run.json` (gitignored). The runner reports the plan, the levels and the
 duration of each check; durations are reported, not asserted.
 
+The two test steps run only in the workspaces the plan names (`-w <workspace>`), so a change in
+one app does not start another app's suite. A change that cannot be put into one workspace, and
+every full run, run in all workspaces; the plan prints the workspaces it uses (story 027).
+
 The checks the plan can hold are: typecheck, lint, format check, structure check
 (`check:template`), the unit tests (`npm test` and `npm run test:scripts`), build,
 `check:dist`, `build:pages`, `test:pages` and the e2e tests. The mapping answers per kind of
