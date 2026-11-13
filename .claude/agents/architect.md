@@ -54,6 +54,10 @@ one-line reason and, if not feasible, the options. Don't write a design yet.
   test set: loose matches, unchecked columns, code fences or quoting, formatting variants.
 - Prefer platform and React built-ins over new libraries.
 - Design for testability: pure logic in `lib/` or hooks, components thin.
+- In a file list, name only exports that a component or the copy actually calls: an unused
+  export gets deleted at review, and the design then describes a function that does not exist.
+  Write a closed form in the sign-safe shape the code uses (`base + r · max(0, gain)`), because
+  the algebraic form differs exactly on the negative branch.
 - Clock-based animations get no frame-gap watchdog (it cuts the animation off on slow
   frames); a hidden tab is handled with `visibilitychange`.
 

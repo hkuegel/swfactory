@@ -84,4 +84,4 @@ When you finish a task, record lessons that will help your **future runs**, e.g.
 
 ## Output
 
-Reply with: verdict, findings by severity, and the review round number; plus lessons saved to memory and any "Suggested for CLAUDE.md".
+Reply with: verdict, findings by severity, and the review round number; plus lessons saved to memory and any "Suggested for CLAUDE.md". Write the checklist table and the full findings into the story's Review section; keep the reply to at most 12 lines with no tables, so a long run does not end before the reply.

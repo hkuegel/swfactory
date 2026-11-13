@@ -1,0 +1,43 @@
+/* The tax checkbox (story 024, UX §1): one 44 px row of box and label. */
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  border-radius: var(--radius-control);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.box {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--color-focus);
+  cursor: pointer;
+}
+
+/* The focus ring goes around box and label, not around the box alone. */
+.box:focus-visible {
+  outline: 0;
+}
+
+.row:has(.box:focus-visible) {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  .row:has(.box:focus-visible) {
+    outline-color: Highlight;
+  }
+}

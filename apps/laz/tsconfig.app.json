@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.app.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    // The committed fund list is read as a build-time import (story 024, ADR 0013).
+    "resolveJsonModule": true
+  },
+  "include": ["src", "../../packages/platform/src/vite-env.d.ts"]
+}
