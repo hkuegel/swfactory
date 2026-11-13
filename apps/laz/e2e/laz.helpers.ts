@@ -65,27 +65,31 @@ export async function cellByHeader(table: Locator, row: Locator, header: string)
 export const rowByHeader = (table: Locator, key: string): Locator =>
   table.getByRole('rowheader', { name: key, exact: true }).locator('xpath=parent::tr');
 
-/** The committed data file the app reads (ADR 0013): the test computes its own oracles from it. */
-export interface DataFileFund {
+/** Fund row of the fixture copy the tests read (ADR 0013 as amended by story 025). */
+export interface FixtureFileFund {
   readonly year: number;
-  readonly navCents: number;
+  readonly navMicroEur: number;
   readonly ytmBp: number;
 }
 
 /** Finding 6 / ADR 0013: `asOf` is one value for the whole file, stamped per refresh run, so the
- * helper reads it from the file top level, not from a fund. */
-export interface DataFile {
+ * helper reads it from the file top level, not from a fund. The file is the fixture copy, not the
+ * data file: in `--mode e2e` the app is built with the same copy, so a refresh of the data file
+ * cannot move these oracles (story 025). */
+export interface FixtureFile {
   readonly asOf: string;
-  readonly funds: DataFileFund[];
+  readonly funds: FixtureFileFund[];
 }
 
-export function dataFile(): DataFile {
-  const path = fileURLToPath(new URL('../src/features/plan/data/fund-list.json', import.meta.url));
-  return JSON.parse(readFileSync(path, 'utf8')) as DataFile;
+export function fixtureFile(): FixtureFile {
+  const path = fileURLToPath(
+    new URL('../src/features/plan/data/fund-list.fixture.json', import.meta.url),
+  );
+  return JSON.parse(readFileSync(path, 'utf8')) as FixtureFile;
 }
 
-export const dataFileFunds = (): DataFileFund[] => dataFile().funds;
-export const dataFileAsOf = (): string => dataFile().asOf;
+export const fixtureFunds = (): FixtureFileFund[] => fixtureFile().funds;
+export const fixtureAsOf = (): string => fixtureFile().asOf;
 
 /** `2026-12-31` as `31.12.2026`, computed from the file's parts, not copied from the app. */
 export const germanDate = (iso: string): string => {

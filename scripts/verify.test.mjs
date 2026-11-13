@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { plan } from './affected-checks.mjs';
-import { commandForStep, pathsOfStatus } from './verify.mjs';
+import { commandForStep, expandPaths, pathsOfStatus } from './verify.mjs';
 
 // Story 026, fixture mode: stored input and the hand expectation (P16), no request and no repository
 // read (P17). App names are placeholders (`x`, `y`). The runner is tested for the two things that can
@@ -21,6 +21,23 @@ describe('the runner reads the changed paths by position, not by trimming', () =
       'scripts/affected-checks.mjs',
     ]);
     expect(pathsOfStatus('')).toEqual([]);
+  });
+
+  it('a wholly untracked directory is expanded to the files inside it (defect found on 2026-11-13)', () => {
+    // Hand expectation: `?? scripts/fixtures/` is a directory, not a file, so the runner must hash the
+    // files it contains instead of reading the directory as one.
+    const list = (dir) =>
+      dir === 'scripts/fixtures/' ? ['scripts/fixtures/b.html', 'scripts/fixtures/a.md'] : [];
+    expect(expandPaths(['scripts/fixtures/', 'docs/a.md'], list)).toEqual([
+      'docs/a.md',
+      'scripts/fixtures/a.md',
+      'scripts/fixtures/b.html',
+    ]);
+    // The expansion is what the mapping sees, so a new fixture directory still answers test:scripts.
+    expect(
+      plan(expandPaths(['scripts/fixtures/'], list), { head: 'abc', files: {} }, 'affected', [])
+        .steps,
+    ).toContain('test:scripts');
   });
 });
 

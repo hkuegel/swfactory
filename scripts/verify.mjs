@@ -74,11 +74,44 @@ export function pathsOfStatus(text) {
   );
 }
 
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  '_site',
+  'coverage',
+  'playwright-report',
+  'test-results',
+  '.vite',
+  '.tmp',
+  '.git',
+]);
+
+/** The files below a directory, so a wholly untracked directory is read as the files inside it. */
+function filesHere(dir) {
+  const base = dir.replace(/\/$/, '');
+  return readdirSync(join(ROOT, base), { withFileTypes: true })
+    .filter((entry) => !SKIP_DIRS.has(entry.name))
+    .flatMap((entry) => {
+      const child = `${base}/${entry.name}`;
+      return entry.isDirectory() ? filesHere(child) : [child];
+    })
+    .sort();
+}
+
+/**
+ * `git status --porcelain` writes a directory whose files are all untracked as one line ending with `/`.
+ * The plan needs the files, not the directory name, so such an entry is expanded before it is hashed.
+ */
+export function expandPaths(paths, list) {
+  return paths.flatMap((path) => (path.endsWith('/') ? list(path) : [path])).sort();
+}
+
 /** A snapshot is the commit plus the content hashes of the paths git reports as changed. */
 function snapshot() {
   const head = git(['rev-parse', 'HEAD']);
   const files = {};
-  for (const path of pathsOfStatus(git(['status', '--porcelain']) ?? '')) {
+  const paths = expandPaths(pathsOfStatus(git(['status', '--porcelain']) ?? ''), filesHere);
+  for (const path of paths) {
     files[path] = hashOf(path);
   }
   return { head, files };

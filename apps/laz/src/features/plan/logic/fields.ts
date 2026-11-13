@@ -8,11 +8,11 @@ export type Direction = 'depot' | 'payout';
 export type RawInputs = Readonly<Record<FieldId, string>>;
 
 export interface FieldSpec {
-  /** Cents for money, basis points for the rate (1 % = 100), `year * 12 + month` for a phase. */
+  /** Micro-euro for the NAV cell, basis points for the rate (1 % = 100), `year * 12 + month` for a phase, cents for the amounts. */
   readonly min: number;
   readonly max: number;
-  /** 0: whole numbers only; 2: up to two decimals. Not used by the date fields. */
-  readonly decimals: 0 | 2;
+  /** 0: whole numbers only; 2: up to two decimals; 6: up to six, the NAV cell's unit (story 025). Not used by the date fields. */
+  readonly decimals: 0 | 2 | 6;
   /** A `TT.MM.JJJJ` date field; its value is a whole calendar month. */
   readonly date: boolean;
 }
@@ -70,6 +70,8 @@ export function fieldSpec(field: FieldId, direction: Direction): FieldSpec {
 export type OverrideField = 'nav' | 'ytm';
 
 export const OVERRIDE_SPECS: Readonly<Record<OverrideField, FieldSpec>> = {
-  nav: { min: 0, max: 20000000, decimals: 2, date: false },
+  // The copy quotes 0 bis 200.000,00 € for the NAV cell, so the bound is that amount in
+  // micro-euro (story 025); keeping the cent bound would have made it 20,00 €.
+  nav: { min: 0, max: 200000 * 1_000_000, decimals: 6, date: false },
   ytm: { min: -10000, max: 10000, decimals: 2, date: false },
 };

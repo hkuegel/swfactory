@@ -17,7 +17,7 @@ import { FUND_LIST, FUND_LIST_AS_OF, effectiveFund, type FundOverride } from './
 import { formatEuro } from './logic/format.ts';
 import { parseField, parseInputs, type FieldError, type FieldErrors } from './logic/parseInputs.ts';
 import { buildPlan, type Phase, type Plan } from './logic/phase.ts';
-import { payoutPerShareCents, type Tax } from './logic/projection.ts';
+import { payoutPerShareMicroEur, type Tax } from './logic/projection.ts';
 import styles from './PlanCalculator.module.css';
 
 /** The live region speaks only after typing has paused this long (UX §4). */
@@ -89,9 +89,9 @@ export function PlanCalculator() {
           rowErrors[field] = result.error;
           continue;
         }
-        if (field === 'nav') values.navCents = result.value;
+        if (field === 'nav') values.navMicroEur = result.value;
         else values.ytmBp = result.value;
-        rowMarkers[field] = result.value !== (field === 'nav' ? fund.navCents : fund.ytmBp);
+        rowMarkers[field] = result.value !== (field === 'nav' ? fund.navMicroEur : fund.ytmBp);
       }
       if (Object.keys(rowErrors).length > 0) overrideErrors.set(fund.year, rowErrors);
       if (Object.keys(rowMarkers).length > 0) markers.set(fund.year, rowMarkers);
@@ -106,7 +106,7 @@ export function PlanCalculator() {
         ? buildPlan(funds, phase, tax, parsed.inputs.amountCents, direction)
         : null;
 
-    for (const fund of funds) projections.set(fund.year, payoutPerShareCents(fund, tax));
+    for (const fund of funds) projections.set(fund.year, payoutPerShareMicroEur(fund, tax));
 
     return {
       errors,

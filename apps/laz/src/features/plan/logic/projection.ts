@@ -37,7 +37,11 @@ export function payoutFactor(fund: Fund, tax: Tax, asOf: string = FUND_LIST_AS_O
   return rho - (tax.rateBp / 10000) * Math.max(0, rho - 1);
 }
 
-/** Payout per share in cents, unrounded: `navCents · ρ′` (AC1, AC4). */
-export function payoutPerShareCents(fund: Fund, tax: Tax, asOf: string = FUND_LIST_AS_OF): number {
-  return fund.navCents * payoutFactor(fund, tax, asOf);
+/** Payout per share in micro-euro, unrounded: `navMicroEur · ρ′` (AC1, AC4 of 024). */
+export function payoutPerShareMicroEur(
+  fund: Fund,
+  tax: Tax,
+  asOf: string = FUND_LIST_AS_OF,
+): number {
+  return fund.navMicroEur * payoutFactor(fund, tax, asOf);
 }

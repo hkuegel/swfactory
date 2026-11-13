@@ -81,6 +81,34 @@ describe('parseInputs', () => {
       expect(errorOf('taxRate', outside)).toEqual({ kind: 'range' });
     }
 
+    // The NAV cell in micro-euro (story 025): the bound the copy quotes, 200.000,00 €, is read in the
+    // field's own unit, so the range test is hand-written in micro-euro, not in cents.
+    for (const [text, microEur] of [
+      ['5,113521', 5113521],
+      ['5,', 5000000],
+      [',5', 500000],
+      ['-0', 0],
+      ['200000,000000', 200000000000],
+    ] as const) {
+      expect(toUnits(text, 6)).toBe(microEur);
+    }
+    expect(parseField(OVERRIDE_SPECS.nav, '5,1234567')).toEqual({
+      ok: false,
+      error: { kind: 'format' },
+    });
+    expect(parseField(OVERRIDE_SPECS.nav, '200000,000000')).toEqual({
+      ok: true,
+      value: 200000000000,
+    });
+    expect(parseField(OVERRIDE_SPECS.nav, '200000,000001')).toEqual({
+      ok: false,
+      error: { kind: 'range' },
+    });
+    expect(parseField(OVERRIDE_SPECS.nav, '-0,000001')).toEqual({
+      ok: false,
+      error: { kind: 'range' },
+    });
+
     // endMonth before startMonth.
     expect(errorsOf({ phaseStart: '1.1.2034', phaseEnd: '31.12.2034' })).toEqual({});
     expect(errorsOf({ phaseStart: '1.1.2034', phaseEnd: '31.12.2033' })).toEqual({

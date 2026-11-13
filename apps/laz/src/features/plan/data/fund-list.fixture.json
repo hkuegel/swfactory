@@ -1,0 +1,68 @@
+{
+  "asOf": "2026-12-31",
+  "funds": [
+    {
+      "year": 2028,
+      "isin": "DE000FIX28",
+      "name": "iBonds EUR Corporate UCITS 2028 (hand fixture)",
+      "navMicroEur": 38000000,
+      "ytmBp": 200,
+      "avgMaturityHundredths": 162,
+      "sharesOutstanding": 1000000
+    },
+    {
+      "year": 2029,
+      "isin": "DE000FIX29",
+      "name": "iBonds EUR Corporate UCITS 2029 (hand fixture)",
+      "navMicroEur": 40000000,
+      "ytmBp": 250,
+      "avgMaturityHundredths": 262,
+      "sharesOutstanding": 1100000
+    },
+    {
+      "year": 2030,
+      "isin": "DE000FIX30",
+      "name": "iBonds EUR Corporate UCITS 2030 (hand fixture)",
+      "navMicroEur": 42000000,
+      "ytmBp": 300,
+      "avgMaturityHundredths": 362,
+      "sharesOutstanding": 1200000
+    },
+    {
+      "year": 2031,
+      "isin": "DE000FIX31",
+      "name": "iBonds EUR Corporate UCITS 2031 (hand fixture)",
+      "navMicroEur": 44000000,
+      "ytmBp": 350,
+      "avgMaturityHundredths": 462,
+      "sharesOutstanding": 1300000
+    },
+    {
+      "year": 2032,
+      "isin": "DE000FIX32",
+      "name": "iBonds EUR Corporate UCITS 2032 (hand fixture)",
+      "navMicroEur": 46000000,
+      "ytmBp": 400,
+      "avgMaturityHundredths": 562,
+      "sharesOutstanding": 1400000
+    },
+    {
+      "year": 2033,
+      "isin": "DE000FIX33",
+      "name": "iBonds EUR Corporate UCITS 2033 (hand fixture)",
+      "navMicroEur": 48000000,
+      "ytmBp": 450,
+      "avgMaturityHundredths": 662,
+      "sharesOutstanding": 1500000
+    },
+    {
+      "year": 2034,
+      "isin": "DE000FIX34",
+      "name": "iBonds EUR Corporate UCITS 2034 (hand fixture)",
+      "navMicroEur": 50000000,
+      "ytmBp": 500,
+      "avgMaturityHundredths": 762,
+      "sharesOutstanding": 1600000
+    }
+  ]
+}

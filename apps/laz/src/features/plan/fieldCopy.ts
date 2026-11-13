@@ -59,7 +59,11 @@ export function amountCopy(direction: Direction): FieldCopy {
 
 /** The input cells of a fund row carry their own visually hidden label (UX §2). */
 export function overrideCopy(field: OverrideField, year: number): FieldCopy {
-  const hint = 'Wert aus der Fondsliste; eigener Wert, höchstens 2 Nachkommastellen.';
+  // The NAV cell's decimal rule follows its unit, micro-euro (story 025); the YTM cell keeps 2.
+  const hint =
+    field === 'nav'
+      ? 'Wert aus der Fondsliste; eigener Wert, höchstens 6 Nachkommastellen.'
+      : 'Wert aus der Fondsliste; eigener Wert, höchstens 2 Nachkommastellen.';
   return field === 'nav'
     ? {
         label: `NAV in Euro für Jahr ${String(year)}`,
