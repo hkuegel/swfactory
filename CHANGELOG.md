@@ -93,6 +93,12 @@ All notable changes to this project are documented here, following
   `-w <workspace>`, so a change in one app does not start another app's suite. A change the plan
   cannot put in one workspace, and every full run, still run in all workspaces; the plan prints the
   workspaces it uses (#027).
+- `npm run verify` now scopes every step a workspace defines in its own `package.json`
+  (`typecheck`, `build`, `test`, `test:e2e`, `lint`, `format:check`, `check:dist`) to the planned
+  workspaces, with `--if-present` so a workspace without the script is skipped. A step no workspace
+  defines (`test:scripts`, `check:structure`, `check:template`), a change with a path in no
+  workspace, and every full run keep the whole-tree command, so a root file is never skipped; the
+  plan prints which steps are scoped (#029).
 - `npm run test:pages` no longer builds the site: `npm run build:pages` produces `_site/`, and
   `test:pages` only tests it, so `_site/` is built once per pipeline. Run `npm run build:pages`
   before `npm run test:pages` when you call them separately (#026).

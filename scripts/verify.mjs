@@ -20,7 +20,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { STEPS, WORKSPACE_STEPS, checkLevels, levelsOf, plan } from './affected-checks.mjs';
+import { STEPS, checkLevels, levelsOf, plan, runsPerWorkspace } from './affected-checks.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const WIN = process.platform === 'win32';
@@ -132,16 +132,32 @@ export function workspacesHere() {
 }
 
 /**
- * Story 027: the command for one step. A workspace step runs in the planned workspaces only, so an
- * app-only change does not start another app's suite; a step that reads the whole tree keeps the root
- * command. An empty scope is never executed as an empty scope: it runs in every workspace.
+ * Story 029: the command for one step. A step that a workspace can run alone runs in the affected
+ * workspaces only; a step that reads the whole tree at once, or a change that touches a file outside
+ * every workspace, keeps the root command. An empty scope is never executed as an empty scope: it runs in
+ * every workspace (story 027, AC2).
  */
-export function commandForStep(step, answer, allWorkspaces) {
-  if (!WORKSPACE_STEPS.includes(step)) return ['run', step];
-  // An empty scope is never executed as an empty scope: it names every workspace, the same rule as the
-  // empty plan in story 026, AC3.
+export function commandForStep(step, answer, allWorkspaces, scriptsByWorkspace = {}) {
   const scope = answer.workspaces?.length ? answer.workspaces : allWorkspaces;
+  if (!runsPerWorkspace(answer, step, scriptsByWorkspace)) {
+    return ['run', step];
+  }
   return ['run', step, '--if-present', ...scope.flatMap((workspace) => ['-w', workspace])];
+}
+
+/** The scripts each workspace defines in its own `package.json`, read as data for one run. */
+function scriptsByWorkspaceHere(workspaces) {
+  const found = {};
+  for (const workspace of workspaces) {
+    const file = join(ROOT, workspace, 'package.json');
+    if (!existsSync(file)) continue;
+    try {
+      found[workspace] = JSON.parse(readFileSync(file, 'utf8')).scripts ?? {};
+    } catch {
+      found[workspace] = {};
+    }
+  }
+  return found;
 }
 
 /** One npm script as a child process; its output is collected so parallel steps do not interleave. */
@@ -185,7 +201,7 @@ function levelsByIdent(answer) {
   return { levels, byLevel: new Map([...byLevel].sort((a, b) => a[0] - b[0])) };
 }
 
-function printPlan(answer, byLevel, stream = process.stdout) {
+function printPlan(answer, byLevel, stream = process.stdout, scriptsByWorkspace = {}) {
   const lines = [
     `verify: mode ${answer.mode}, ${answer.steps.length} of ${STEPS.length} steps, ` +
       `chain ${Math.max(...byLevel.keys()) + 1} levels`,
@@ -196,9 +212,11 @@ function printPlan(answer, byLevel, stream = process.stdout) {
     const skipped = STEPS.filter((step) => !answer.steps.includes(step)).sort();
     lines.push(`  skipped: ${skipped.length === 0 ? 'nothing' : skipped.join(', ')}`);
   }
-  if (answer.steps.some((step) => WORKSPACE_STEPS.includes(step))) {
-    // Story 027: the workspaces the scoped steps run in, so an empty scope is visible in the plan.
-    lines.push(`  workspaces: ${answer.workspaces.join(', ')}`);
+  // Story 029: the plan shows which steps run in which workspaces, so a run that covers one workspace is
+  // not read as a full run. A step that cannot be scoped is not named here.
+  const scoped = answer.steps.filter((step) => runsPerWorkspace(answer, step, scriptsByWorkspace));
+  if (scoped.length > 0) {
+    lines.push(`  workspaces: ${answer.workspaces.join(', ')} (${scoped.join(', ')})`);
   }
   for (const [level, steps] of byLevel) lines.push(`  level ${level}: ${steps.join(', ')}`);
   stream.write(`${lines.join('\n')}\n`);
@@ -219,8 +237,8 @@ async function main() {
   const mode = option('mode', record === undefined ? 'full' : 'affected');
 
   const allWorkspaces = workspacesHere();
+  const scriptsByWorkspace = scriptsByWorkspaceHere(allWorkspaces);
   const answer = plan(changed, record, mode, appsHere(), allWorkspaces);
-  answer.changed = changed ?? [];
   const { levels, byLevel } = levelsByIdent(answer);
 
   if (answer.steps.length === 0) {
@@ -239,7 +257,7 @@ async function main() {
   }
 
   const machine = option('format') === 'github-output';
-  printPlan(answer, byLevel, machine ? process.stderr : process.stdout);
+  printPlan(answer, byLevel, machine ? process.stderr : process.stdout, scriptsByWorkspace);
   if (machine) {
     // The three lines a CI step output reads; the human plan above went to stderr.
     console.log(`mode=${answer.mode}`);
@@ -257,15 +275,16 @@ async function main() {
   const results = [];
   for (const [level, steps] of byLevel) {
     const done = await Promise.all(
-      steps.map((step) => runStep(step, commandForStep(step, answer, allWorkspaces))),
+      steps.map((step) =>
+        runStep(step, commandForStep(step, answer, allWorkspaces, scriptsByWorkspace)),
+      ),
     );
     for (const r of done) {
       results.push(r);
-      // Story 027: the scope is printed, so a run that covers one workspace is not read as a full run.
-      const scope =
-        WORKSPACE_STEPS.includes(r.step) && answer.workspaces.length > 0
-          ? ` in ${answer.workspaces.join(', ')}`
-          : '';
+      // Story 029: the scope is printed, so a run that covers one workspace is not read as a full run.
+      const scope = runsPerWorkspace(answer, r.step, scriptsByWorkspace)
+        ? ` in ${answer.workspaces.join(', ')}`
+        : ' whole tree';
       console.log(
         `  level ${level} ${r.step}: ${r.code === 0 ? 'ok' : `FAILED (${r.code})`} ${shown(r.seconds)}${scope}`,
       );

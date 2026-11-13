@@ -32,3 +32,4 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 026 | platform    | [Process slimming - run only what can regress, decide instead of ask](026-process-slimming.md)                                                            | done   |
 | 027 | platform    | [The runner runs the test steps in the workspaces it planned](027-per-app-scoping.md)                                                                     | done   |
 | 028 | platform    | [CI caches the Playwright browsers, not only node_modules](028-playwright-browser-cache.md)                                                               | done   |
+| 029 | platform    | [The runner scopes every check that a workspace can run alone](029-workspace-scoped-checks.md)                                                            | done   |

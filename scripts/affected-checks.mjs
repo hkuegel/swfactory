@@ -107,11 +107,27 @@ export function appsIn(changedPaths, allApps) {
 }
 
 /**
- * Story 027: the steps that run per workspace. A test step must not run in a workspace that cannot see
- * the change, so the plan names the workspaces it runs in. `lint` and `format:check` read the whole tree
- * and are not scoped.
+ * Story 029: whether the runner can run one step in the affected workspaces only. Three conditions, all
+ * read as data: the run is an affected run, the workspace defines the script in its own `package.json`
+ * (a step the repository does not define per workspace, like `test:scripts`, cannot be scoped), and every
+ * changed path lies inside a workspace - a file that belongs to no workspace (`docs/`, a root file) is not
+ * seen by a run that only visits workspaces. A full run is never scoped: a full run checks the whole tree,
+ * so a file outside the planned workspaces cannot be missed. Story 027 scoped the test steps with the same
+ * rule; this generalises it to every step a workspace can run alone.
  */
-export const WORKSPACE_STEPS = Object.freeze(['test', 'test:e2e']);
+export function runsPerWorkspace(answer, step, scriptsByWorkspace) {
+  if (answer.mode !== 'affected') return false;
+  const workspaces = answer.workspaces ?? [];
+  const changed = answer.changed ?? [];
+  if (workspaces.length === 0 || changed.length === 0) return false;
+  const inside = changed.every((path) =>
+    workspaces.some((workspace) => path === workspace || path.startsWith(`${workspace}/`)),
+  );
+  if (!inside) return false;
+  // A workspace that does not define the script is skipped by `--if-present`; a step no workspace defines
+  // (`test:scripts`, `check:structure`) has no per-workspace command at all, so the root command runs.
+  return workspaces.some((workspace) => scriptsByWorkspace[workspace]?.[step] !== undefined);
+}
 
 /**
  * The workspaces a change can reach, read from the path prefix `apps/<name>/` or `packages/<name>/`. A
@@ -143,6 +159,7 @@ export function affectedPlan(changedPaths, allApps, allWorkspaces = []) {
   if (groups.has('tooling') || ungrouped) {
     return {
       mode: 'affected',
+      changed: [...changedPaths],
       steps: [...STEPS].sort(),
       apps: [...allApps].sort(),
       workspaces: [...allWorkspaces].sort(),
@@ -179,6 +196,7 @@ export function affectedPlan(changedPaths, allApps, allWorkspaces = []) {
 
   return {
     mode: 'affected',
+    changed: [...changedPaths],
     steps: [...steps].sort(),
     apps: appsIn(changedPaths, allApps),
     workspaces: workspacesOf(changedPaths, allWorkspaces),
@@ -193,6 +211,7 @@ export function plan(changedPaths, record, mode, allApps, allWorkspaces = []) {
   if (mode === 'full' || record === undefined || record === null) {
     return {
       mode: 'full',
+      changed: [...changedPaths],
       steps: [...STEPS].sort(),
       apps: [...allApps].sort(),
       workspaces: [...allWorkspaces].sort(),
