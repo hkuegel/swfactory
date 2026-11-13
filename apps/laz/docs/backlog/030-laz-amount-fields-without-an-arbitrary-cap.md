@@ -1,4 +1,4 @@
-﻿---
+---
 id: 030
 title: Amount fields without an invented cap
 status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
