@@ -7,6 +7,8 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- `npm run test:scripts` runs the tests of `scripts/`, which is not an npm workspace, with its
+  own Vitest config (#026).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).
@@ -81,6 +83,27 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- `npm run verify` is a runner (`scripts/verify.mjs`) that asks which checks can see the
+  change and runs only those, independent checks at the same time, with at most three levels.
+  Without a recorded full run every check runs. The runner reports the levels and the
+  durations, and records a full run in `.tmp/last-full-run.json`. Modes are named
+  `--mode=affected` and `--mode=full`; `--plan-only`, `--format=github-output`,
+  `--base=<ref>`, `--paths=a,b` and `--no-record` are for a CI step (#026).
+- `npm run test:pages` no longer builds the site: `npm run build:pages` produces `_site/`, and
+  `test:pages` only tests it, so `_site/` is built once per pipeline. Run `npm run build:pages`
+  before `npm run test:pages` when you call them separately (#026).
+- `npm run check:structure` checks the story size: a story from 026 on declares
+  `size: S | M | L`, and a `size: S` story (at most three ACs) needs only its "Explanation"
+  section, no Review, no Cost table and no UX design section. The Cost table of a `size: M`
+  or `size: L` story may not say `n/a` in every row: a row is measured or says `not measured`
+  with the reason. Stories before 026 keep the record as written (#026).
+- The CI workflow is one job now: one install with `node_modules` from the cache keyed on the
+  lockfile hash, a pull-request run that may use the mapping, a full run on `main` and
+  `workflow_dispatch`, Chromium installed only when the plan has a browser step, and the Pages
+  artifact uploaded by the run that built `_site/` (#026).
+- The orchestrator decides when there is one clearly correct answer and records the decision,
+  instead of asking; it asks only for genuinely open questions or decisions costly to reverse
+  (#026).
 - The avd chart draws every part of the bars in a plain, solid colour instead of stripes and
   outlines. The parts stay apart by colour, and the legend swatches match them. Stripes and
   outlines return only in forced colours mode (#017).

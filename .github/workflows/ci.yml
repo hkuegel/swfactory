@@ -10,69 +10,63 @@ permissions:
   contents: read
 
 # Runs on main are serialised and never cancelled (a deployment must not be cut off);
-# newer runs of a PR cancel older ones.
+# newer runs of a pull request cancel older ones.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # Story 026: one job, one install, one build. A run that publishes to main or a
+  # workflow_dispatch run is always a full run (AC4); a pull-request run may use the mapping, so a
+  # change that can only affect the markdown does not start a browser at all (AC1, AC2).
+  # node_modules comes from the cache keyed on the lockfile hash and is installed only on a miss (AC7).
+  # _site/ is built once, by the plan, and never rebuilt (AC6).
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # fetch-depth 0 so the runner can read what changed since the recorded full run.
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run verify
-
-  e2e:
-    runs-on: ubuntu-latest
-    needs: verify
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/cache@v4
+        id: deps
         with:
-          node-version-file: .nvmrc
-          cache: npm
+          path: node_modules
+          key: node_modules-${{ hashFiles('package-lock.json') }}
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-      - uses: actions/upload-artifact@v7
+        if: steps.deps.outputs.cache-hit != 'true'
+      - name: plan
+        id: plan
+        env:
+          MODE: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && 'full' || 'affected' }}
+          BASE: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: node scripts/verify.mjs --plan-only --format=github-output --mode="$MODE" --base="$BASE" --no-record >> "$GITHUB_OUTPUT"
+      - name: browsers
+        run: npx playwright install --with-deps chromium
+        if: contains(steps.plan.outputs.steps, 'test:e2e') || contains(steps.plan.outputs.steps, 'test:pages')
+      - name: checks
+        run: node scripts/verify.mjs --mode=${{ steps.plan.outputs.mode }} --base=${{ steps.plan.outputs.base }} --no-record
+      - name: report
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: verify-report
           path: |
             apps/*/playwright-report
             apps/*/test-results
-
-  pages:
-    runs-on: ubuntu-latest
-    needs: verify
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      # Builds every app guest-only under /swfactory/<app>/ into _site/, checks _site/
-      # (check-dist --guest-only --out), then smoke-tests _site/ served under the subpath.
-      - run: npm run test:pages
-      - uses: actions/upload-pages-artifact@v5
+            packages/platform/test-results
+      # Only a full run publishes, so the artifact is always there when the deployment runs (AC4, AC6).
+      - name: publish
+        uses: actions/upload-pages-artifact@v5
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         with:
           path: _site
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: pages-test-results
-          path: packages/platform/test-results
 
   deploy:
-    needs: [e2e, pages]
+    needs: verify
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:

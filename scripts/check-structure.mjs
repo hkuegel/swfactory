@@ -1,4 +1,6 @@
-// Structure and link guard (story 011, AC2, AC4). Part of `npm run verify`; exit 1 on any violation.
+#!/usr/bin/env node
+// Structure and link guard (story 011, AC2, AC4; story 026 adds the size rules). Part of `npm run
+// verify`; exit 1 on any violation.
 //   1. Factory files and the platform do not name an app (apps/<name>/), and the platform imports
 //      nothing from an app. `.claude/agent-memory/**` is exempt (memories keep story numbers).
 //   2. Every relative markdown link in the docs, READMEs, CHANGELOG and CLAUDE.md resolves.
@@ -6,13 +8,18 @@
 //      story ids are unique across all backlogs, and the status in the index equals the
 //      story's frontmatter `status:`.
 //   4. A story with `status: done` and an id above 012 has the sections Review, Explanation and
-//      Retrospective in this order, a non-empty Explanation of at most 15 lines of at most 120 characters, and a `### Cost`
-//      table in the Retrospective (story 012).
+//      Retrospective in this order, a non-empty Explanation of at most 15 lines of at most 120
+//      characters, and a `### Cost` table in the Retrospective (story 012).
+//   5. Story 026 (size): a story from 026 on declares `size: S | M | L`. `size: S` means at most
+//      three ACs and needs no Review section and no Cost table, only the Explanation. A Cost table of
+//      a `size: M` or `size: L` story may not say `n/a` in every row: a row is measured or says
+//      `not measured` with the reason. Both rules read only the story text, and apply from 026 on, so
+//      the record of an earlier story is not rewritten.
 // A common word as app name (e.g. "todo") causes false positives in rule 1: pick a distinctive
 // name, or add an exemption below in the same change.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SKIP_DIRS = new Set([
@@ -45,144 +52,33 @@ function walk(dir) {
 
 const textFiles = (...dirs) => dirs.flatMap(walk).filter((f) => TEXT_EXTENSIONS.test(f));
 
-const apps = existsSync(join(ROOT, 'apps'))
-  ? readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
-      .filter((e) => e.isDirectory() && existsSync(join(ROOT, 'apps', e.name, 'package.json')))
-      .map((e) => e.name)
-      .sort()
-  : [];
-
-// --- Rule 1: no app names in the factory files and the platform ---------------------------------
-const FACTORY = [
-  'CLAUDE.md',
-  '.claude/agents',
-  '.claude/skills',
-  'docs/templates',
-  'templates',
-  'packages/platform',
-  'landing',
-];
-const factoryFiles = textFiles(...FACTORY);
-for (const name of apps) {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const word = new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, 'i');
-  for (const file of factoryFiles) {
-    readFileSync(file, 'utf8')
-      .split('\n')
-      .forEach((text, index) => {
-        if (word.test(text)) {
-          report(
-            file,
-            index + 1,
-            `names the app "${name}" (factory files and the platform are app-agnostic)`,
-          );
-        }
-      });
-  }
-}
-// The platform imports nothing from an app (by package name or by path).
-for (const file of textFiles('packages/platform').filter((f) => /\.(ts|tsx|mjs|js)$/.test(f))) {
-  readFileSync(file, 'utf8')
-    .split('\n')
-    .forEach((text, index) => {
-      const from = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/.exec(text)?.[1];
-      if (from && (/^@swfactory\/(?!platform(?:\/|$))/.test(from) || /(?:^|\/)apps\//.test(from))) {
-        report(file, index + 1, `imports "${from}" from an app (the platform must not)`);
-      }
-    });
+function appsHere() {
+  const dir = join(ROOT, 'apps');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && existsSync(join(ROOT, 'apps', e.name, 'package.json')))
+    .map((e) => e.name)
+    .sort();
 }
 
-// --- Rule 2: relative markdown links resolve ---------------------------------------------------
-const markdownFiles = [
-  ...textFiles('docs', 'README.md', 'CHANGELOG.md', 'CLAUDE.md', 'templates'),
-  ...apps.flatMap((app) => textFiles(join('apps', app, 'docs'), join('apps', app, 'README.md'))),
-  ...textFiles('packages/platform/README.md'),
-].filter((f, i, all) => f.endsWith('.md') && all.indexOf(f) === i);
-
-/** Markdown text without fenced code blocks and inline code (links in code are not links). */
-function stripCode(text) {
-  return text
-    .replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, (block) => block.replace(/[^\n]/g, ' '))
-    .replace(/`[^`\n]*`/g, (span) => ' '.repeat(span.length));
-}
-
-for (const file of markdownFiles) {
-  const text = stripCode(readFileSync(file, 'utf8'));
-  const targets = [
-    ...text.matchAll(/!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g),
-    ...text.matchAll(/^\s*\[[^\]]+\]:\s*<?(\S+?)>?\s*$/gm),
-  ];
-  for (const match of targets) {
-    const target = match[1];
-    if (/^([a-z][a-z0-9+.-]*:|#|\/\/)/i.test(target)) continue; // URL, mailto, anchor
-    const path = decodeURI(target.split('#')[0].split('?')[0]);
-    if (path === '') continue;
-    const line = text.slice(0, match.index).split('\n').length;
-    if (!existsSync(resolve(dirname(file), path))) report(file, line, `dead link "${target}"`);
-  }
-}
-
-// --- Rule 3: every story is listed once in the root backlog README; ids are unique -------------
-const backlogDirs = ['docs/backlog', ...apps.map((app) => `apps/${app}/docs/backlog`)];
-const stories = backlogDirs.flatMap((dir) =>
-  existsSync(join(ROOT, dir))
-    ? readdirSync(join(ROOT, dir))
-        .filter((name) => /^\d{3}-.+\.md$/.test(name))
-        .map((name) => join(ROOT, dir, name))
-    : [],
-);
-const indexPath = join(ROOT, 'docs', 'backlog', 'README.md');
-const listed = new Map(); // absolute story path -> number of links in the index
-if (existsSync(indexPath)) {
-  const indexText = stripCode(readFileSync(indexPath, 'utf8'));
-  for (const match of indexText.matchAll(/\]\(\s*<?([^)\s>#]+\.md)(?:#[^)\s]*)?>?\s*\)/g)) {
-    const target = resolve(dirname(indexPath), decodeURI(match[1]));
-    listed.set(target, (listed.get(target) ?? 0) + 1);
-  }
-} else {
-  report(indexPath, 0, 'backlog index not found');
-}
-// Status per story as written in the index table (last cell of the row that links the story).
-const indexStatus = new Map();
-if (existsSync(indexPath)) {
-  for (const row of readFileSync(indexPath, 'utf8').split('\n')) {
-    const link = /\]\(\s*<?([^)\s>#]+\.md)/.exec(row)?.[1];
-    const cells = row.split('|').map((c) => c.trim());
-    if (link && row.trim().startsWith('|')) {
-      indexStatus.set(resolve(dirname(indexPath), decodeURI(link)), cells[cells.length - 2]);
-    }
-  }
-}
-const ids = new Map();
-for (const story of stories) {
-  const id = /^(\d{3})-/.exec(basename(story))[1];
-  ids.set(id, [...(ids.get(id) ?? []), rel(story)]);
-  const count = listed.get(story) ?? 0;
-  if (count !== 1) {
-    report(indexPath, 0, `story ${rel(story)} is listed ${count} times (must be exactly once)`);
-  }
-  const fmStatus = /^status:\s*([a-z-]+)/m.exec(readFileSync(story, 'utf8'))?.[1];
-  const idxStatus = indexStatus.get(story);
-  if (idxStatus !== undefined && fmStatus !== idxStatus) {
-    report(
-      indexPath,
-      0,
-      `story ${rel(story)}: index status "${idxStatus}" differs from frontmatter "${fmStatus}"`,
-    );
-  }
-  const frontmatterId = /^id:\s*(\d+)/m.exec(readFileSync(story, 'utf8'))?.[1];
-  if (frontmatterId !== undefined && frontmatterId.padStart(3, '0') !== id) {
-    report(story, 0, `frontmatter id ${frontmatterId} does not match the file name`);
-  }
-}
-for (const [id, files] of ids) {
-  if (files.length > 1) problems.push(`story id ${id} is used more than once: ${files.join(', ')}`);
-}
-
-// --- Rule 4: record of a done story (cost table, explanation) -----------------------------------
+// --- Rules 4 and 5: the record of a story (cost table, explanation, size) ------------------------
 const COST_HEADER = ['role', 'round', 'model', 'tokens', 'tool uses', 'duration'];
 const MAX_EXPLANATION_LINES = 15;
 const MAX_EXPLANATION_LINE_LENGTH = 120;
+const FIRST_SIZE_STORY = 26; // the story that introduced `size:` and the measured-cost rule
+const MAX_AC_OF_S = 3;
+const SIZES = ['S', 'M', 'L'];
+
+/** Frontmatter `size:`; a story before the rule is read as M, so its record is not rewritten. */
+export function sizeOf(raw) {
+  const size = /^size:\s*([SML])\b/m.exec(raw)?.[1];
+  return size === undefined ? 'M' : size;
+}
+
+/** Counted AC markers of a story, the number a `size: S` story may not exceed. */
+export function acCount(raw) {
+  return (raw.match(/^- \*\*AC\d+:/gm) ?? []).length;
+}
 
 /** Cells of a markdown table row. */
 const cellsOf = (row) =>
@@ -192,23 +88,35 @@ const cellsOf = (row) =>
     .split('|')
     .map((c) => c.trim());
 
-/** Rule 4 problems of one done story as `[line, message]` pairs. */
-function checkStoryRecord(raw) {
+/** Markdown text without fenced code blocks and inline code (links in code are not links). */
+function stripCode(text) {
+  return text
+    .replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, (block) => block.replace(/[^\n]/g, ' '))
+    .replace(/`[^`\n]*`/g, (span) => ' '.repeat(span.length));
+}
+
+/** Rule 4 and 5 problems of one story as `[line, message]` pairs, read from the story text only. */
+export function checkStoryRecord(raw, size = 'M', id = 0) {
   const out = [];
   const lineAt = (offset) => raw.slice(0, offset).split('\n').length;
   const stripped = stripCode(raw); // same length as `raw`: offsets are shared
   const heading = (name) => new RegExp(`^## ${name}[ \\t]*$`, 'm').exec(stripped);
   const [review, explanation, retro] = ['Review', 'Explanation', 'Retrospective'].map(heading);
-  if (
-    !review ||
-    !explanation ||
-    !retro ||
-    !(review.index < explanation.index) ||
-    !(explanation.index < retro.index)
-  ) {
+  // AC8: a `size: S` story needs only the Explanation - no Review, no Cost table, no UX section.
+  const missing =
+    size === 'S'
+      ? !explanation
+      : !review ||
+        !explanation ||
+        !retro ||
+        !(review.index < explanation.index) ||
+        !(explanation.index < retro.index);
+  if (missing) {
     out.push([
       0,
-      'missing or misplaced section: need "## Review", "## Explanation", "## Retrospective" in this order',
+      size === 'S'
+        ? 'missing section: a size S story needs "## Explanation"'
+        : 'missing or misplaced section: need "## Review", "## Explanation", "## Retrospective" in this order',
     ]);
     return out;
   }
@@ -218,7 +126,7 @@ function checkStoryRecord(raw) {
     const next = /^## /m.exec(rest);
     return next ? { index: from.index + from[0].length + next.index } : undefined;
   };
-  const explanationLines = body(explanation, retro)
+  const explanationLines = body(explanation, size === 'S' ? nextHeading(explanation) : retro)
     .replace(/<!--[\s\S]*?-->/g, '')
     .split('\n')
     .map((l) => l.trim())
@@ -240,6 +148,8 @@ function checkStoryRecord(raw) {
       ]);
     }
   }
+
+  if (size === 'S') return out; // AC8: no Cost table required
 
   const retroBody = body(retro, nextHeading(retro));
   const retroStart = retro.index + retro[0].length;
@@ -284,19 +194,30 @@ function checkStoryRecord(raw) {
   const totals = data.filter(isTotal);
   const orchestrators = data.filter(isOrchestrator);
   if (runs.length === 0) out.push([lineOfRow(tableStart), 'cost table has no agent run row']);
+  const VALUE = /^(\d+|n\/a|not measured( \([^)]*\))?)$/;
+  const DURATION = /^(\d+:\d{2}(:\d{2})?|n\/a|not measured( \([^)]*\))?)$/;
   for (const [i, c] of runs) {
     if (c.length !== 6 || c.some((cell) => cell === '')) {
       out.push([lineOfRow(i), 'cost row needs six non-empty cells']);
-    } else if (!(
-      /^(\d+|n\/a)$/.test(c[3]) &&
-      /^(\d+|n\/a)$/.test(c[4]) &&
-      /^(\d+:\d{2}(:\d{2})?|n\/a)$/.test(c[5])
-    )) {
+    } else if (!(VALUE.test(c[3]) && VALUE.test(c[4]) && DURATION.test(c[5]))) {
       out.push([
         lineOfRow(i),
-        'cost row: Tokens and Tool uses are integers, Duration is m:ss, or n/a',
+        'cost row: Tokens and Tool uses are integers, Duration is m:ss, or n/a, or "not measured" with the reason',
       ]);
     }
+  }
+  // AC9: the Cost table carries data, not ceremony. From story 026 on a table may not be plain n/a in
+  // every row; a row that is not measured says so with the reason. An earlier story keeps its record.
+  const plainNa = (cell) => cell === 'n/a';
+  if (
+    id >= FIRST_SIZE_STORY &&
+    runs.length > 0 &&
+    runs.every(([, c]) => [3, 4, 5].every((index) => plainNa(c[index] ?? '')))
+  ) {
+    out.push([
+      lineOfRow(tableStart),
+      'cost table: every row says n/a; a row must be measured or say "not measured" with the reason (AC9)',
+    ]);
   }
   if (totals.length !== 1) {
     out.push([
@@ -349,20 +270,173 @@ function checkStoryRecord(raw) {
   return out;
 }
 
-for (const story of stories) {
-  const raw = readFileSync(story, 'utf8');
-  const status = /^status:\s*([a-z-]+)/m.exec(raw)?.[1];
-  const id = parseInt(/^(\d{3})-/.exec(basename(story))[1], 10);
-  if (status !== 'done' || id <= 12) continue;
-  for (const [line, message] of checkStoryRecord(raw)) report(story, line, message);
+/** Rule 5 problems of the size declaration, as `[line, message]` pairs. */
+export function checkStorySize(raw, id) {
+  if (id < FIRST_SIZE_STORY) return [];
+  const out = [];
+  const size = /^size:\s*([SML])\b/m.exec(raw)?.[1];
+  if (size === undefined) {
+    out.push([0, `frontmatter needs "size: ${SIZES.join(' | ')}" (story 026)`]);
+    return out;
+  }
+  const count = acCount(raw);
+  if (size === 'S' && count > MAX_AC_OF_S) {
+    out.push([0, `size S story has ${count} ACs (at most ${MAX_AC_OF_S}, story 026)`]);
+  }
+  return out;
 }
 
-if (problems.length > 0) {
-  console.error(`check-structure: ${problems.length} problem(s):`);
-  problems.forEach((p) => console.error(`  ${p}`));
-  process.exit(1);
+// --- The scan of the repository (rules 1, 2, 3) ---------------------------------------------------
+function scanAll() {
+  const apps = appsHere();
+
+  // Rule 1: no app names in the factory files and the platform.
+  const FACTORY = [
+    'CLAUDE.md',
+    '.claude/agents',
+    '.claude/skills',
+    'docs/templates',
+    'templates',
+    'packages/platform',
+    'landing',
+  ];
+  const factoryFiles = textFiles(...FACTORY);
+  for (const name of apps) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const word = new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, 'i');
+    for (const file of factoryFiles) {
+      readFileSync(file, 'utf8')
+        .split('\n')
+        .forEach((text, index) => {
+          if (word.test(text)) {
+            report(
+              file,
+              index + 1,
+              `names the app "${name}" (factory files and the platform are app-agnostic)`,
+            );
+          }
+        });
+    }
+  }
+  // The platform imports nothing from an app (by package name or by path).
+  for (const file of textFiles('packages/platform').filter((f) => /\.(ts|tsx|mjs|js)$/.test(f))) {
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .forEach((text, index) => {
+        const from = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/.exec(text)?.[1];
+        if (
+          from &&
+          (/^@swfactory\/(?!platform(?:\/|$))/.test(from) || /(?:^|\/)apps\//.test(from))
+        ) {
+          report(file, index + 1, `imports "${from}" from an app (the platform must not)`);
+        }
+      });
+  }
+
+  // Rule 2: relative markdown links resolve.
+  const markdownFiles = [
+    ...textFiles('docs', 'README.md', 'CHANGELOG.md', 'CLAUDE.md', 'templates'),
+    ...apps.flatMap((app) => textFiles(join('apps', app, 'docs'), join('apps', app, 'README.md'))),
+    ...textFiles('packages/platform/README.md'),
+  ].filter((f, i, all) => f.endsWith('.md') && all.indexOf(f) === i);
+
+  for (const file of markdownFiles) {
+    const text = stripCode(readFileSync(file, 'utf8'));
+    const targets = [
+      ...text.matchAll(/!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g),
+      ...text.matchAll(/^\s*\[[^\]]+\]:\s*<?(\S+?)>?\s*$/gm),
+    ];
+    for (const match of targets) {
+      const target = match[1];
+      if (/^([a-z][a-z0-9+.-]*:|#|\/\/)/i.test(target)) continue; // URL, mailto, anchor
+      const path = decodeURI(target.split('#')[0].split('?')[0]);
+      if (path === '') continue;
+      const line = text.slice(0, match.index).split('\n').length;
+      if (!existsSync(resolve(dirname(file), path))) report(file, line, `dead link "${target}"`);
+    }
+  }
+
+  // Rule 3: every story is listed once in the root backlog README; ids are unique.
+  const backlogDirs = ['docs/backlog', ...apps.map((app) => `apps/${app}/docs/backlog`)];
+  const stories = backlogDirs.flatMap((dir) =>
+    existsSync(join(ROOT, dir))
+      ? readdirSync(join(ROOT, dir))
+          .filter((name) => /^\d{3}-.+\.md$/.test(name))
+          .map((name) => join(ROOT, dir, name))
+      : [],
+  );
+  const indexPath = join(ROOT, 'docs', 'backlog', 'README.md');
+  const listed = new Map(); // absolute story path -> number of links in the index
+  if (existsSync(indexPath)) {
+    const indexText = stripCode(readFileSync(indexPath, 'utf8'));
+    for (const match of indexText.matchAll(/\]\(\s*<?([^)\s>#]+\.md)(?:#[^)\s]*)?>?\s*\)/g)) {
+      const target = resolve(dirname(indexPath), decodeURI(match[1]));
+      listed.set(target, (listed.get(target) ?? 0) + 1);
+    }
+  } else {
+    report(indexPath, 0, 'backlog index not found');
+  }
+  // Status per story as written in the index table (last cell of the row that links the story).
+  const indexStatus = new Map();
+  if (existsSync(indexPath)) {
+    for (const row of readFileSync(indexPath, 'utf8').split('\n')) {
+      const link = /\]\(\s*<?([^)\s>#]+\.md)/.exec(row)?.[1];
+      const cells = row.split('|').map((c) => c.trim());
+      if (link && row.trim().startsWith('|')) {
+        indexStatus.set(resolve(dirname(indexPath), decodeURI(link)), cells[cells.length - 2]);
+      }
+    }
+  }
+  const ids = new Map();
+  for (const story of stories) {
+    const id = /^(\d{3})-/.exec(basename(story))[1];
+    ids.set(id, [...(ids.get(id) ?? []), rel(story)]);
+    const count = listed.get(story) ?? 0;
+    if (count !== 1) {
+      report(indexPath, 0, `story ${rel(story)} is listed ${count} times (must be exactly once)`);
+    }
+    const raw = readFileSync(story, 'utf8');
+    const fmStatus = /^status:\s*([a-z-]+)/m.exec(raw)?.[1];
+    const idxStatus = indexStatus.get(story);
+    if (idxStatus !== undefined && fmStatus !== idxStatus) {
+      report(
+        indexPath,
+        0,
+        `story ${rel(story)}: index status "${idxStatus}" differs from frontmatter "${fmStatus}"`,
+      );
+    }
+    const frontmatterId = /^id:\s*(\d+)/m.exec(raw)?.[1];
+    if (frontmatterId !== undefined && frontmatterId.padStart(3, '0') !== id) {
+      report(story, 0, `frontmatter id ${frontmatterId} does not match the file name`);
+    }
+
+    // Rules 4 and 5.
+    const number = parseInt(id, 10);
+    for (const [line, message] of checkStorySize(raw, number)) report(story, line, message);
+    if (fmStatus === 'done' && number > 12) {
+      for (const [line, message] of checkStoryRecord(raw, sizeOf(raw), number)) {
+        report(story, line, message);
+      }
+    }
+  }
+  for (const [id, files] of ids) {
+    if (files.length > 1)
+      problems.push(`story id ${id} is used more than once: ${files.join(', ')}`);
+  }
+
+  if (problems.length > 0) {
+    console.error(`check-structure: ${problems.length} problem(s):`);
+    problems.forEach((p) => console.error(`  ${p}`));
+    process.exit(1);
+  }
+  console.log(
+    `check-structure: ok (${apps.length} app(s): ${apps.join(', ')}; ${stories.length} stories; ` +
+      `${markdownFiles.length} markdown files, ${factoryFiles.length} factory files scanned)`,
+  );
 }
-console.log(
-  `check-structure: ok (${apps.length} app(s): ${apps.join(', ')}; ${stories.length} stories; ` +
-    `${markdownFiles.length} markdown files, ${factoryFiles.length} factory files scanned)`,
-);
+
+// A test imports the rule functions without reading the repository (P17), so the scan runs only when
+// this file is executed.
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  scanAll();
+}
