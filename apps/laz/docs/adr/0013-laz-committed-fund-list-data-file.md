@@ -33,7 +33,9 @@ even if AC6 allowed one.
 The fund list lives at `apps/laz/src/features/plan/data/fund-list.json`: one object with a `funds`
 array, one entry per maturity year 2028–2034, fields `year`, `isin`, `name`, `navCents` (integer
 cents), `ytmBp` (integer basis points), `avgMaturity` (ISO calendar date), `sharesOutstanding`
-(integer), `asOf` (ISO calendar date, per fund). Dates are ISO `YYYY-MM-DD` calendar dates; money
+(integer), `asOf` (ISO calendar date, **one value for the whole file**, stamped by the writer script
+for each refresh run, not one per fund, so the UI shows a single date for every row). Dates are ISO
+`YYYY-MM-DD` calendar dates; money
 is integer cents, so no float parsing anywhere. The app reads it through an import, never a fetch,
 and the committed values are the fixture the tests compute against.
 

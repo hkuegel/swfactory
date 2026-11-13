@@ -42,9 +42,11 @@ Round trip:
 
 1. **One closed form, used in both directions** (chosen) – `F = Σ_funded years m_y / ρ′_y` with
    `ρ′ = 1 + (1 − r)·(ρ − 1)` the tax-adjusted payout factor per euro invested; the forward answer
-   is `P = D / F`, the reverse answer is `D = P · F`. They are the same expression inverted, so the
-   round trip agrees exactly on the unrounded values; the one cent of AC3 covers only the display
-   rounding.
+   is `P = D / F`, the reverse answer is `D = P · F`. As the code has it, `ρ′ = ρ − r · max(0, ρ − 1)`:
+   the same value as `1 + (1 − r)(ρ − 1)` when the gain is positive (`ρ ≥ 1`) and `ρ` itself otherwise,
+   so tax can never raise the result above the pre-tax projection on the negative-gain path (AC4).
+   Both directions use the same `ρ′`, so the round trip agrees exactly on the unrounded values; the
+   one cent of AC3 covers only the display rounding.
 2. **A per-year simulation with a carryover balance** – closer to a real depot, but the minimum over
    prefix sums makes the two directions different functions, so a cent-exact round trip is not
    guaranteed and the app needs a loop where a formula suffices. The funding rule of AC2 already

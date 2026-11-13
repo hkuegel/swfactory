@@ -1,0 +1,29 @@
+/*
+ * The panel around the calculator (story 024, UX §1). Below 600 px it is edge to edge with
+ * 16 px padding; from 600 px a bordered card with 24 px padding (the shell's --panel-pad).
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  min-width: 0;
+  max-width: 64rem;
+  margin-inline: auto;
+  padding: var(--panel-pad);
+  border-block: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+@media (min-width: 600px) {
+  .panel {
+    border: var(--panel-border) solid var(--color-border);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-panel);
+  }
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-color: CanvasText;
+  }
+}

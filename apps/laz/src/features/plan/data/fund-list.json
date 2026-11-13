@@ -1,0 +1,68 @@
+{
+  "asOf": "2026-12-31",
+  "funds": [
+    {
+      "year": 2028,
+      "isin": "DE000FIX28",
+      "name": "iBonds EUR Corporate UCITS 2028 (fixture)",
+      "navCents": 3800,
+      "ytmBp": 200,
+      "avgMaturity": "2028-06-30",
+      "sharesOutstanding": 1000000
+    },
+    {
+      "year": 2029,
+      "isin": "DE000FIX29",
+      "name": "iBonds EUR Corporate UCITS 2029 (fixture)",
+      "navCents": 4000,
+      "ytmBp": 250,
+      "avgMaturity": "2029-06-30",
+      "sharesOutstanding": 1100000
+    },
+    {
+      "year": 2030,
+      "isin": "DE000FIX30",
+      "name": "iBonds EUR Corporate UCITS 2030 (fixture)",
+      "navCents": 4200,
+      "ytmBp": 300,
+      "avgMaturity": "2030-06-30",
+      "sharesOutstanding": 1200000
+    },
+    {
+      "year": 2031,
+      "isin": "DE000FIX31",
+      "name": "iBonds EUR Corporate UCITS 2031 (fixture)",
+      "navCents": 4400,
+      "ytmBp": 350,
+      "avgMaturity": "2031-06-30",
+      "sharesOutstanding": 1300000
+    },
+    {
+      "year": 2032,
+      "isin": "DE000FIX32",
+      "name": "iBonds EUR Corporate UCITS 2032 (fixture)",
+      "navCents": 4600,
+      "ytmBp": 400,
+      "avgMaturity": "2032-06-30",
+      "sharesOutstanding": 1400000
+    },
+    {
+      "year": 2033,
+      "isin": "DE000FIX33",
+      "name": "iBonds EUR Corporate UCITS 2033 (fixture)",
+      "navCents": 4800,
+      "ytmBp": 450,
+      "avgMaturity": "2033-06-30",
+      "sharesOutstanding": 1500000
+    },
+    {
+      "year": 2034,
+      "isin": "DE000FIX34",
+      "name": "iBonds EUR Corporate UCITS 2034 (fixture)",
+      "navCents": 5000,
+      "ytmBp": 500,
+      "avgMaturity": "2034-06-30",
+      "sharesOutstanding": 1600000
+    }
+  ]
+}

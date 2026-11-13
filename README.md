@@ -14,9 +14,10 @@ The repo has three parts. They are kept apart
   sign-in, the e2e sign-in fake, the app shell, design tokens, the shared button and helpers.
   It is consumed as source by the apps and never names or imports an app.
 - **The apps** (`apps/<name>/`) are the products. Each app has its own code, tests,
-  stories and ADRs, and sets its own page heading and title. Today there are two apps:
-  [Minesweeper](apps/minesweeper/README.md) and `avd`, the
-  [Altersvorsorgedepot calculator](apps/avd/README.md).
+  stories and ADRs, and sets its own page heading and title. Today there are three apps:
+  [Minesweeper](apps/minesweeper/README.md), `avd`, the
+  [Altersvorsorgedepot calculator](apps/avd/README.md), and `laz`, the
+  [Lebensarbeitszeitkonto calculator](apps/laz/README.md).
 
 ## Getting started
 

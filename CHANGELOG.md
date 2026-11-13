@@ -7,6 +7,12 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- New app `laz`, the Lebensarbeitszeitkonto calculator. It shows the maximum monthly payout a
+  depot funds over a payout phase of the length you choose, or the depot a target monthly
+  payout would need. Each phase year is funded by the iBonds fund liquidated in December of
+  the year before; a year without a funding fund is shown without an amount. Tax on the gain
+  is a parameter, on/off plus a rate. The payout per share is a projection from YTM and NAV,
+  read from a committed data file, and the app labels it as a projection (#024).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).
