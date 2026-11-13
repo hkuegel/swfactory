@@ -44,14 +44,17 @@ function moneyRule(unit: string, decimals: number, suffix = ''): string {
 export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
   phaseStart: {
     label: 'Phase Beginn (Monat)',
-    range: '1.1.2027 bis 31.12.2034',
-    hint: 'Erster Monat der Auszahlungsphase; Format TT.MM.JJJJ, zum Beispiel 01.01.2028.',
+    // Story 033: no range. The rule is the shape of a month, so the error names the shape, not a range.
+    range:
+      'Monat und Jahr, zum Beispiel 01.2028; ein ergänzter Tag muss ein echter Tag dieses Monats sein',
+    hint: 'Erster Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 01.2028; ein Tag kann ergänzt werden.',
     formatWord: 'kein gültiges Datum',
   },
   phaseEnd: {
     label: 'Phase Ende (Monat)',
-    range: '1.1.2027 bis 31.12.2034',
-    hint: 'Letzter Monat der Auszahlungsphase; Format TT.MM.JJJJ, zum Beispiel 31.03.2034; muss nach dem Beginn liegen.',
+    range:
+      'Monat und Jahr, zum Beispiel 03.2034; ein ergänzter Tag muss ein echter Tag dieses Monats sein',
+    hint: 'Letzter Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 03.2034; ein Tag kann ergänzt werden; muss nach dem Beginn liegen.',
     formatWord: 'kein gültiges Datum',
   },
   amount: {

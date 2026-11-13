@@ -323,3 +323,81 @@ test('030 AC2, AC3: the error names the rule of the unit, and the copy quotes no
   await depot.fill('90071992547409,91');
   await expect(depot).not.toHaveAttribute('aria-invalid');
 });
+
+// Story 033 – the phase fields have no range and take the short month form. Hand oracle for the phase
+// outside the fund list: the fund list covers 2028–2034, so a phase in 2026 has no funding fund for any
+// year. The shown total of 0,00 € is asserted at logic level in `phase.test.ts`; here the UI shows the
+// no-funding callout (UX §2), so the visible claim is that no year is dropped from the table.
+test('033 AC1, AC2: a phase outside the fund list keeps every year, the short month form is accepted, and a partial month names no error', async ({
+  page,
+}) => {
+  const start = phaseStartInput(page);
+  const end = phaseEndInput(page);
+
+  // AC2 while typing: `13.` is not a complete input, so nothing is marked, and a complete input that is
+  // not a real month is. The hand error string is the copy of the field.
+  await start.fill('13.');
+  await expect(start).not.toHaveAttribute('aria-invalid');
+  await expect(start).not.toHaveAccessibleDescription(/kein gültiges Datum/);
+  await start.fill('13.2028');
+  await expect(start).toHaveAttribute('aria-invalid', 'true');
+  await expect(
+    page.getByText(
+      'Phase Beginn (Monat): kein gültiges Datum. Erlaubt: Monat und Jahr, zum Beispiel 01.2028; ein ergänzter Tag muss ein echter Tag dieses Monats sein.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  // AC1: a phase entirely before the list, typed in the short form. Hand: 2026 is the only year, and it
+  // is a missing year, so the table keeps it with no amount.
+  await start.fill('01.2026');
+  await end.fill('12.2026');
+  await amountInput(page).fill('1000,00');
+
+  const table = yearTable(page);
+  await expect(table.locator('tbody tr')).toHaveCount(1);
+  const row2026 = rowByHeader(table, '2026');
+  await expect(await cellByHeader(table, row2026, 'Monate')).toHaveText('12');
+  await expect(await cellByHeader(table, row2026, 'Finanzierung durch Fonds')).toHaveText(
+    'kein Fonds für dieses Jahr',
+  );
+  await expect(await cellByHeader(table, row2026, 'Betrag für das Jahr')).toHaveText('–');
+  const shown = await resultText(page);
+  expect(shown).toContain('Kein Ergebnis möglich: die Phase hat kein Jahr mit einem Fonds.');
+
+  // The caption names the phase months with no day (024, review round 1 finding 3); the month names are
+  // this test's own oracle, not `formatMonth`.
+  const caption = await table.locator('caption').innerText();
+  expect(caption).toContain('Januar 2026');
+  expect(caption).toContain('Dezember 2026');
+  expect(caption.indexOf('Januar 2026')).toBeLessThan(caption.indexOf('Dezember 2026'));
+  expect(caption).not.toMatch(/\d{2}\.\d{2}\.\d{4}/);
+});
+
+// Story 033, AC3: the defaults are hak's example phase, the keyboard order is the one 024 fixed, and no
+// field is ever disabled (UX §2, UX §4).
+test('033 AC3: the phase fields start with the example phase hak gave, are reached by the keyboard in the form order, and none is disabled', async ({
+  page,
+}) => {
+  // Hand oracle: hak's example phase, written as the field's own format.
+  await expect(phaseStartInput(page)).toHaveValue('01.2028');
+  await expect(phaseEndInput(page)).toHaveValue('03.2034');
+
+  const fields = [
+    phaseStartInput(page),
+    phaseEndInput(page),
+    amountInput(page),
+    page.getByLabel('Steuersatz in Prozent', { exact: true }),
+  ];
+  for (const field of fields) {
+    await expect(field, `field ${field}`).not.toBeDisabled();
+  }
+
+  // The form order of `FIELD_IDS`: Beginn, Ende, Betrag, Steuersatz.
+  await phaseStartInput(page).focus();
+  await expect(phaseStartInput(page)).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(phaseEndInput(page)).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(amountInput(page)).toBeFocused();
+});

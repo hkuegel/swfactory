@@ -15,13 +15,13 @@ export type RawInputs = Readonly<Record<FieldId, string>>;
 export const MAX_EXACT_UNITS = '9007199254740991';
 
 export interface FieldSpec {
-  /** Micro-euro for the NAV cell, basis points for the rate (1 % = 100), `year * 12 + month` for a phase, cents for the amounts. */
-  readonly min: number;
-  /** `null` for a money field: the value is only limited by what is exact in its unit (story 030). A percent field and a date field keep a bound that belongs to what the value means. */
+  /** Micro-euro for the NAV cell, basis points for the rate (1 % = 100), `year * 12 + month` for a phase, cents for the amounts. `null` for a phase field: a month has no bound of its own (story 033). */
+  readonly min: number | null;
+  /** `null` for a money field: the value is only limited by what is exact in its unit (story 030), and for a phase field, which has no range (story 033). A percent field keeps a bound that belongs to what the value means. */
   readonly max: number | null;
   /** 0: whole numbers only; 2: up to two decimals; 6: up to six, the NAV cell's unit (story 025). Not used by the date fields. */
   readonly decimals: 0 | 2 | 6;
-  /** A `TT.MM.JJJJ` date field; its value is a whole calendar month. */
+  /** A `MM.JJJJ` date field (story 033: a day may still be typed); its value is a whole calendar month. */
   readonly date: boolean;
 }
 
@@ -49,23 +49,19 @@ export function monthKeyOf(name: string): number {
   return monthKey(Number(name.slice(0, 4)), Number(name.slice(5, 7)));
 }
 
-/** Phase range (Technical design): 1.1.2027 – 31.12.2034, whole months. */
-export const PHASE_MIN = monthKey(2027, 1);
-export const PHASE_MAX = monthKey(2034, 12);
-
 /**
- * The rules the copy quotes (story 030): the money fields have no maximum, only the decimals of their
- * unit and the exact-integer bound of that unit; the tax rate keeps 0 – 50 % until story 031 replaces
- * it with the statutory rates; phase months 1.1.2027 – 31.12.2034 until story 033 drops the range. The
- * amount field exists once, with the rule of the chosen direction, and the YTM override may be
- * negative so a gain can be negative.
+ * The rules the copy quotes. Money fields have no maximum, only the decimals of their unit and the
+ * exact-integer bound of that unit (story 030); the tax rate keeps 0 – 50 % until story 031 replaces it
+ * with the statutory rates; a phase month has no range (story 033): the 1.1.2027 – 31.12.2034 bound 024
+ * had was not a business rule, because a phase year the fund list cannot fund is already reported as a
+ * missing year (024 AC2). The amount field exists once, with the rule of the chosen direction.
  */
 export function fieldSpec(field: FieldId): FieldSpec {
   if (field === 'amount') {
     return { min: 0, max: null, decimals: 2, date: false };
   }
   if (field === 'taxRate') return { min: 0, max: 5000, decimals: 2, date: false };
-  return { min: PHASE_MIN, max: PHASE_MAX, decimals: 0, date: true };
+  return { min: null, max: null, decimals: 0, date: true };
 }
 /**
  * The two input cells of a fund row (UX design §2). The YTM cell allows negative values because the

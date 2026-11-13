@@ -63,4 +63,30 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     // The sign is still its own reason, and the decimals are still a format error.
     expect(errorMessage(FIELD_COPY.amount, { kind: 'format' })).toContain('keine gültige Zahl');
   });
+
+  it('033 AC1, AC3: the phase copy quotes the shape of a month, not a range', () => {
+    // Hand oracle: the strings from the AC. No range, no year bound, and the short form is the format
+    // the hint shows, so the copy cannot disagree with the parser (the 025 defect pattern).
+    expect(FIELD_COPY.phaseStart.range).toBe(
+      'Monat und Jahr, zum Beispiel 01.2028; ein ergänzter Tag muss ein echter Tag dieses Monats sein',
+    );
+    expect(FIELD_COPY.phaseStart.hint).toBe(
+      'Erster Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 01.2028; ein Tag kann ergänzt werden.',
+    );
+    expect(FIELD_COPY.phaseEnd.hint).toBe(
+      'Letzter Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 03.2034; ein Tag kann ergänzt werden; muss nach dem Beginn liegen.',
+    );
+    expect(errorMessage(FIELD_COPY.phaseEnd, { kind: 'format' })).toBe(
+      'Phase Ende (Monat): kein gültiges Datum. Erlaubt: Monat und Jahr, zum Beispiel 03.2034; ein ergänzter Tag muss ein echter Tag dieses Monats sein.',
+    );
+    // Without a range in the spec the copy cannot quote one: the phase fields have no bounds, while the
+    // rate field keeps the bound that belongs to what a percent means.
+    for (const field of ['phaseStart', 'phaseEnd'] as const) {
+      expect(fieldSpec(field).min).toBeNull();
+      expect(fieldSpec(field).max).toBeNull();
+    }
+    for (const copy of [FIELD_COPY.phaseStart, FIELD_COPY.phaseEnd]) {
+      expect(`${copy.hint} ${copy.range}`).not.toMatch(/2027|2035|TT\.MM\.JJJJ/u);
+    }
+  });
 });

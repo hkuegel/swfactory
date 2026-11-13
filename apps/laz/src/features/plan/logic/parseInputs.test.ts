@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { OVERRIDE_SPECS, fieldSpec, monthKey, type FieldId, type RawInputs } from './fields.ts';
+import { OVERRIDE_SPECS, fieldSpec, type FieldId, type RawInputs } from './fields.ts';
 import {
   isExactInUnit,
   parseField,
   parseInputs,
   parseMonth,
+  parseMonthInput,
   toUnits,
   unitDigits,
 } from './parseInputs.ts';
@@ -134,28 +135,42 @@ describe('parseInputs', () => {
       phaseEnd: { kind: 'endBeforeStart', start: '2034-01' },
     });
 
-    // German dates as real branches: accepted as whole months, rejected as format or range.
+    // German dates as real branches: accepted as whole months, rejected only as a format error.
+    // Story 033, AC1: the phase fields have no range, so a month outside the range 024 had is a value.
+    // Hand month keys (year · 12 + month): 2028·12+1 = 24337, 2034·12+3 = 24411, 2027·12+1 = 24325,
+    // 2034·12+12 = 24420, 2026·12+1 = 24313, 2035·12+1 = 24421.
     for (const [text, month, key] of [
-      ['1.1.2028', '2028-01', monthKey(2028, 1)],
-      ['01.01.2028', '2028-01', monthKey(2028, 1)],
-      [' 31.3.2034 ', '2034-03', monthKey(2034, 3)],
-      ['29.2.2028', '2028-02', monthKey(2028, 2)],
-      ['1.1.2027', '2027-01', monthKey(2027, 1)],
-      ['31.12.2034', '2034-12', monthKey(2034, 12)],
+      ['1.1.2028', '2028-01', 24337],
+      ['01.01.2028', '2028-01', 24337],
+      [' 31.3.2034 ', '2034-03', 24411],
+      ['29.2.2028', '2028-02', 24338],
+      ['1.1.2027', '2027-01', 24325],
+      ['31.12.2034', '2034-12', 24420],
+      // AC1: the years outside 024's range are values, not errors.
+      ['1.1.2026', '2026-01', 24313],
+      ['1.1.2035', '2035-01', 24421],
+      // AC2: the short form is the same value as the long form.
+      ['01.2028', '2028-01', 24337],
+      ['3.2034', '2034-03', 24411],
     ] as const) {
       expect(parseMonth(text)).toBe(month);
       expect(parseField(fieldSpec('phaseStart'), text)).toEqual({ ok: true, value: key });
     }
-    for (const [text, kind] of [
-      ['31.13.2028', 'format'],
-      ['29.2.2027', 'format'],
-      ['31.12.2026', 'range'],
-      ['1.1.2026', 'range'],
-      ['1.1.2035', 'range'],
-    ] as const) {
+
+    // AC2: an incomplete entry is a typing state. It names no error and gives no value, so the field is
+    // not marked and nothing is calculated. Hand states: only a month, only a year, a month with a
+    // trailing separator, a year that is not four digits yet.
+    for (const text of ['1', '2028', '1.', '1.2', '1.2.', '01.20', '20']) {
+      expect(parseMonthInput(text)).toEqual({ state: 'partial' });
+      expect(parseField(fieldSpec('phaseStart'), text)).toEqual({ ok: false, error: null });
+      expect(errorOf('phaseStart', text)).toBeUndefined();
+    }
+
+    // A complete input that is not a real month is still a format error; the day rule stays.
+    for (const text of ['31.13.2028', '29.2.2027', '13.2028', '1.0.2028', 'abc.2028']) {
       expect(parseField(fieldSpec('phaseEnd'), text)).toEqual({
         ok: false,
-        error: { kind },
+        error: { kind: 'format' },
       });
     }
 
