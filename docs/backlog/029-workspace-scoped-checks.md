@@ -1,7 +1,7 @@
 ---
 id: 029
 title: The runner scopes every check that a workspace can run alone
-status: ready
+status: done
 type: chore
 app: platform
 size: S
@@ -74,6 +74,7 @@ _none._
 - 2026-11-13 — Gate 1: hak approves the next improvement ("mach das nächste performance improvement").
 - 2026-11-13 — The review was run by the orchestrator, not by the `reviewer` subagent, because this harness
   does not offer that role; the verdict is recorded as such in the Review section.
+- 2026-11-13 — Gate 2: hak approves the story ("freigegeben"), so the status is `done`.
 
 ## Implementation notes
 
@@ -118,12 +119,17 @@ Measured, reported not asserted (same input, same machine, through the runner):
 | `build`, whole tree against one workspace                     | 4,2 s / 1,9 s     | the runner now asks for one workspace |
 | full run                                                      | 70,5 s            | 70,8 s, green, not scoped             |
 
-Not verified: the numbers are machine-dependent and one machine only. CI of this branch is open (`gh` is not
-installed here, so the runs are read from `https://api.github.com/repos/hkuegel/swfactory/actions/runs`). The
-runs of the merged stories: 026 green (run 20), 027 green (run 21), 028 red (run 25) — that run failed on the
-landing figures test AC8 because the index row for 027 said `ready` while the story said `done`, so the build
-counted the index and the oracle counted the files. The run of the index fix on `main` (run 27, 2026-11-13) is
-green, which is the proof that the two counts agree again after the fix.
+Gate 2 full runs (the recording run): three, two green at 70,8 s and 69,1 s wall clock, one failed on `test:e2e`.
+The rerun of that step alone was green (80 tests in `avd`, 110 in the platform, none failed). The failed test is
+not named here because the rerun replaced its result file, so the name is lost; it is reported as observed, not
+as a defect.
+
+CI of this branch is open (`gh` is not installed here, so the runs are read from
+`https://api.github.com/repos/hkuegel/swfactory/actions/runs`). The runs of the merged stories: 026 green
+(run 20), 027 green (run 21), 028 red (run 25) — that run failed on the landing figures test AC8 because the
+index row for 027 said `ready` while the story said `done`, so the build counted the index and the oracle
+counted the files. The run of the index fix on `main` (run 27, 2026-11-13) is green, which is the proof that the
+two counts agree again after the fix.
 
 ## Review
 
