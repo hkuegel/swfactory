@@ -128,7 +128,7 @@ function readRecord(file) {
 }
 
 /** Paths changed since the recorded full run (AC2); null when nothing is recorded. */
-function changedSince(record, current) {
+export function changedSince(record, current) {
   if (record === undefined) return null;
   const paths = new Set();
   for (const path of (git(['diff', '--name-only', `${record.head}..${current.head}`]) ?? '')
