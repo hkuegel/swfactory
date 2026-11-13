@@ -118,8 +118,12 @@ Measured, reported not asserted (same input, same machine, through the runner):
 | `build`, whole tree against one workspace                     | 4,2 s / 1,9 s     | the runner now asks for one workspace |
 | full run                                                      | 70,5 s            | 70,8 s, green, not scoped             |
 
-Not verified: the numbers are machine-dependent and one machine only; the CI run of this branch is open, so
-the numbers there are not compared (`gh` is not installed here, the run is read from the Actions API).
+Not verified: the numbers are machine-dependent and one machine only. CI of this branch is open (`gh` is not
+installed here, so the runs are read from `https://api.github.com/repos/hkuegel/swfactory/actions/runs`). The
+runs of the merged stories: 026 green (run 20), 027 green (run 21), 028 red (run 25) — that run failed on the
+landing figures test AC8 because the index row for 027 said `ready` while the story said `done`, so the build
+counted the index and the oracle counted the files. The run of the index fix on `main` (run 27, 2026-11-13) is
+green, which is the proof that the two counts agree again after the fix.
 
 ## Review
 
