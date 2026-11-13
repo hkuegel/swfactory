@@ -194,6 +194,14 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   the UI or the clock. When existing cases are rerun for a new option, or a rule is
   mutation-checked, at least one case must actually move the result (a strict difference);
   inputs at a cap hide changes.
+  **Non-vacuity:** a test may not compare its subject with the same source it reads (the page
+  against the file the test also reads cannot be falsified) — pin a hand value as well; and a
+  negative assertion must be triggered by text that differs from the value already shown, since
+  filling a field with its own text fires no change handler. Assert values from a hand oracle,
+  not values the code under test computes. A test that asserts a network request must name the
+  mode it is measured in (dev server or built site); against the built site, assert the values,
+  not the request. A test comment that says a wording is not asserted must not assert it, and a
+  formatter must not print a value the user did not enter (a day inside a month-only label).
 - **Independent tests:** tests of one feature don't depend on another feature's layout or
   tab order — e.g. an auth test asserts that focus left the auth controls, not which game
   control it landed on. No counted Tab sequences and no raw coordinates of elements that

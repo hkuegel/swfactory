@@ -28,6 +28,7 @@ for the cost table (retro step).
 every step in which one of them edited markdown, run
 `npx prettier --write docs apps/*/docs README.md CHANGELOG.md apps/*/README.md` yourself
 (`npm run verify` checks markdown too). Never format a file while another agent is still editing it.
+Before the review step, run prettier and `npm run check:structure` on the story and the backlog index, so housekeeping (story formatting, the index row matching the story status) does not become a review finding. When a role's run ends with no reply, read the story section that role owns before re-running it: the work is usually already on disk and only the reply was lost.
 
 1. **Story** — `product-owner`: turn the idea into a story in the backlog of the platform
    (`docs/backlog/`) or of an app (`apps/<name>/docs/backlog/`; the story's `app:` field).

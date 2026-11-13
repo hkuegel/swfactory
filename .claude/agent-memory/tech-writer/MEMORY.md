@@ -66,3 +66,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - When a story adds a non-app workspace, name it in the README layout block and in the check:structure scan sentence, and state its content rules without listing the banned words (story 021).
 - Don't list banned words (e.g. internal tool names) in README or CHANGELOG, even as examples; say the rule and point to the check (story 021).
 - Take a figure's "as of" date in README from the ADR's consequences (commit date of the build), not from the story's example values (story 021).
+- When a story replaces the skeleton's placeholder content, the app README must describe the app's actual feature, never `src/Content.tsx`, which the story deletes (story 024).

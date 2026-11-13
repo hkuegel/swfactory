@@ -24,7 +24,9 @@ Fill the **UX design** section of the story with:
    user sees and can do in each.
 3. **Interactions** — what each control does, validation rules and when messages appear,
    focus movement after actions.
-4. **Copy** — exact user-facing texts (labels, buttons, error messages, empty states).
+4. **Copy** — exact user-facing texts (labels, buttons, error messages, empty states),
+   including accessible names (`aria-label`, `aria-describedby` texts): they are design copy,
+   not only visible text, so a tester can check them.
 5. **Accessibility** — semantic elements and roles, accessible names, keyboard flow,
    focus management, `aria-live` for async updates, colour contrast (WCAG 2.2 AA).
    Every state change that doesn't move focus (new game, results, async updates) needs

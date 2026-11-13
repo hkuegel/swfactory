@@ -75,3 +75,5 @@ When you finish a task, record lessons that will help your **future runs**, e.g.
 
 Reply with: AC coverage table, test results, defects (severity + repro), verdict
 PASS / FAIL; plus lessons saved to memory and any "Suggested for CLAUDE.md".
+Write the coverage table and the full report into the story's Test report section; keep the
+reply to at most 12 lines with no tables, so a long run does not end before the reply.
