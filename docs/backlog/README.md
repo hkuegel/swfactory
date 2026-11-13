@@ -5,6 +5,8 @@ One file per story: `NNN-short-slug.md`, created by the `product-owner` agent fr
 sequential and never reused. Stories of the shared platform live in this directory; stories
 of an app live in `apps/<name>/docs/backlog/`. This table lists every story of every backlog.
 
+<<<<<<< HEAD
+
 | ID  | App         | Title                                                                                                                                                     | Status    |
 | --- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | 001 | platform    | [Login with Google](001-login.md)                                                                                                                         | done      |
@@ -35,3 +37,7 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 027 | platform    | [The runner runs the test steps in the workspaces it planned](027-per-app-scoping.md)                                                                     | done      |
 | 028 | platform    | [CI caches the Playwright browsers, not only node_modules](028-playwright-browser-cache.md)                                                               | done      |
 | 029 | platform    | [The runner scopes every check that a workspace can run alone](029-workspace-scoped-checks.md)                                                            | done      |
+| 030 | laz         | [Amount fields without an invented cap](../../apps/laz/docs/backlog/030-laz-amount-fields-without-an-arbitrary-cap.md)                                    | in-review |
+| 031 | laz         | [Kapitalertragsteuer and Kirchensteuer as checkboxes](../../apps/laz/docs/backlog/031-laz-capital-gain-tax-checkboxes.md)                                 | ready     |
+| 032 | laz         | [Shares of each fund to buy now](../../apps/laz/docs/backlog/032-laz-shares-to-buy-now-per-fund.md)                                                       | ready     |
+| 033 | laz         | [Phase months without an invented range, typed as a month](../../apps/laz/docs/backlog/033-laz-phase-input-month-typing.md)                               | ready     |
