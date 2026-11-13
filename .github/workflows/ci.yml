@@ -34,7 +34,13 @@ jobs:
       - uses: actions/cache@v4
         id: deps
         with:
-          path: node_modules
+          # Story 028: the cache also holds the vitest cache of each workspace, which lives in its own
+          # node_modules and is not part of the root one.
+          path: |
+            node_modules
+            apps/*/node_modules/.vite
+            packages/*/node_modules/.vite
+            landing/node_modules/.vite
           key: node_modules-${{ hashFiles('package-lock.json') }}
       - run: npm ci
         if: steps.deps.outputs.cache-hit != 'true'
@@ -44,9 +50,18 @@ jobs:
           MODE: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && 'full' || 'affected' }}
           BASE: ${{ github.event.pull_request.base.sha || github.sha }}
         run: node scripts/verify.mjs --plan-only --format=github-output --mode="$MODE" --base="$BASE" --no-record >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: browsers
+        # Story 028: the browser is read from the cache only when the plan has a browser step, so a
+        # markdown-only round does not touch it (AC3). The key is the lockfile hash, which carries the
+        # Playwright version (AC2).
+        if: contains(steps.plan.outputs.steps, 'test:e2e') || contains(steps.plan.outputs.steps, 'test:pages')
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}
       - name: browsers
         run: npx playwright install --with-deps chromium
-        if: contains(steps.plan.outputs.steps, 'test:e2e') || contains(steps.plan.outputs.steps, 'test:pages')
+        if: (contains(steps.plan.outputs.steps, 'test:e2e') || contains(steps.plan.outputs.steps, 'test:pages')) && steps.browsers.outputs.cache-hit != 'true'
       - name: checks
         run: node scripts/verify.mjs --mode=${{ steps.plan.outputs.mode }} --base=${{ steps.plan.outputs.base }} --no-record
       - name: report

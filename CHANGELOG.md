@@ -105,6 +105,9 @@ All notable changes to this project are documented here, following
   lockfile hash, a pull-request run that may use the mapping, a full run on `main` and
   `workflow_dispatch`, Chromium installed only when the plan has a browser step, and the Pages
   artifact uploaded by the run that built `_site/` (#026).
+- The CI cache covers the vitest cache of every workspace and the Playwright browser directory, not
+  only `node_modules`. The browser is installed only when that cache misses, and only when the plan has
+  a browser step (#028).
 - The orchestrator decides when there is one clearly correct answer and records the decision,
   instead of asking; it asks only for genuinely open questions or decisions costly to reverse
   (#026).
