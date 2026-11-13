@@ -9,6 +9,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Write a known limitation as one README line that names the follow-up story; don't add a separate section for it (story 001).
 - Use CHANGELOG "Added" for new capabilities and "Changed" for existing screens whose behaviour changed, e.g. content moved behind sign-in (story 001).
 - Write tables and lists by hand in Prettier style; the user runs Prettier afterwards and the tech writer can't run it (story 001).
+- Prettier here has printWidth 100 and `proseWrap: preserve`, so it re-pads tables but never re-wraps prose: write prose lines within 100 characters (story 026).
 - Read the story's Implementation notes "Open points" and the Review for doc tasks; they name the README sections that are owed (story 001).
 - Before writing, check `docs/` for developer docs besides ADRs and backlog; in story 001 none existed, so only README and CHANGELOG changed (story 001).
 - Check the Test report's "Manual check results" before writing setup steps; hak's real setup overrode the design (publishing needs a homepage and privacy URL, so keep "Testing" with test users locally) (story 001).
@@ -67,3 +68,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Don't list banned words (e.g. internal tool names) in README or CHANGELOG, even as examples; say the rule and point to the check (story 021).
 - Take a figure's "as of" date in README from the ADR's consequences (commit date of the build), not from the story's example values (story 021).
 - When a story replaces the skeleton's placeholder content, the app README must describe the app's actual feature, never `src/Content.tsx`, which the story deletes (story 024).
+- Print a check rule that only fires for `status: done` stories as "a done story" in the README bullets: read the script's condition, not the story's AC wording (story 026).
+- Don't split an inline code span across two lines: prettier re-wraps it and the continuation line loses the list indent (story 026).

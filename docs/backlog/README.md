@@ -31,3 +31,7 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 022 | platform    | [Factory checks pass on Windows](022-cross-platform-checks.md)                                                                                            | done   |
 | 024 | laz         | [Lebensarbeitszeitkonto iBonds payout phase, both directions (projection)](../../apps/laz/docs/backlog/024-laz-ibonds-phase-plan.md)                      | done   |
 | 025 | laz         | [Fund list data-file writer (devops), triggered from the UI, tested in fixture mode](../../apps/laz/docs/backlog/025-laz-fund-list-writer.md)             | ready  |
+| 026 | platform    | [Process slimming - run only what can regress, decide instead of ask](026-process-slimming.md)                                                            | done   |
+| 027 | platform    | [The runner runs the test steps in the workspaces it planned](027-per-app-scoping.md)                                                                     | done   |
+| 028 | platform    | [CI caches the Playwright browsers, not only node_modules](028-playwright-browser-cache.md)                                                               | done   |
+| 029 | platform    | [The runner scopes every check that a workspace can run alone](029-workspace-scoped-checks.md)                                                            | done   |

@@ -19,7 +19,8 @@ to the code.
    level that shows it — usually a Playwright spec in `apps/<name>/e2e/` (or `packages/platform/e2e/` for
    the sign-in specs that every app runs; related ACs may share a test); unit tests (Vitest + Testing Library, next to the code, by role/label) only
    for logic with branches. Don't add a test for an AC that's already convincingly
-   covered at another level. Prefix test names with the AC id (`AC3: …`).
+   covered at another level. A look-only story takes at most three new tests; needing more means an AC
+   was misformulated, so report it instead of writing it (hak, 2026-11-13). Prefix test names with the AC id (`AC3: …`).
 3. Probe beyond the ACs: empty/long/special-character input, double clicks, keyboard-only
    use, error responses. Keep a probe as a permanent test only if it found a defect or
    covers a real risk (security, races); list the others as "checked, OK". If the UX
@@ -29,7 +30,8 @@ to the code.
    `document.getAnimations()` is empty. When a check script or a harness bound is changed,
    run its failure path by hand once with a deliberately bad input, on the machine where the
    change is made. Revert a mutation from a backup copy made before it, never with `git checkout`,
-   `git restore` or `git stash`.
+   `git restore` or `git stash`. Prove only the checks this story adds or changes: an assertion
+   inherited from an earlier story is not re-proven (hak, 2026-11-13).
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and

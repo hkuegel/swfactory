@@ -100,6 +100,22 @@ The backlog must be enough to rebuild the app without any chat history:
 
 ## Conventions
 
+- **Decide, don't ask:** when there is one clearly correct answer, the orchestrator decides it
+  and records it in the Decision log. It asks only for genuinely open questions or for a
+  decision that is costly to reverse (story 026).
+- **Progress in the chat:** the orchestrator writes the progress in the chat while the pipeline
+  runs — one short line per step (what ran, what it answered, what it decided), not a wall of
+  text, so hak can follow without opening the story (story 026, R7).
+- **Small stories:** stories stay small, one checkable behaviour each, so progress is trackable. `size: S`
+  (at most three ACs, only the Explanation record) is the default; `M` needs a reason and `L` is for
+  several behaviours that must move together (story 026, R8). A smaller story also gives a shorter Test
+  report and a cheaper gate 2.
+- **One question message:** all open questions are asked in one message at gate 1; after that the
+  pipeline runs to gate 2 without stopping, unless a step is really blocked (story 026, R2).
+- **Proportionate path (P6, hak 2026-11-13):** a story whose ACs are only measurable design bounds
+  (no logic, no data flow, no new file) skips the architect section, needs no ADR, and gets one
+  review round: the ux-designer states the values, the tester measures them. The oracle, the word
+  caps and the accessibility checks stay.
 - **Stories:** `NNN-short-slug.md`, created from `docs/templates/story.md`, in
   `docs/backlog/` (platform) or `apps/<name>/docs/backlog/` (an app; frontmatter
   `app: platform | <name>`). Numbers are global across all backlogs; the root
@@ -220,6 +236,16 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   it as DOM/text; computed styles are read only after transitions ended (`getAnimations()`
   empty); software-GL specs run with one worker on CI. Playwright `testIgnore`/`testMatch` globs
   are matched against absolute paths and are anchored (e.g. `**/e2e/pages/**`).
+- **Hand oracle:** the expected number is written by hand in the test, never read from the same table,
+  parser or fixture the code uses to answer; a fix of a parser is tested through its caller, not only
+  through the exported function (story 026, R3 and nit 6).
+- **Which checks run:** `npm run verify` runs the checks a change can affect; durations are reported,
+  never asserted. A run that publishes to `main` is always a full run, and the gate 2 full run is the
+  oracle for what the mapping could have missed (story 026, R4).
+- **No live request, no repository read** in a test, and the mode is named in every call; a script that
+  a test imports runs its scan only when it is executed directly (story 026).
+- **Cost table carries data:** a row is measured or says `not measured` with the reason; a table that
+  is `n/a` in every row is ceremony (story 026, R5).
 - **No-script pages:** a page that must work without scripts is checked on the built site
   (`npm run test:pages`), never on the dev server.
 - **Shared e2e helpers:** an app's shared e2e helpers live in one `e2e/<app>.helpers.ts`
@@ -308,13 +334,19 @@ npm run typecheck   # tsc --build, every workspace
 npm run lint        # eslint (whole repo)
 npm run format      # prettier --write
 npm test            # vitest (single run), every workspace
+npm run test:scripts  # vitest tests of scripts/ (not a workspace: vitest.scripts.config.ts)
 npm run test:e2e    # playwright for every app: app in mode e2e on port 5174 with the fake sign-in, never real Google
 npm run test:e2e -w apps/<name>     # one app's specs plus the platform's sign-in specs
 npm run build:pages  # every app guest-only under /swfactory/<app>/ into _site/, checked (part of verify)
-npm run test:pages   # build:pages + Playwright smoke test of _site/ under /swfactory/ + app checks in apps/*/e2e/pages
+npm run test:pages   # Playwright test of _site/ (run build:pages first): smoke test under /swfactory/ + app checks in apps/*/e2e/pages
 npm run check:dist  # dev-only strings and budgets in every app's dist/ (after build)
 npm run check:structure  # no app names in factory files/platform, no dead markdown links, every story listed once, index status = story status
 npm run check:template   # unit tests + typecheck of the app skeleton templates/app (not a workspace)
-npm run verify      # typecheck + lint + prettier check (incl. markdown) + structure + skeleton + unit tests + build + dist check
+npm run verify      # scripts/verify.mjs: the checks that can see the change, run in levels
+npm run verify --mode=full   # every check; a full run records itself in .tmp/last-full-run.json
+npm run verify --plan-only   # the plan only, run nothing; CI reads --format=github-output
 npm run verify -w apps/<name>       # that app plus the platform it uses
 ```
+
+The runner reports the plan, the levels and the duration of each check; a duration is
+reported, never asserted.

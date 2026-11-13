@@ -7,6 +7,8 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- `npm run test:scripts` runs the tests of `scripts/`, which is not an npm workspace, with its
+  own Vitest config (#026).
 - New app `laz`, the Lebensarbeitszeitkonto calculator. It shows the maximum monthly payout a
   depot funds over a payout phase of the length you choose, or the depot a target monthly
   payout would need. Each phase year is funded by the iBonds fund liquidated in December of
@@ -87,6 +89,45 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- Hak's process rules of 2026-11-13 are recorded in `CLAUDE.md` and the role files, after the story
+  that produced them was discarded by hak: the proportionate path for a look-only story, review
+  rounds appended below the earlier ones so the story can be rebuilt without the chat, a test proves
+  only what its own story adds or changes, an AC asserts only what can regress, and a look-only
+  story takes at most three new tests.
+- `npm run verify` is a runner (`scripts/verify.mjs`) that asks which checks can see the
+  change and runs only those, independent checks at the same time, with at most three levels.
+  Without a recorded full run every check runs. The runner reports the levels and the
+  durations, and records a full run in `.tmp/last-full-run.json`. Modes are named
+  `--mode=affected` and `--mode=full`; `--plan-only`, `--format=github-output`,
+  `--base=<ref>`, `--paths=a,b` and `--no-record` are for a CI step (#026).
+- `npm run verify` runs `test` and `test:e2e` only in the workspaces the plan names, with
+  `-w <workspace>`, so a change in one app does not start another app's suite. A change the plan
+  cannot put in one workspace, and every full run, still run in all workspaces; the plan prints the
+  workspaces it uses (#027).
+- `npm run verify` now scopes every step a workspace defines in its own `package.json`
+  (`typecheck`, `build`, `test`, `test:e2e`, `lint`, `format:check`, `check:dist`) to the planned
+  workspaces, with `--if-present` so a workspace without the script is skipped. A step no workspace
+  defines (`test:scripts`, `check:structure`, `check:template`), a change with a path in no
+  workspace, and every full run keep the whole-tree command, so a root file is never skipped; the
+  plan prints which steps are scoped (#029).
+- `npm run test:pages` no longer builds the site: `npm run build:pages` produces `_site/`, and
+  `test:pages` only tests it, so `_site/` is built once per pipeline. Run `npm run build:pages`
+  before `npm run test:pages` when you call them separately (#026).
+- `npm run check:structure` checks the story size: a story from 026 on declares
+  `size: S | M | L`, and a `size: S` story (at most three ACs) needs only its "Explanation"
+  section, no Review, no Cost table and no UX design section. The Cost table of a `size: M`
+  or `size: L` story may not say `n/a` in every row: a row is measured or says `not measured`
+  with the reason. Stories before 026 keep the record as written (#026).
+- The CI workflow is one job now: one install with `node_modules` from the cache keyed on the
+  lockfile hash, a pull-request run that may use the mapping, a full run on `main` and
+  `workflow_dispatch`, Chromium installed only when the plan has a browser step, and the Pages
+  artifact uploaded by the run that built `_site/` (#026).
+- The CI cache covers the vitest cache of every workspace and the Playwright browser directory, not
+  only `node_modules`. The browser is installed only when that cache misses, and only when the plan has
+  a browser step (#028).
+- The orchestrator decides when there is one clearly correct answer and records the decision,
+  instead of asking; it asks only for genuinely open questions or decisions costly to reverse
+  (#026).
 - The avd chart draws every part of the bars in a plain, solid colour instead of stripes and
   outlines. The parts stay apart by colour, and the legend swatches match them. Stripes and
   outlines return only in forced colours mode (#017).
