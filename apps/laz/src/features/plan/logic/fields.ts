@@ -7,10 +7,18 @@ export type Direction = 'depot' | 'payout';
 /** The raw text of every field, exactly as typed. */
 export type RawInputs = Readonly<Record<FieldId, string>>;
 
+/**
+ * The largest whole number a `Number` holds exactly: 2^53 − 1. A money field has no maximum of its
+ * own (story 030); its only limit is that its value must be an exact integer in its unit, so this
+ * bound is read as digits, never as a Number.
+ */
+export const MAX_EXACT_UNITS = '9007199254740991';
+
 export interface FieldSpec {
   /** Micro-euro for the NAV cell, basis points for the rate (1 % = 100), `year * 12 + month` for a phase, cents for the amounts. */
   readonly min: number;
-  readonly max: number;
+  /** `null` for a money field: the value is only limited by what is exact in its unit (story 030). A percent field and a date field keep a bound that belongs to what the value means. */
+  readonly max: number | null;
   /** 0: whole numbers only; 2: up to two decimals; 6: up to six, the NAV cell's unit (story 025). Not used by the date fields. */
   readonly decimals: 0 | 2 | 6;
   /** A `TT.MM.JJJJ` date field; its value is a whole calendar month. */
@@ -46,23 +54,19 @@ export const PHASE_MIN = monthKey(2027, 1);
 export const PHASE_MAX = monthKey(2034, 12);
 
 /**
- * The ranges the copy quotes: depot 0,00 – 200.000,00 €; monthly target 0,00 – 10.000,00 €;
- * tax rate 0 – 50 %; phase months 1.1.2027 – 31.12.2034. The amount field exists once, with the
- * range of the chosen direction, and the YTM override may be negative so a gain can be negative.
+ * The rules the copy quotes (story 030): the money fields have no maximum, only the decimals of their
+ * unit and the exact-integer bound of that unit; the tax rate keeps 0 – 50 % until story 031 replaces
+ * it with the statutory rates; phase months 1.1.2027 – 31.12.2034 until story 033 drops the range. The
+ * amount field exists once, with the rule of the chosen direction, and the YTM override may be
+ * negative so a gain can be negative.
  */
-export function fieldSpec(field: FieldId, direction: Direction): FieldSpec {
+export function fieldSpec(field: FieldId): FieldSpec {
   if (field === 'amount') {
-    return {
-      min: 0,
-      max: direction === 'depot' ? 20000000 : 1000000,
-      decimals: 2,
-      date: false,
-    };
+    return { min: 0, max: null, decimals: 2, date: false };
   }
   if (field === 'taxRate') return { min: 0, max: 5000, decimals: 2, date: false };
   return { min: PHASE_MIN, max: PHASE_MAX, decimals: 0, date: true };
 }
-
 /**
  * The two input cells of a fund row (UX design §2). The YTM cell allows negative values because the
  * override path can make the gain negative (risk 4), which `max(0, gain)` then keeps untaxed.
@@ -70,8 +74,8 @@ export function fieldSpec(field: FieldId, direction: Direction): FieldSpec {
 export type OverrideField = 'nav' | 'ytm';
 
 export const OVERRIDE_SPECS: Readonly<Record<OverrideField, FieldSpec>> = {
-  // The copy quotes 0 bis 200.000,00 € for the NAV cell, so the bound is that amount in
-  // micro-euro (story 025); keeping the cent bound would have made it 20,00 €.
-  nav: { min: 0, max: 200000 * 1_000_000, decimals: 6, date: false },
+  // Story 030: the NAV cell has no amount cap; the value must be an exact integer in micro-euro, the
+  // unit story 025 gave it.
+  nav: { min: 0, max: null, decimals: 6, date: false },
   ytm: { min: -10000, max: 10000, decimals: 2, date: false },
 };

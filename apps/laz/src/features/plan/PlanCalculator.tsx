@@ -65,10 +65,10 @@ export function PlanCalculator() {
   const [overrides, setOverrides] = useState<OverrideTexts>(new Map());
 
   const derived: Derived = useMemo(() => {
-    const parsed = parseInputs(raw, direction, taxOn);
+    const parsed = parseInputs(raw, taxOn);
     const errors = parsed.ok ? {} : parsed.errors;
     // The rate is read only while the checkbox is checked; while it cannot be parsed it is 0.
-    const rate = taxOn ? parseField(fieldSpec('taxRate', direction), raw.taxRate) : null;
+    const rate = taxOn ? parseField(fieldSpec('taxRate'), raw.taxRate) : null;
     const tax: Tax = { on: taxOn, rateBp: rate !== null && rate.ok ? rate.value : 0 };
 
     const projections = new Map<number, number>();

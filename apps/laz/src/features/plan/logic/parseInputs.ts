@@ -5,10 +5,10 @@
 
 import {
   FIELD_IDS,
+  MAX_EXACT_UNITS,
   fieldSpec,
   monthKeyOf,
   monthName,
-  type Direction,
   type FieldId,
   type FieldSpec,
   type RawInputs,
@@ -30,6 +30,8 @@ export type FieldError =
   | { readonly kind: 'format' }
   /** Outside the spec of the field. */
   | { readonly kind: 'range' }
+  /** Story 030: the value is not an exact whole unit (cents, micro-euro), so it cannot be used. */
+  | { readonly kind: 'exact' }
   /** `phaseEnd` only: before the start. */
   | { readonly kind: 'endBeforeStart'; readonly start: string };
 
@@ -51,19 +53,30 @@ const DECIMAL_6 = DECIMAL_DECIMALS(6);
 const DATE = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
 
 /**
- * Text already matched by WHOLE or DECIMAL → integer in the field's unit, by string arithmetic
- * (`"9,99"` → 999, `"5,113521"` → 5113521), never `parseFloat · 100`. `-0` gives 0.
+ * Text already matched by WHOLE or DECIMAL → its magnitude in the field's unit as digits, exact, so a
+ * value above the exact-integer bound is seen before it becomes a `Number` (story 030, AC2). `"9,99"`
+ * with 2 decimals is `999`, `"5,113521"` with 6 is `5113521`; a leading zero of the digits is dropped.
  */
-export function toUnits(text: string, decimals: 0 | 2 | 6): number {
+export function unitDigits(text: string, decimals: 0 | 2 | 6): string {
   // U+2212 (typed minus) reads as the minus sign, as avd's parser does.
-  const normalized = text.replace(/−/g, '-');
-  const negative = normalized.startsWith('-');
-  const unsigned = negative ? normalized.slice(1) : normalized;
+  const unsigned = text.replace(/−/g, '-').replace(/^-/, '');
   const [whole = '', fraction = ''] = unsigned.split(/[.,]/);
-  const scale = decimals === 0 ? 1 : decimals === 2 ? 100 : 1_000_000;
-  const magnitude =
-    Number(whole === '' ? '0' : whole) * scale +
-    (decimals === 0 ? 0 : Number(fraction.padEnd(decimals, '0')));
+  const digits = whole + (decimals === 0 ? '' : fraction.padEnd(decimals, '0'));
+  return digits.replace(/^0+/, '') || '0';
+}
+
+/** The digits are within what a `Number` holds exactly (2^53 − 1 in the field's unit). */
+export function isExactInUnit(digits: string): boolean {
+  return (
+    digits.length < MAX_EXACT_UNITS.length ||
+    (digits.length === MAX_EXACT_UNITS.length && digits <= MAX_EXACT_UNITS)
+  );
+}
+
+/** A field's magnitude read as digits → integer in the field's unit, never `parseFloat · 100`. `-0` gives 0. */
+export function toUnits(text: string, decimals: 0 | 2 | 6): number {
+  const negative = text.replace(/−/g, '-').startsWith('-');
+  const magnitude = Number(unitDigits(text, decimals));
   return negative && magnitude !== 0 ? -magnitude : magnitude;
 }
 
@@ -103,27 +116,38 @@ export function parseField(spec: FieldSpec, raw: string): FieldResult {
     const month = parseMonth(text);
     if (month === null) return { ok: false, error: { kind: 'format' } };
     const key = monthKeyOf(month);
-    if (key < spec.min || key > spec.max) return { ok: false, error: { kind: 'range' } };
+    if (key < spec.min || (spec.max !== null && key > spec.max)) {
+      return { ok: false, error: { kind: 'range' } };
+    }
     return { ok: true, value: key };
   }
   if (!PATTERN[spec.decimals].test(text)) {
     return { ok: false, error: { kind: 'format' } };
   }
+  // Story 030, AC2: the magnitude is compared as digits, so a value above the exact-integer bound of
+  // its unit is refused before it becomes a Number that is no longer exact.
+  if (!isExactInUnit(unitDigits(text, spec.decimals))) {
+    return { ok: false, error: { kind: 'exact' } };
+  }
   const value = toUnits(text, spec.decimals);
-  if (value < spec.min || value > spec.max) return { ok: false, error: { kind: 'range' } };
+  if (value < spec.min || (spec.max !== null && value > spec.max)) {
+    return { ok: false, error: { kind: 'range' } };
+  }
   return { ok: true, value };
 }
 
 /**
- * The phase fields, the amount field of the chosen direction and the rate. The rate is required
- * and parsed only while `taxOn` is true; otherwise it produces no error and `taxRateBp` is 0.
+ * The phase fields, the amount field and the rate. The rate is required and parsed only while `taxOn`
+ * is true; otherwise it produces no error and `taxRateBp` is 0. The amount field has no maximum
+ * (story 030): its rule is the decimal count of its unit and a value exact in that unit, which the
+ * copy quotes.
  */
-export function parseInputs(raw: RawInputs, direction: Direction, taxOn: boolean): ParseResult {
+export function parseInputs(raw: RawInputs, taxOn: boolean): ParseResult {
   const errors: Partial<Record<FieldId, FieldError>> = {};
   const values: Partial<Record<FieldId, number>> = {};
   for (const field of FIELD_IDS) {
     if (field === 'taxRate' && !taxOn) continue;
-    const result = parseField(fieldSpec(field, direction), raw[field]);
+    const result = parseField(fieldSpec(field), raw[field]);
     if (result.ok) values[field] = result.value;
     else errors[field] = result.error;
   }

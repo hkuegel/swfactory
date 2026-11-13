@@ -4,17 +4,41 @@
  */
 
 import type { Fund } from './logic/fund.ts';
-import { FIELD_IDS, type Direction, type FieldId, type OverrideField } from './logic/fields.ts';
+import {
+  FIELD_IDS,
+  MAX_EXACT_UNITS,
+  type Direction,
+  type FieldId,
+  type OverrideField,
+} from './logic/fields.ts';
 import type { FieldError } from './logic/parseInputs.ts';
 import { formatDate, formatMonth } from './logic/format.ts';
 
 export interface FieldCopy {
   readonly label: string;
-  /** The allowed range as quoted in error messages. */
+  /** The rule the error quotes: a range that belongs to what the value means, or the rule of its unit (story 030). */
   readonly range: string;
   readonly hint: string;
   /** `kein gültiges Datum` for the phase fields, `keine gültige Zahl` for the numbers (UX §2). */
   readonly formatWord: 'keine gültige Zahl' | 'kein gültiges Datum';
+  /** The field's unit, named in the error when a value is not an exact whole unit (story 030). */
+  readonly unit?: string;
+}
+
+/**
+ * The largest whole number a `Number` holds exactly, as the German copy quotes it (story 030). It is
+ * the exact-integer limit of a unit, not an amount cap: 9.007.199.254.740.991 Cent is
+ * 90.071.992.547.409,91 €. The digits come from `MAX_EXACT_UNITS`, so copy and constant cannot drift
+ * (the defect story 025 found).
+ */
+const LARGEST_EXACT_UNITS = MAX_EXACT_UNITS.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+/** The rule of a money field: sign, the decimals of its unit, and a value exact in that unit. */
+function moneyRule(unit: string, decimals: number, suffix = ''): string {
+  return (
+    `0 € oder mehr${suffix}, höchstens ${decimals} Nachkommastellen, Wert muss eine ganze Anzahl ` +
+    `${unit} sein (bis ${LARGEST_EXACT_UNITS} ${unit})`
+  );
 }
 
 export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
@@ -32,9 +56,10 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
   },
   amount: {
     label: 'Depot am Anfang der Phase (EUR)',
-    range: '0 bis 200.000,00 €',
-    hint: '0 bis 200.000,00 €, höchstens 2 Nachkommastellen.',
+    range: moneyRule('Cent', 2),
+    hint: '0 € oder mehr, höchstens 2 Nachkommastellen; der Wert muss eine ganze Anzahl Cent sein.',
     formatWord: 'keine gültige Zahl',
+    unit: 'Cent',
   },
   taxRate: {
     label: 'Steuersatz in Prozent',
@@ -44,14 +69,15 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
   },
 };
 
-/** The amount field exists once; its label and range follow the direction (UX §2). */
+/** The amount field exists once; its label follows the direction, its rule is the rule of its unit (UX §2, story 030). */
 export function amountCopy(direction: Direction): FieldCopy {
   if (direction === 'payout') {
     return {
       label: 'Monatliche Auszahlung als Ziel (EUR)',
-      range: '0,00 bis 10.000,00 € pro Monat',
-      hint: '0,00 € oder mehr pro Monat, höchstens 2 Nachkommastellen.',
+      range: moneyRule('Cent', 2, ' pro Monat'),
+      hint: '0 € oder mehr pro Monat, höchstens 2 Nachkommastellen; der Wert muss eine ganze Anzahl Cent sein.',
       formatWord: 'keine gültige Zahl',
+      unit: 'Cent',
     };
   }
   return FIELD_COPY.amount;
@@ -59,27 +85,26 @@ export function amountCopy(direction: Direction): FieldCopy {
 
 /** The input cells of a fund row carry their own visually hidden label (UX §2). */
 export function overrideCopy(field: OverrideField, year: number): FieldCopy {
-  // The NAV cell's decimal rule follows its unit, micro-euro (story 025); the YTM cell keeps 2.
-  const hint =
-    field === 'nav'
-      ? 'Wert aus der Fondsliste; eigener Wert, höchstens 6 Nachkommastellen.'
-      : 'Wert aus der Fondsliste; eigener Wert, höchstens 2 Nachkommastellen.';
-  return field === 'nav'
-    ? {
-        label: `NAV in Euro für Jahr ${String(year)}`,
-        range: '0 bis 200.000,00 €',
-        hint,
-        formatWord: 'keine gültige Zahl',
-      }
-    : {
-        label: `YTM in Prozent für Jahr ${String(year)}`,
-        range: '-100,00 bis 100,00 %',
-        hint,
-        formatWord: 'keine gültige Zahl',
-      };
+  // The NAV cell's decimal rule follows its unit, micro-euro (story 025), and it has no amount cap
+  // (story 030); the YTM cell keeps 2 decimals and the range of a percent.
+  if (field === 'nav') {
+    return {
+      label: `NAV in Euro für Jahr ${String(year)}`,
+      range: moneyRule('Micro-Euro', 6),
+      hint: 'Wert aus der Fondsliste; eigener Wert, höchstens 6 Nachkommastellen; der Wert muss eine ganze Anzahl Micro-Euro sein.',
+      formatWord: 'keine gültige Zahl',
+      unit: 'Micro-Euro',
+    };
+  }
+  return {
+    label: `YTM in Prozent für Jahr ${String(year)}`,
+    range: '-100,00 bis 100,00 %',
+    hint: 'Wert aus der Fondsliste; eigener Wert, höchstens 2 Nachkommastellen.',
+    formatWord: 'keine gültige Zahl',
+  };
 }
 
-/** The field's error text; always names the field and its allowed range (UX §2). */
+/** The field's error text; always names the field and the rule it broke (UX §2, story 030). */
 export function errorMessage(copy: FieldCopy, error: FieldError): string {
   if (error.kind === 'endBeforeStart') {
     return `Phase Ende (Monat): muss nach dem Beginn liegen (${formatMonth(error.start)}). Erlaubt: ein Monat ab dem Beginn.`;
@@ -89,7 +114,9 @@ export function errorMessage(copy: FieldCopy, error: FieldError): string {
       ? 'Wert fehlt'
       : error.kind === 'format'
         ? copy.formatWord
-        : 'Wert außerhalb des erlaubten Bereichs';
+        : error.kind === 'exact'
+          ? `Wert ist keine ganze Anzahl ${copy.unit ?? 'der Einheit des Felds'}`
+          : 'Wert außerhalb des erlaubten Bereichs';
   return `${copy.label}: ${word}. Erlaubt: ${copy.range}.`;
 }
 

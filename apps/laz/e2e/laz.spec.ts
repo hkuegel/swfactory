@@ -262,3 +262,64 @@ test('AC6: a guest session makes no request of its own, writes nothing to storag
   );
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
 });
+
+// Story 030 – no invented maximum in a money field. Hand oracles for the same fixture and the same
+// phase, with F = 55,125236 (tax off), recomputed here by hand in cents:
+//   depot 250.000,00 € = 25.000.000 cents → 25.000.000 / F = 453.512,799 cents = 4.535,13 €, and the
+//   63 funded phase months give 28.571.306,347 cents = 285.713,06 €.
+//   monthly target 12.000,00 € = 1.200.000 cents → 1.200.000 × F = 66.150.282,98 cents = 661.502,83 €,
+//   and 1.200.000 · 63 = 75.600.000 cents = 756.000,00 € for the sum.
+// Both are above the maximum 024 had (depot 200.000,00 €, target 10.000,00 €), so the test is the
+// case that the old bound refused. The digits bound is 2^53 − 1 = 9007199254740991 units.
+test('030 AC1: an amount above the maximum 024 had is accepted and used for the result', async ({
+  page,
+}) => {
+  await phaseStartInput(page).fill('01.01.2028');
+  await phaseEndInput(page).fill('31.03.2034');
+  const depot = amountInput(page);
+  await depot.fill('250000,00');
+
+  await expect(depot, 'no error for a depot above the old maximum').not.toHaveAttribute(
+    'aria-invalid',
+  );
+  await expect(figure(page, 'Maximale monatliche Auszahlung')).toHaveText(euro('4.535,13'));
+  await expect(figure(page, 'Summe der finanzierten Jahre')).toHaveText(euro('285.713,06'));
+
+  // The other direction, on the monthly target above 024's maximum.
+  await page.getByRole('radio', { name: 'Auszahlung gegeben, Depot gesucht' }).check();
+  const target = page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true });
+  await target.fill('12000,00');
+  await expect(target).not.toHaveAttribute('aria-invalid');
+  await expect(figure(page, 'Benötigtes Depot für die Phase')).toHaveText(euro('661.502,83'));
+  await expect(figure(page, 'Summe der finanzierten Jahre')).toHaveText(euro('756.000,00'));
+});
+
+test('030 AC2, AC3: the error names the rule of the unit, and the copy quotes no maximum amount', async ({
+  page,
+}) => {
+  const depot = amountInput(page);
+  // One unit above what a Number holds exactly in Cent: 9007199254740991 Cent is 90.071.992.547.409,91 €
+  // and is accepted, so this input is refused for the reason of the unit. The expected strings are the
+  // hand oracle of the test.
+  await depot.fill('90071992547409,92');
+  await expect(depot).toHaveAttribute('aria-invalid', 'true');
+  await expect(
+    page.getByText(
+      'Depot am Anfang der Phase (EUR): Wert ist keine ganze Anzahl Cent. Erlaubt: 0 € oder mehr, höchstens 2 Nachkommastellen, Wert muss eine ganze Anzahl Cent sein (bis 9.007.199.254.740.991 Cent).',
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  // AC3: the hint states the same rule, and the amount 024 quoted is gone from the copy.
+  await expect(
+    page.getByText(
+      '0 € oder mehr, höchstens 2 Nachkommastellen; der Wert muss eine ganze Anzahl Cent sein.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/200\.000,00|10\.000,00/)).toHaveCount(0);
+
+  // The largest value that is still exact in the unit is accepted, so the same field shows no error.
+  await depot.fill('90071992547409,91');
+  await expect(depot).not.toHaveAttribute('aria-invalid');
+});
