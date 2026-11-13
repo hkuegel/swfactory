@@ -129,6 +129,9 @@ _none - all levers are in the ACs; the rule changes that cannot be tested are re
   (hak). Recorded as retro proposal R8, applied to CLAUDE.md; `size: S` becomes the default.
 - 2026-11-13 — Gate 2: hak approves the gate (the run as measured, the reviewer's verdict) and all eight
   retro proposals, including the two he added at gate 2 (R7, R8), and the commit.
+- 2026-11-13 — The branch is pushed (`518035f`, `feature/026-process-slimming`). CI on a branch runs only
+  for a pull request or a `workflow_dispatch` run, and `gh` is not installed on this machine, so the green
+  CI run of the Definition of Done is open until hak opens the pull request or dispatches the workflow.
 
 ## Retro proposals (all eight approved by hak at gate 2, 2026-11-13; they change rules, not code)
 
@@ -245,6 +248,10 @@ Run of `npm run test:scripts`: 3 test files, 29 tests passed (`scripts/check-str
 scope). Each planted case was
 mutation-checked against a copy of the module: removing the AC9 rule gives 0 problems, loosening
 `checkLevels` to `level < need` gives `[]`, so every assertion above can go red.
+
+CI on the branch is open: the branch is pushed (`518035f`) but the workflow runs on a pull request, a run
+on `main`, or a `workflow_dispatch`, and `gh` is not installed on this machine, so the green CI run of the
+Definition of Done is still missing for this story.
 
 Reported, not asserted (Out of scope): measured per level on hak's machine, full run, levels run at the
 same time - level 0: build 11,6 s, build:pages 3,4 s, check:structure 0,8 s, check:template 7,6 s,
