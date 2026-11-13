@@ -20,7 +20,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { STEPS, checkLevels, levelsOf, plan } from './affected-checks.mjs';
+import { STEPS, WORKSPACE_STEPS, checkLevels, levelsOf, plan } from './affected-checks.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const WIN = process.platform === 'win32';
@@ -109,17 +109,53 @@ function changedSince(record, current) {
   return [...paths].sort();
 }
 
+/** The workspaces of the repository, read from package.json's `workspaces` field, never a hard-coded
+ *  list (story 027). A `*` entry is expanded as a directory that has its own package.json. */
+export function workspacesHere() {
+  const entries = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).workspaces ?? [];
+  const found = [];
+  for (const entry of entries) {
+    if (!entry.endsWith('/*')) {
+      found.push(entry);
+      continue;
+    }
+    const base = entry.slice(0, -2);
+    const dir = join(ROOT, base);
+    if (!existsSync(dir)) continue;
+    for (const item of readdirSync(dir, { withFileTypes: true })) {
+      if (item.isDirectory() && existsSync(join(ROOT, base, item.name, 'package.json'))) {
+        found.push(`${base}/${item.name}`);
+      }
+    }
+  }
+  return found.sort();
+}
+
+/**
+ * Story 027: the command for one step. A workspace step runs in the planned workspaces only, so an
+ * app-only change does not start another app's suite; a step that reads the whole tree keeps the root
+ * command. An empty scope is never executed as an empty scope: it runs in every workspace.
+ */
+export function commandForStep(step, answer, allWorkspaces) {
+  if (!WORKSPACE_STEPS.includes(step)) return ['run', step];
+  // An empty scope is never executed as an empty scope: it names every workspace, the same rule as the
+  // empty plan in story 026, AC3.
+  const scope = answer.workspaces?.length ? answer.workspaces : allWorkspaces;
+  return ['run', step, '--if-present', ...scope.flatMap((workspace) => ['-w', workspace])];
+}
+
 /** One npm script as a child process; its output is collected so parallel steps do not interleave. */
-function runStep(step) {
+function runStep(step, args) {
   return new Promise((resolve) => {
     const started = Date.now();
     // On Windows npm is a .cmd shim and needs a shell (story 022). With a shell the command is one
-    // string; it is not quoted here because `npm` and the step names contain no space - quoting the
-    // program name makes cmd.exe resolve the shim from the working directory and every step fails.
-    const command = WIN ? `npm run ${step}` : null;
+    // string; it is not quoted here because `npm`, the step names and the workspace paths contain no
+    // space — quoting the program name makes cmd.exe resolve the shim from the working directory and
+    // every step fails.
+    const command = WIN ? `npm ${args.join(' ')}` : null;
     const child =
       command === null
-        ? spawn('npm', ['run', step], { cwd: ROOT })
+        ? spawn('npm', args, { cwd: ROOT })
         : spawn(command, { cwd: ROOT, shell: true });
     let out = '';
     child.stdout.on('data', (chunk) => (out += chunk));
@@ -160,6 +196,10 @@ function printPlan(answer, byLevel, stream = process.stdout) {
     const skipped = STEPS.filter((step) => !answer.steps.includes(step)).sort();
     lines.push(`  skipped: ${skipped.length === 0 ? 'nothing' : skipped.join(', ')}`);
   }
+  if (answer.steps.some((step) => WORKSPACE_STEPS.includes(step))) {
+    // Story 027: the workspaces the scoped steps run in, so an empty scope is visible in the plan.
+    lines.push(`  workspaces: ${answer.workspaces.join(', ')}`);
+  }
   for (const [level, steps] of byLevel) lines.push(`  level ${level}: ${steps.join(', ')}`);
   stream.write(`${lines.join('\n')}\n`);
 }
@@ -178,7 +218,8 @@ async function main() {
           .filter((p) => p !== '');
   const mode = option('mode', record === undefined ? 'full' : 'affected');
 
-  const answer = plan(changed, record, mode, appsHere());
+  const allWorkspaces = workspacesHere();
+  const answer = plan(changed, record, mode, appsHere(), allWorkspaces);
   answer.changed = changed ?? [];
   const { levels, byLevel } = levelsByIdent(answer);
 
@@ -215,11 +256,18 @@ async function main() {
   const start = Date.now();
   const results = [];
   for (const [level, steps] of byLevel) {
-    const done = await Promise.all(steps.map(runStep));
+    const done = await Promise.all(
+      steps.map((step) => runStep(step, commandForStep(step, answer, allWorkspaces))),
+    );
     for (const r of done) {
       results.push(r);
+      // Story 027: the scope is printed, so a run that covers one workspace is not read as a full run.
+      const scope =
+        WORKSPACE_STEPS.includes(r.step) && answer.workspaces.length > 0
+          ? ` in ${answer.workspaces.join(', ')}`
+          : '';
       console.log(
-        `  level ${level} ${r.step}: ${r.code === 0 ? 'ok' : `FAILED (${r.code})`} ${shown(r.seconds)}`,
+        `  level ${level} ${r.step}: ${r.code === 0 ? 'ok' : `FAILED (${r.code})`} ${shown(r.seconds)}${scope}`,
       );
       if (r.code !== 0 && r.out !== '') console.log(r.out);
     }

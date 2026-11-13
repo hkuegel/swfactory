@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   STEPS,
+  WORKSPACE_STEPS,
   affectedPlan,
   appsIn,
   checkLevels,
   groupsOf,
   levelsOf,
   plan,
+  workspacesOf,
 } from './affected-checks.mjs';
 
 // Story 026, fixture mode: the change lists and the expected answers are written by hand here, so the
@@ -143,6 +145,54 @@ describe('AC4: the mode is named, a publishing run is always full', () => {
     // Hand expectation: the steps that produce and test the published site are in the full plan.
     expect(answer.steps).toContain('build:pages');
     expect(answer.steps).toContain('test:pages');
+  });
+});
+
+describe('story 027 AC1-AC3: the workspaces a test step runs in', () => {
+  // Hand expectation, written here and not read from the module: the workspaces the runner knows, as data.
+  const ALL = ['apps/x', 'apps/y', 'landing', 'packages/platform'];
+
+  it('AC1: an app change scopes the test step to that app, not to the other app', () => {
+    // Hand expectation: one workspace, the one the path is in.
+    expect(workspacesOf(['apps/x/src/tokens.css'], ALL)).toEqual(['apps/x']);
+    const answer = plan(
+      ['apps/x/src/features/plan/logic/fund.ts'],
+      { head: 'abc', files: {} },
+      'affected',
+      ['x', 'y'],
+      ALL,
+    );
+    expect(answer.mode, 'fixture mode: stored input, no repository, mode named in the call').toBe(
+      'affected',
+    );
+    expect(answer.workspaces).toEqual(['apps/x']);
+    // Hand expectation: the scoped steps are the two test steps, `lint` and `format:check` read the tree.
+    expect(WORKSPACE_STEPS).toEqual(['test', 'test:e2e']);
+    expect(answer.steps.includes('lint')).toBe(true);
+  });
+
+  it('AC2: a platform change scopes to the platform and to every app, so its own tests are not lost', () => {
+    // Hand expectation: the platform workspace plus both apps, because the platform is source for every app.
+    expect(workspacesOf(['packages/platform/src/lib/date.ts'], ALL)).toEqual([
+      'apps/x',
+      'apps/y',
+      'packages/platform',
+    ]);
+  });
+
+  it('AC2: a path in no workspace scopes to all of them, never to an empty list', () => {
+    // Hand expectation: `landing/` is a workspace of its own and a root file belongs to none, so both
+    // answer with the whole list. A scope that runs nothing is not a scope.
+    expect(workspacesOf(['landing/index.html'], ALL)).toEqual(ALL);
+    expect(workspacesOf(['.gitignore'], ALL)).toEqual(ALL);
+  });
+
+  it('AC3: planted violation - a full run names every workspace, the same answer as today', () => {
+    const answer = plan(['apps/x/src/tokens.css'], undefined, 'full', ['x', 'y'], ALL);
+    // Hand expectation: no record means the full scope, so the scoping cannot hide a regression.
+    expect(answer.mode).toBe('full');
+    expect(answer.workspaces).toEqual(ALL);
+    expect(answer.workspaces.length).toBe(4);
   });
 });
 
