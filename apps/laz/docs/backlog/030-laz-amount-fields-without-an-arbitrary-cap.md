@@ -108,6 +108,10 @@ Defect found while testing: my first hand value was wrong, not the code. `900719
 text is 900.719.925.474.099.100 Cent, which is far above the bound; the largest accepted text is
 `90071992547409,91` (9007199254740991 Cent). The test was corrected to that, the code was not touched.
 
+Mutation check, run on a copy under `.tmp` (never on the real file): the digit guard is made to always
+pass, and the copied hand expectation for `90071992547409,92` goes red, so the test can fail. Copies
+deleted afterwards; the real files are still green (12 unit tests).
+
 ## Review
 
 _reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
