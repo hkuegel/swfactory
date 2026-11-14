@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { FUND_LIST } from './fund.ts';
 import { formatEuro } from './format.ts';
-import { depotFromPayoutCents, payoutFromDepotCents } from './phase.ts';
+import {
+  buildPlan,
+  depotFromPayoutCents,
+  displayYearCents,
+  payoutFromDepotCents,
+  phaseYears,
+} from './phase.ts';
 import type { Phase } from './phase.ts';
 import type { Tax } from './projection.ts';
 
@@ -53,5 +59,27 @@ describe('phase (ADR 0012, the one closed form)', () => {
       7.0,
       1,
     );
+  });
+
+  it('033 AC1: a phase outside the fund list keeps every phase year and totals 0,00 €', () => {
+    // Hand oracle: no phase year has a funding fund, so the sum is 0 cents = 0,00 €, and no year is
+    // dropped. Before the list: 2026-01 to 2026-12 would need the December 2025 liquidation.
+    const before: Phase = { startMonth: '2026-01', endMonth: '2026-12' };
+    const beforePlan = buildPlan(FUND_LIST, before, TAX_OFF, 1000000, 'depot');
+    expect(phaseYears(before)).toEqual([2026]);
+    expect(beforePlan.fundedYears).toEqual([]);
+    expect(beforePlan.totalCents).toBe(0);
+    expect(formatEuro(beforePlan.totalCents)).toBe('0,00\u00a0€');
+    expect(displayYearCents(beforePlan)).toEqual([null]);
+
+    // After the list: 2036-01 to 2037-02 needs the December 2035 and 2036 liquidations, and both years
+    // stay in the table. Hand: 12 months and 2 months.
+    const after: Phase = { startMonth: '2036-01', endMonth: '2037-02' };
+    const afterPlan = buildPlan(FUND_LIST, after, TAX_OFF, 1000000, 'depot');
+    expect(phaseYears(after)).toEqual([2036, 2037]);
+    expect(afterPlan.years.map((row) => row.months)).toEqual([12, 2]);
+    expect(afterPlan.years.map((row) => row.fundingFund)).toEqual([null, null]);
+    expect(displayYearCents(afterPlan)).toEqual([null, null]);
+    expect(formatEuro(afterPlan.totalCents)).toBe('0,00\u00a0€');
   });
 });

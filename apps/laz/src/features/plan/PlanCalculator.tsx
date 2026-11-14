@@ -23,8 +23,13 @@ import styles from './PlanCalculator.module.css';
 /** The live region speaks only after typing has paused this long (UX §4). */
 const LIVE_REGION_DELAY_MS = 700;
 
-/** The empty first render: nothing typed, direction 1, tax off (UX §3). */
-const EMPTY_INPUTS: RawInputs = { phaseStart: '', phaseEnd: '', amount: '', taxRate: '' };
+/** The first render: hak's example phase (story 033, AC3), nothing typed in the other fields, direction 1, tax off (UX §3). */
+const DEFAULT_INPUTS: RawInputs = {
+  phaseStart: '01.2028',
+  phaseEnd: '03.2034',
+  amount: '',
+  taxRate: '',
+};
 
 type OverrideTexts = ReadonlyMap<number, Readonly<Partial<Record<OverrideField, string>>>>;
 
@@ -56,7 +61,7 @@ interface Derived {
  * are derived in one `useMemo`; only the live region is debounced (UX §4).
  */
 export function PlanCalculator() {
-  const [raw, setRaw] = useState<RawInputs>(EMPTY_INPUTS);
+  const [raw, setRaw] = useState<RawInputs>(DEFAULT_INPUTS);
   const [direction, setDirection] = useState<Direction>('depot');
   const [taxOn, setTaxOn] = useState(false);
   // The first render is not announced and shows no error (UX §3).
@@ -85,8 +90,9 @@ export function PlanCalculator() {
         if (text === undefined || text.trim() === '') continue;
         const result = parseField(OVERRIDE_SPECS[field], text);
         if (!result.ok) {
-          // An invalid cell shows its error; the calculation keeps the value of the data file.
-          rowErrors[field] = result.error;
+          // An invalid cell shows its error; the calculation keeps the value of the data file. A number
+          // cell has no typing state (story 033 names one only for a date field), so `error` is set here.
+          if (result.error !== null) rowErrors[field] = result.error;
           continue;
         }
         if (field === 'nav') values.navMicroEur = result.value;
