@@ -63,6 +63,14 @@ jobs:
         run: npx playwright install --with-deps chromium
         if: (contains(steps.plan.outputs.steps, 'test:e2e') || contains(steps.plan.outputs.steps, 'test:pages')) && steps.browsers.outputs.cache-hit != 'true'
       - name: checks
+        # Story 025, hak's CI decision of 2026-11-14: the checks step runs in fixture/local mode, so a test
+        # run reads stored data and never the source. `local` is the mode a test run has (ADR 0014), and
+        # `fixture` names the fund data it reads, which is the source the app test that proves the fixture
+        # copy depends on; here it is named by the run instead of falling back to a default. The live part
+        # is not a test run: it runs as its own step after the publish, in the deploy job below.
+        env:
+          VITE_TEST_MODE: local
+          LAZ_FUND: fixture
         run: node scripts/verify.mjs --mode=${{ steps.plan.outputs.mode }} --base=${{ steps.plan.outputs.base }} --no-record
       - name: report
         uses: actions/upload-artifact@v7
@@ -93,3 +101,21 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+      # Story 025, hak's CI decision of 2026-11-14: the live part runs here, after the publish, in its own
+      # step. This job has no write permission, so the writer runs in `--frozen` mode: it reads the live
+      # pages, writes nothing, and names each difference with the committed file. A result that does not fit
+      # ends the step red, so a CI run can never publish a file its own checks would contradict. The `--full`
+      # write belongs to the UI-triggered workflow, the only workflow with contents: write, and that run
+      # refuses to write when its result does not fit either.
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: live comparison in frozen mode, writes nothing
+        env:
+          LAZ_FUND: committed
+        run: |
+          node scripts/write-fund-list.mjs \
+            --mode=live --frozen \
+            --run-date="$(date -u +%Y-%m-%d)" \
+            --out=apps/laz/src/features/plan/data/fund-list.json
