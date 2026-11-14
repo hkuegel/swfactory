@@ -90,6 +90,9 @@ the chat. Append only._
 - 2026-11-13 — hak confirms all open gates in advance and asks for the open laz stories to be finished
   without waiting for his approval, so this story is set to done at gate 2; the merge to main runs in the
   order 024 → 025 → 030 → 033 → 031 → 032.
+- 2026-11-14 — Gate 2 (hak, 2026-11-14): the two reason strings of this story are confirmed as written,
+  `Auflösung vor Phasenbeginn` and `keine Hochrechnung je Anteil`; `Auflösung nach Phasenende` stays hak's
+  example from AC3. P29 and P30 approved with the same gate and applied to the tester rules.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -188,13 +191,14 @@ Two things the run showed:
 
 - A new e2e file was written under a name the runner does not pick up, so the case never ran until it was
   put into the app's spec file. Proposed change P29: a test is not reported as covering an AC until it has
-  been observed running. Pending hak's approval.
+  been observed running. Pending hak's approval; approved by hak on 2026-11-14 and applied to the tester rules.
 - A test that types a number into a field must type it the way the field accepts it, not the way the display
   formats it; the expected figure and the typed text are two different oracles. Proposed change P30: an e2e
-  input is written in the form the parser takes, and the display form only in the assertion. Pending.
+  input is written in the form the parser takes, and the display form only in the assertion. Pending; approved
+  by hak on 2026-11-14 and applied to the tester rules.
 
 Proposals applied for this story's roles: P22 (developer and tester), P23 (tester), P24 (developer),
 P26 (tech-writer), P21 (tester). P27 (proposal numbers are never reused) and P28 (files written with the
-editor tool) stay pending.
+editor tool) were pending here and are approved by hak on 2026-11-14, applied to `CLAUDE.md` and the role files.
 
 No Cost table: size S (story 026, R8).

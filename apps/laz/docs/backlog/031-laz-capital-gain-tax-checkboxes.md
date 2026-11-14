@@ -178,12 +178,14 @@ Two things the run showed:
 
 - A file written through a shell heredoc came out in the console code page, which broke the umlauts of a
   German label and made an e2e assertion fail on the locator, not on the app. Proposed change P28: source
-  files are written with the editor tool, never through a shell heredoc. Pending hak's approval.
+  files are written with the editor tool, never through a shell heredoc. Pending hak's approval; approved by hak on 2026-11-14 and applied to the
+  developer rules.
 - 024 AC6 had a hand expectation that was the app's 25 % state. When the rate field was removed, it had
   to be derived by hand again, which is the same rule as P21: an expectation that can only be read from
   the app is not a hand oracle. The open finding from 025 stays open.
 
 Proposals applied for this story's roles: P22 (developer and tester), P23 (tester), P24 (developer),
-P25 (devops), P26 (tech-writer), P21 (tester). P27 (proposal numbers are never reused) is pending.
+P25 (devops), P26 (tech-writer), P21 (tester). P27 (proposal numbers are never reused) was pending here and
+is approved by hak on 2026-11-14; P28 approved with the same gate and applied to the developer rules.
 
 No Cost table: size S (story 026, R8).
