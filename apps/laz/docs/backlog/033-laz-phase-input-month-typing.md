@@ -1,7 +1,7 @@
 ---
 id: 033
 title: Phase months without an invented range, typed as a month
-status: in-review # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<name>/docs/backlog)
 size: S # S | M | L (story 026). S = at most three ACs: needs only the Explanation, no Review section and no Cost table.
@@ -74,6 +74,9 @@ the chat. Append only._
   accepted but is not required, and an error is shown only for a complete input.
 - 2026-11-13 — Decision (orchestrator): defaults are hak's example phase, so the app shows a plan on
   first opening without inventing a phase the user did not ask for.
+- 2026-11-14 — Gate 2: hak confirmed all open gates on 2026-11-13 and asked for the open `laz` stories to
+  be finished without waiting for his approval, which covers this story's Explanation. Story set to done,
+  index row in the same commit. The look in the browser after the merge stays hak's manual check.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
