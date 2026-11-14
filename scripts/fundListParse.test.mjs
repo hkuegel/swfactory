@@ -96,6 +96,32 @@ describe('fund list writer (fixture mode)', () => {
     expect(answer.lines).toEqual(['fund 2028 (IE0008UEVOE0): navMicroEur — value missing']);
   });
 
+  it('AC4 of story 036: an empty name or an empty ISIN names the fund and the field and writes nothing', async () => {
+    // The rule of story 025 AC2 is not weakened by the columns that read these fields: a row with an empty
+    // name or an empty ISIN cannot exist in the committed file.
+    const cases = [
+      [{ year: 2028, isin: '', name: 'iBonds EUR Corporate UCITS 2028' }, 'isin'],
+      [{ year: 2028, isin: 'IE0008UEVOE0', name: '' }, 'name'],
+    ];
+    for (const [entry, field] of cases) {
+      const result = parseFundResponse(readFixture('332876.html'), entry);
+      expect(result.ok).toBe(false);
+      expect(result.field).toBe(field);
+      expect(result.problem).toBe('value missing');
+    }
+
+    // Through the caller: nothing is written, so the file cannot gain a row with an empty identity.
+    const answer = await run({
+      mode: 'fixture',
+      runDate: '2026-11-14',
+      table: [{ year: 2028, isin: '', name: 'iBonds EUR Corporate UCITS 2028' }],
+      read: () => readFixture('332876.html'),
+      request: noRequest,
+    });
+    expect(answer.content).toBeNull();
+    expect(answer.lines).toEqual(['fund 2028 (): isin — value missing']);
+  });
+
   it('AC3: fixture mode makes no request, measured with a stub that throws when called', async () => {
     let called = 0;
     const answer = await run({

@@ -103,7 +103,7 @@ export function overrideCopy(field: OverrideField, year: number): FieldCopy {
   // (story 030); the YTM cell keeps 2 decimals and the range of a percent.
   if (field === 'nav') {
     return {
-      label: `NAV in Euro für Jahr ${String(year)}`,
+      label: `Kurs in Euro für Jahr ${String(year)}`,
       range: moneyRule('Micro-Euro', 6),
       hint: 'Wert aus der Fondsliste; eigener Wert, höchstens 6 Nachkommastellen; der Wert muss eine ganze Anzahl Micro-Euro sein.',
       formatWord: 'keine gültige Zahl',
@@ -149,7 +149,14 @@ export const COPY = {
   monthsColumn: 'Monate',
   fundingColumn: 'Finanzierung durch Fonds',
   amountColumn: 'Betrag für das Jahr',
-  navColumn: 'NAV in Euro',
+  /** Story 036 (hak's gate 1 answers of 2026-11-14): the fund row names the fund it is. The strings are
+   * the values as the data file stores them, so no formatting is invented for them. */
+  nameColumn: 'Fondsname',
+  isinColumn: 'ISIN',
+  /** Hak's word for the value the source publishes with its asOf date: "nenne es Kurs wenn es der
+   * aktuelle Kurs ist" (2026-11-14). The source publishes no separate market price for these funds, so the
+   * column shows the net asset value per share the data file has (story 025). */
+  navColumn: 'Kurs',
   ytmColumn: 'YTM in Prozent',
   projectionColumn: 'Hochrechnung je Anteil in Euro',
   /** Story 032: the two columns of the purchase side. Hak's wording is "wieviel ich von jedem ETF JETZT kaufen muss". */

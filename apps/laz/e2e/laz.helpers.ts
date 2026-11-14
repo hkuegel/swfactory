@@ -22,7 +22,7 @@ export const amountInput = (page: Page): Locator =>
 /** A fund-row override input by its visually hidden label (UX §2), never by cell position. */
 export const fundInput = (page: Page, field: 'nav' | 'ytm', year: number): Locator =>
   page.getByLabel(
-    `${field === 'nav' ? 'NAV in Euro' : 'YTM in Prozent'} für Jahr ${String(year)}`,
+    `${field === 'nav' ? 'Kurs in Euro' : 'YTM in Prozent'} für Jahr ${String(year)}`,
     {
       exact: true,
     },
@@ -65,9 +65,12 @@ export async function cellByHeader(table: Locator, row: Locator, header: string)
 export const rowByHeader = (table: Locator, key: string): Locator =>
   table.getByRole('rowheader', { name: key, exact: true }).locator('xpath=parent::tr');
 
-/** Fund row of the fixture copy the tests read (ADR 0013 as amended by story 025). */
+/** Fund row of the fixture copy the tests read (ADR 0013 as amended by story 025). Story 036 reads the
+ * identity fields too, from the same file the app is built with. */
 export interface FixtureFileFund {
   readonly year: number;
+  readonly isin: string;
+  readonly name: string;
   readonly navMicroEur: number;
   readonly ytmBp: number;
 }

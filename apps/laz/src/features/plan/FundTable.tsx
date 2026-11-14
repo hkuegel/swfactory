@@ -61,6 +61,10 @@ export function FundTable({
           <thead>
             <tr>
               <th scope="col">{COPY.yearColumn}</th>
+              {/* Story 036 (AC1): the order is one order for the whole table, and the row header stays the
+                  year (hak's gate 1 answer of 2026-11-14), so these two are cells, not the header. */}
+              <th scope="col">{COPY.nameColumn}</th>
+              <th scope="col">{COPY.isinColumn}</th>
               <th scope="col">{COPY.navColumn}</th>
               <th scope="col">{COPY.ytmColumn}</th>
               <th scope="col">{COPY.projectionColumn}</th>
@@ -85,6 +89,11 @@ export function FundTable({
               return (
                 <tr key={fund.year}>
                   <th scope="row">{String(fund.year)}</th>
+                  {/* Story 036 AC1, AC2: the name and the ISIN as the data file stores them, with nothing
+                      formatted for them. They are cells, not the row header, and not figures, so the
+                      projection label does not describe them. */}
+                  <td className={styles.identity}>{fund.name}</td>
+                  <td className={styles.identity}>{fund.isin}</td>
                   {(['nav', 'ytm'] as const).map((field) => (
                     <td key={field}>
                       <TextField

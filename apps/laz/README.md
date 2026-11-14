@@ -30,3 +30,8 @@ committed fund the run did not read does not — so a run that cannot verify its
 CI runs the live part as a `--frozen` step after the publish, and the checks step names its test mode
 (`VITE_TEST_MODE=local`) and its fund data (`LAZ_FUND=fixture`), so a CI run reads stored data and never
 the source.
+
+The fund table names the fund each row is: `Fondsname` and `ISIN` as the data file stores them, and the column that
+shows the net asset value per share is named `Kurs` (story 036, hak's word of 2026-11-14). The row header stays the
+fund's year, and nothing is formatted for these two columns. The copy of the table's columns lives in
+`src/features/plan/fieldCopy.ts`, which the UI and the tests read as the same strings.

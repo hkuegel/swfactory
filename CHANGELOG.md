@@ -122,6 +122,12 @@ All notable changes to this project are documented here, following
   the three months that are actually paid. The writer reports a fund the committed file does not have as an
   addition, which does not make the result unfit, and its message counts only the identity differences; the
   nine values in the committed file came from a live run on 2026-11-14, nothing was typed (#035).
+- `laz`: the fund table names the fund each row is. `Fondsname` and `ISIN` are shown as the data file stores them, in
+  the order Jahr, Fondsname, ISIN, then the existing columns, and the column that shows the net asset value per share
+  is named `Kurs` (hak's word of 2026-11-14); the row header stays the fund's year. The writer refuses a fund whose
+  name or ISIN it cannot read, as it already did for the four values. At a 320 px viewport the page had scrolled
+  horizontally because a visually hidden label inside an input cell is positioned against the page, not against its
+  cell, so the table's wrapper did not clip it; the cell is now the containing block for that label (#036).
 - Hak's process rules of 2026-11-13 are recorded in `CLAUDE.md` and the role files, after the story
   that produced them was discarded by hak: the proportionate path for a look-only story, review
   rounds appended below the earlier ones so the story can be rebuilt without the chat, a test proves

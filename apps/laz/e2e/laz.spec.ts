@@ -676,3 +676,65 @@ test('035 AC1: 2028 names the 2027 fund as its funding fund, 2036 names the 2035
   await expect(figure(page, 'Maximale monatliche Auszahlung')).toHaveText(euro('119,71'));
   await expect(figure(page, 'Summe der finanzierten Jahre')).toHaveText(euro('11.851,75'));
 });
+
+// Story 036 – the fund row names the fund it is. The strings below are written by hand from the fixture
+// copy (P16), then cross-checked against the same file the app is built with in e2e mode (story 025,
+// ADR 0013), so the oracle is not the module under test.
+test('036 AC1, AC2, AC3: the fund row shows the hand name and ISIN, the course column is named Kurs, and the row header stays the year', async ({
+  page,
+}) => {
+  const table = fundTable(page);
+
+  // AC1: the columns have one order for the whole table.
+  const headers = await table.getByRole('columnheader').allInnerTexts();
+  expect(headers.map((header) => header.trim())).toEqual([
+    'Jahr',
+    'Fondsname',
+    'ISIN',
+    'Kurs',
+    'YTM in Prozent',
+    'Hochrechnung je Anteil in Euro',
+    'Anteile jetzt kaufen',
+    'Kaufpreis heute in Euro',
+  ]);
+
+  const hand = {
+    year: 2030,
+    name: 'iBonds EUR Corporate UCITS 2030 (hand fixture)',
+    isin: 'DE000FIX30',
+    // 42.000.000 micro-euro as the cell shows it: the micro-euro format prints the decimals a value has,
+    // so a whole euro shows as `42`, which is what lets the cell round-trip through the same parser
+    // (story 025). Hand value, not read from the format module.
+    kurs: '42',
+    projection: '47,28',
+  };
+  const fileRow = fixtureFunds().find((fund) => fund.year === hand.year);
+  expect([fileRow?.name, fileRow?.isin], 'the hand row is the row the app shows').toEqual([
+    hand.name,
+    hand.isin,
+  ]);
+
+  // AC2, hak's gate 1 answer of 2026-11-14: the row header stays the fund's year, so the name and the ISIN
+  // are cells of the row and the tests that read rows by year keep their oracles.
+  const row = rowByHeader(table, String(hand.year));
+  await expect(row.locator('th').first()).toHaveText(String(hand.year));
+  await expect(await cellByHeader(table, row, 'Fondsname')).toHaveText(hand.name);
+  await expect(await cellByHeader(table, row, 'ISIN')).toHaveText(hand.isin);
+
+  // AC3: the column that shows the course names what it is, and the value is the one the source published
+  // with its asOf date, which the projection label states as a projection, not as a market price.
+  await expect(fundInput(page, 'nav', hand.year)).toHaveValue(hand.kurs);
+  const label = `Diese Beträge sind eine Hochrechnung aus YTM und NAV und kein veröffentlichter Marktwert. Stand der Daten: ${germanDate(fixtureAsOf())}.`;
+  await expect(
+    page.getByRole('region', { name: 'Fondsplan', exact: true }).locator('p').first(),
+  ).toHaveText(label);
+
+  // The figures of the row are still described by the label; the name and the ISIN are not figures, so the
+  // label does not describe them.
+  const projectionCell = await cellByHeader(table, row, 'Hochrechnung je Anteil in Euro');
+  await expect(projectionCell.locator('[aria-describedby]')).toHaveText(euro(hand.projection));
+  await expect(projectionCell.locator('[aria-describedby]')).toHaveAccessibleDescription(label);
+  for (const header of ['Fondsname', 'ISIN']) {
+    await expect(await cellByHeader(table, row, header)).not.toHaveAccessibleDescription(label);
+  }
+});
