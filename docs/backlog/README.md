@@ -37,5 +37,5 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 029 | platform    | [The runner scopes every check that a workspace can run alone](029-workspace-scoped-checks.md)                                                            | done   |
 | 030 | laz         | [Amount fields without an invented cap](../../apps/laz/docs/backlog/030-laz-amount-fields-without-an-arbitrary-cap.md)                                    | done   |
 | 031 | laz         | [Kapitalertragsteuer and Kirchensteuer as checkboxes](../../apps/laz/docs/backlog/031-laz-capital-gain-tax-checkboxes.md)                                 | done   |
-| 032 | laz         | [Shares of each fund to buy now](../../apps/laz/docs/backlog/032-laz-shares-to-buy-now-per-fund.md)                                                       | ready  |
+| 032 | laz         | [Shares of each fund to buy now](../../apps/laz/docs/backlog/032-laz-shares-to-buy-now-per-fund.md)                                                       | done   |
 | 033 | laz         | [Phase months without an invented range, typed as a month](../../apps/laz/docs/backlog/033-laz-phase-input-month-typing.md)                               | done   |

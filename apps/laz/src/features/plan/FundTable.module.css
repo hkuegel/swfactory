@@ -72,6 +72,15 @@
   overflow-wrap: anywhere;
 }
 
+/* Story 032 AC3: the reason a fund shows no purchase belongs to the dash it explains, so it reads in the
+   same cell and stays readable in a narrow column. */
+.reason {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  overflow-wrap: anywhere;
+}
+
 /* Below 600 px the projection label and the rows stack; the inputs fill their cell. */
 @media (max-width: 599.98px) {
   .table th:first-child {

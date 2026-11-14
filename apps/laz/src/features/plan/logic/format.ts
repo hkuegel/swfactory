@@ -40,6 +40,19 @@ export function formatMonth(isoMonth: string): string {
 }
 
 const PLAIN = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 });
+/** Shares are shown with two decimals (story 032): the model's number is not a whole share. */
+const SHARES = new Intl.NumberFormat('de-DE', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Shares as the fund table shows them (story 032 AC1): `55,06`. Shares are not money, so the money rule
+ * of the last part does not apply to this column.
+ */
+export function formatShares(shares: number): string {
+  return SHARES.format(shares);
+}
 /** Micro-euro shows the decimals it has, up to 6, so the cell text round-trips through the same parser. */
 const MICRO = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 6 });
 

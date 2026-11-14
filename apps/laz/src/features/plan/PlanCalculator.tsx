@@ -17,6 +17,7 @@ import { formatEuro } from './logic/format.ts';
 import { parseField, parseInputs, type FieldError, type FieldErrors } from './logic/parseInputs.ts';
 import { buildPlan, type Phase, type Plan } from './logic/phase.ts';
 import { payoutPerShareMicroEur, type Tax } from './logic/projection.ts';
+import { purchaseRows, type PurchaseRow } from './logic/purchase.ts';
 import { DEFAULT_BUNDESLAND, taxFromState, type TaxState } from './logic/tax.ts';
 import styles from './PlanCalculator.module.css';
 
@@ -55,6 +56,10 @@ interface Derived {
   readonly noFundingYear: boolean;
   /** The tax the calculation uses, from the two checkboxes and the Bundesland. */
   readonly tax: Tax;
+  /** Story 032: one purchase row per fund, in the order of the fund table, or null while no result is possible. */
+  readonly purchases: readonly PurchaseRow[] | null;
+  /** The depot that is shown, in cents, so the last purchase part comes from the total (032 AC2). */
+  readonly totalCents: number | null;
 }
 
 /**
@@ -116,6 +121,11 @@ export function PlanCalculator() {
 
     for (const fund of funds) projections.set(fund.year, payoutPerShareMicroEur(fund, tax));
 
+    // Story 032: the purchase side of the same model, on the same effective funds and tax state. The
+    // fund table's rows are funds, so a fund row shows the phase year after its liquidation year.
+    const purchases =
+      plan === null || phase === null ? null : purchaseRows(funds, phase, plan.monthlyCents, tax);
+
     return {
       errors,
       phase,
@@ -125,6 +135,8 @@ export function PlanCalculator() {
       markers,
       noFundingYear: plan !== null && plan.fundedYears.length === 0,
       tax,
+      purchases,
+      totalCents: plan === null ? null : plan.depotCents,
     };
   }, [raw, direction, taxState, overrides]);
 
@@ -201,6 +213,8 @@ export function PlanCalculator() {
         errors={derived.overrideErrors}
         markers={derived.markers}
         asOf={FUND_LIST_AS_OF}
+        purchases={derived.purchases}
+        totalCents={derived.totalCents}
         onOverrideChange={handleOverride}
       />
     </div>

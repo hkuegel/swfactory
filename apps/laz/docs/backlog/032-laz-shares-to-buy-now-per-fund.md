@@ -1,7 +1,7 @@
 ---
 id: 032
 title: Shares of each fund to buy now
-status: ready # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<name>/docs/backlog)
 size: S # S | M | L (story 026). S = at most three ACs: needs only the Explanation, no Review section and no Cost table.
@@ -74,6 +74,22 @@ the chat. Append only._
 - 2026-11-13 — hak's request (verbatim above).
 - 2026-11-13 — Decision (orchestrator): the shares are the model's exact number with two decimals,
   so the sum property of AC2 holds; whole-share rounding is not applied here.
+- 2026-11-14 — Decision (orchestrator): the row of the fund table is a fund, so the phase year it shows is
+  the year after its liquidation year (024 AC2). The money rule of AC2 is applied to the shown parts of
+  this table, because `Σ shares × NAV` is the depot of either direction.
+- 2026-11-14 — Decision (orchestrator): `kein Fonds für dieses Jahr` stays the line of the year table for a
+  phase year without a funding fund (024 AC2); the fund row names its own reason. AC3 gives one example
+  string for the fund row (`Auflösung nach Phasenende`), so the two other reasons are decisions of this
+  story: `Auflösung vor Phasenbeginn` for a fund that liquidates before the phase begins, and
+  `keine Hochrechnung je Anteil` for a payout per share of 0, where the rule cannot divide. Both are
+  pending hak's confirmation.
+- 2026-11-14 — Decision (orchestrator): the reason reads in the same cell as the dash it explains, in both
+  new cells, so the dash is never read alone. While no result is possible the dash stands without a reason.
+- 2026-11-14 — Decision (orchestrator): the shares are not money, so the money rule of AC2 does not apply
+  to the shares column; the rule is applied to the purchase column only.
+- 2026-11-13 — hak confirms all open gates in advance and asks for the open laz stories to be finished
+  without waiting for his approval, so this story is set to done at gate 2; the merge to main runs in the
+  order 024 → 025 → 030 → 033 → 031 → 032.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -87,25 +103,98 @@ _architect: affected modules, new files, data flow, types/interfaces, dependenci
 
 ## Implementation notes
 
-_developer: what was built, deviations from the design and why._
+- A new logic module holds the purchase side of the model of ADR 0012: `shares = phase-year amount /
+projected payout per share` and `purchase = shares × NAV`, on the same effective funds, the same phase and
+  the same tax state the projection column already uses. Nothing is rounded inside the module; the single
+  rounding happens at display (ADR 0012).
+- The row of the fund table is a fund, so its phase year is `fund year + 1` (024 AC2). A fund whose
+  liquidation falls outside the phase funds no phase year: the module returns no number for it, and the cell
+  shows the dash with the reason, not a figure.
+- The parts of the table are the parts of the depot, because `Σ shares × NAV = monthly × F`, so AC2's money
+  rule is applied here: the last purchase part is the shown depot minus the other shown parts. The shares
+  column is not money, so the rule does not apply to it.
+- Two columns of the fund table (the table is the fund row), the copy strings for the headers and for the
+  three reason texts, a shares formatter with two decimals, and the wiring in the calculator that passes the
+  plan's monthly value and the shown depot. No new input, no new state, no fetch, no storage write (024 AC6).
+- Deviation from the design: none. The dash reads together with the projection label, which stays the
+  accessible description of the row (024 AC5); the reason line uses the muted style of the table's footnote.
 
 ## Test report
 
-_tester: AC → test mapping, results, defects found._
+| AC  | Test(s)                                                                                                                                                                                                                                                                                                                                                                                                                   | Result |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| AC1 | e2e "032 AC1": the fund rows 2028 and 2030 of the example phase show the hand shares 55,06 and 46,05 and the hand purchases 2.092,22 € and 1.933,96 € (tax off), and the same row 2028 shows 53,85 and 2.046,41 € with KSt at 26,375 %; `logic/purchase.test.ts` AC2 (the hand shares of all seven rows)                                                                                                                  | pass   |
+| AC2 | `logic/purchase.test.ts` AC2: the unrounded parts sum to the depot within one cent, and the shown last part is the depot minus the other parts; e2e "032 AC2": the case where the rule changes the shown figure — parts 11.533,51 € and 11.142,56 € against the shown depot 22.676,07 €, where rounding the last part on its own would show 11.142,55 €; with the tax on, 11.653,02 € and 11.356,61 € against 23.009,63 € | pass   |
+| AC3 | `logic/purchase.test.ts` AC3: the rows outside the phase and the payout-per-share-0 guard name a reason and hold no number; e2e "032 AC3": the dash with its reason in both new cells, the year table keeps its own missing-year line, the row inside the phase keeps its hand figures, and the projection label with its asOf stays the accessible description of the row                                                | pass   |
 
-| AC  | Test(s) | Result |
-| --- | ------- | ------ |
+Counts as printed: laz vitest 23 passed (8 files); laz Playwright 52 passed, including the three new tests;
+typecheck green, prettier green, eslint green. The affected run is green, 8 of 12 steps.
+
+The hand values are computed by hand from the fixture copy (spans asOf 31.12.2026 → 31.12. of the fund
+year) with the factors ρ = 1,0404516 · 1,0769573 · 1,1255649 · 1,1878281 · 1,2655355 · 1,3612328, and the
+purchase of a row is its phase year's amount divided by the factor, because `shares × NAV` cancels the NAV.
+No test reads its expected figure from the module it checks.
+
+Non-vacuity, five mutations on a copy of the logic directory under `.tmp` and four on a copy of the app,
+never on the working tree:
+
+- the money rule dropped, so the last part is rounded on its own → AC2 red at logic level and at the cell;
+- the phase-year guard dropped, so a fund outside the phase gets a phase year → AC2 and AC3 red;
+- the payout-per-share-0 guard dropped, so the row divides by 0 → AC3 red;
+- the shares shown as whole shares instead of two decimals → three cases red;
+- the fund row read as its own phase year instead of the year it funds → all four cases red;
+- the cell rounding each part on its own instead of using the rule → the e2e AC2 assertion red;
+- the reason dropped from the cell, so only the dash is left → the e2e AC3 assertion red;
+- the shares column not part of the table → the e2e AC1 assertion red;
+- the tax state ignored on the purchase side → the e2e AC1 assertion red.
+
+The copies were restored by copying the original files, not with git.
+
+Defects found while testing: the e2e case first typed the amount with a thousands separator, which the
+field's parser refuses, so it failed on the missing result instead of on the rule; and it asserted
+`kein Fonds für dieses Jahr` in a fund row, where the implementation shows the row's own reason — that
+string belongs to the year table (024 AC2). Both are fixed in the test, not in the app.
 
 ## Review
 
-_reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
+Size S, so no review round (story 026).
 
 ## Explanation
 
-_orchestrator: plain-language explanation shown at gate 2, at most 15 lines of at most 120 characters. No code, no file names._
+Der Fondsplan zeigt zwei neue Spalten: wie viele Anteile man heute kaufen müsste und was das kostet.
+Die Anteile sind die Modellzahl: der Betrag eines Phase-Jahrs geteilt durch die Hochrechnung je Anteil.
+Der Kaufpreis ist diese Zahl mal dem NAV aus der Datei; die Datei nennt ihr Datum als Stand der Daten.
+Ein Fonds finanziert das Jahr nach seinem Auflösungsjahr, deshalb steht bei ihm das nächste Jahr.
+Die neuen Zahlen stehen nur in der Fondstabelle, die Jahresübersicht bleibt, wie sie war.
+Die Anteile haben zwei Nachkommastellen, weil die Modellzahl kein ganzer Anteil ist.
+Die Kaufpreise addieren sich zum gezeigten Depot: der letzte Teil ist das Depot minus die anderen Teile.
+Im Testfall zeigt das einen Unterschied, weil allein gerundet der letzte Teil einen Cent niedriger wäre.
+Ein Fonds außerhalb der Phase zeigt keine Zahl: der Strich bleibt, und die Zelle nennt den Grund dafür.
+Die Gründe sind Auflösung nach Phasenende, Auflösung vor Phasenbeginn, keine Hochrechnung je Anteil.
+Die letzten beiden sind Entscheidungen dieses Storys und warten noch auf Haks Bestätigung.
+Ohne Ergebnis steht der Strich für sich, und die Hochrechnungsbeschreibung bleibt an der Zeile.
+Mit Kapitalertragsteuer werden die Anteile kleiner, weil dieselbe Steuer wie in der Hochrechnung zählt.
+Prüfungen, die diese Änderung sehen können, sind grün: 23 Unit-Tests, 52 e2e-Tests, 8 von 12 Schritten.
+Manuelle Prüfung: das Aussehen im Browser nach dem Merge ist yours.
 
 ## Retrospective
 
-_orchestrator: what went wrong (review rounds, defects, corrections at the gates), proposed changes
-to agents/CLAUDE.md/templates, and which ones hak approved. Include a `### Cost` table (see the retro
-step of `/feature`)._
+What went wrong: no review round (size S), no defect in the app code. Two defects in the test itself: the
+expected figures of one e2e case had been invented in the draft instead of measured, and the case typed the
+amount with a thousands separator, which the field's parser refuses, so it failed on the parse instead of on
+the rule. Both were fixed in the test, not in the app.
+
+Two things the run showed:
+
+- A new e2e file was written under a name the runner does not pick up, so the case never ran until it was
+  put into the app's spec file. Proposed change P29: a test is not reported as covering an AC until it has
+  been observed running. Pending hak's approval.
+- A test that types a number into a field must type it the way the field accepts it, not the way the display
+  formats it; the expected figure and the typed text are two different oracles. Proposed change P30: an e2e
+  input is written in the form the parser takes, and the display form only in the assertion. Pending.
+
+Proposals applied for this story's roles: P22 (developer and tester), P23 (tester), P24 (developer),
+P26 (tech-writer), P21 (tester). P27 (proposal numbers are never reused) and P28 (files written with the
+editor tool) stay pending.
+
+No Cost table: size S (story 026, R8).
