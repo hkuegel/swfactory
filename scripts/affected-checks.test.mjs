@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   STEPS,
+  SCOPING_STEPS,
+  WHOLE_TREE_STEPS,
   affectedPlan,
   appsIn,
   checkLevels,
@@ -15,6 +17,43 @@ import {
 // oracle is not the table the module reads (P16). No request, no repository read (P17); the mode is
 // named in every call. App names are placeholders (`x`, `y`), because factory files must not name an
 // app. Only the mapping and the level graph are asserted, never a duration.
+
+// Hand data shared by the blocks that need it, written here and not read from the repository: the
+// workspaces the runner knows, and the scripts each workspace defines in its own package.json. App names are
+// placeholders, and `test:scripts` is defined by no workspace.
+const ALL = ['apps/x', 'apps/y', 'landing', 'packages/platform'];
+const SCRIPTS = {
+  'apps/x': {
+    typecheck: 'tsc --build',
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    test: 'vitest run',
+    'test:e2e': 'playwright test',
+    build: 'vite build',
+    'check:dist': 'node check-dist.mjs x',
+  },
+  'apps/y': {
+    typecheck: 'tsc --build',
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    test: 'vitest run',
+    'test:e2e': 'playwright test',
+    build: 'vite build',
+    'check:dist': 'node check-dist.mjs y',
+  },
+  landing: {
+    typecheck: 'tsc --build',
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    test: 'vitest run',
+  },
+  'packages/platform': {
+    typecheck: 'tsc --build',
+    lint: 'eslint .',
+    'format:check': 'prettier --check .',
+    test: 'vitest run',
+  },
+};
 
 /** The full run, written out by hand in alphabetical order. */
 const HAND_FULL = [
@@ -149,9 +188,6 @@ describe('AC4: the mode is named, a publishing run is always full', () => {
 });
 
 describe('story 027 AC1-AC3: the workspaces a test step runs in', () => {
-  // Hand expectation, written here and not read from the module: the workspaces the runner knows, as data.
-  const ALL = ['apps/x', 'apps/y', 'landing', 'packages/platform'];
-
   it('AC1: an app change scopes the test step to that app, not to the other app', () => {
     // Hand expectation: one workspace, the one the path is in.
     expect(workspacesOf(['apps/x/src/tokens.css'], ALL)).toEqual(['apps/x']);
@@ -197,40 +233,6 @@ describe('story 027 AC1-AC3: the workspaces a test step runs in', () => {
 });
 
 describe('story 029 AC1-AC3: whether a step can run in one workspace', () => {
-  // Hand expectation, as data: the scripts the hand data says each workspace defines. The module must not
-  // be checked against the table it reads, so this map is written here and not read from package.json.
-  const SCRIPTS = {
-    'apps/x': {
-      typecheck: 'tsc --build',
-      lint: 'eslint .',
-      'format:check': 'prettier --check .',
-      test: 'vitest run',
-      'test:e2e': 'playwright test',
-      build: 'vite build',
-      'check:dist': 'node check-dist.mjs x',
-    },
-    'apps/y': {
-      typecheck: 'tsc --build',
-      lint: 'eslint .',
-      'format:check': 'prettier --check .',
-      test: 'vitest run',
-      'test:e2e': 'playwright test',
-      build: 'vite build',
-      'check:dist': 'node check-dist.mjs y',
-    },
-    landing: {
-      typecheck: 'tsc --build',
-      lint: 'eslint .',
-      'format:check': 'prettier --check .',
-      test: 'vitest run',
-    },
-    'packages/platform': {
-      typecheck: 'tsc --build',
-      lint: 'eslint .',
-      'format:check': 'prettier --check .',
-      test: 'vitest run',
-    },
-  };
   const answerFor = (paths, mode = 'affected') =>
     plan(paths, { head: 'abc', files: {} }, mode, ['x', 'y'], Object.keys(SCRIPTS));
 
@@ -293,6 +295,122 @@ describe('story 029 AC1-AC3: whether a step can run in one workspace', () => {
       undefined,
     );
     expect(runsPerWorkspace(answer, 'test:e2e', SCRIPTS)).toBe(true);
+  });
+});
+
+describe('story 034 (hak, 2026-11-14): a publishing run scopes only what a workspace can run alone', () => {
+  const record = { head: 'abc', files: {} };
+
+  it('AC1: the eight checks that read the tree in one pass are in every publishing plan', () => {
+    // Hand expectation, written out in alphabetical order. A markdown-only change answers two steps for the
+    // mapping, so the publishing plan naming these eight is the rule, not the mapping's answer.
+    const wholeTree = [
+      'build',
+      'build:pages',
+      'check:dist',
+      'check:structure',
+      'check:template',
+      'format:check',
+      'test:pages',
+      'test:scripts',
+    ];
+    expect(WHOLE_TREE_STEPS).toEqual(wholeTree);
+    // Hand expectation: the two names together are the twelve checks, with nothing in common.
+    expect(SCOPING_STEPS).toEqual(['lint', 'test', 'test:e2e', 'typecheck']);
+    expect(wholeTree.some((step) => SCOPING_STEPS.includes(step))).toBe(false);
+    expect([...WHOLE_TREE_STEPS, ...SCOPING_STEPS].sort()).toEqual([...STEPS].sort());
+    const answer = plan(['docs/backlog/README.md'], record, 'publish', ['x', 'y'], ALL);
+    expect(answer.mode).toBe('publish');
+    expect(answer.steps).toEqual(wholeTree);
+  });
+
+  it('AC1: build:pages is in the whole-tree set because test:pages reads what it writes', () => {
+    // Hand expectation (story 026 AC5): the publishing plan compares the published pages, so its producer
+    // must be in the same plan even when the change is a markdown file the mapping can only see with two checks.
+    const answer = plan(['docs/backlog/README.md'], record, 'publish', ['x', 'y'], ALL);
+    expect(answer.steps.includes('test:pages')).toBe(true);
+    expect(answer.steps.includes('build:pages')).toBe(true);
+    // Hand expectation: `check:dist` reads the site `build` writes for every app, so it cannot read one app.
+    expect(answer.steps.includes('check:dist')).toBe(true);
+  });
+
+  it('AC2: the four scoping steps run in the workspace the change can reach', () => {
+    const answer = plan(
+      ['apps/x/src/features/plan/logic/fund.ts'],
+      record,
+      'publish',
+      ['x', 'y'],
+      ALL,
+    );
+    // Hand expectation: the eight whole-tree checks plus the four the mapping answers for app source.
+    expect(answer.steps).toEqual([...STEPS].sort());
+    expect(answer.workspaces).toEqual(['apps/x']);
+    for (const step of SCOPING_STEPS) {
+      expect(runsPerWorkspace(answer, step, SCRIPTS), `step ${step}`).toBe(true);
+    }
+    for (const step of WHOLE_TREE_STEPS) {
+      expect(runsPerWorkspace(answer, step, SCRIPTS), `step ${step}`).toBe(false);
+    }
+    // Hand expectation: the other app is not read by a publishing run for a change in one app.
+    expect(answer.workspaces.includes('apps/y')).toBe(false);
+  });
+
+  it('AC2: an affected run answers with the same workspaces, so the mode does not change the scope', () => {
+    const paths = ['apps/x/src/features/plan/logic/fund.ts'];
+    expect(plan(paths, record, 'publish', ['x', 'y'], ALL).workspaces).toEqual(
+      plan(paths, record, 'affected', ['x', 'y'], ALL).workspaces,
+    );
+    // Hand expectation: the publishing plan is the mapping's answer plus the whole-tree checks, so the
+    // affected plan cannot be the same plan - the mapping answers seven steps here.
+    expect(plan(paths, record, 'affected', ['x', 'y'], ALL).steps.length).toBe(7);
+  });
+
+  it('AC3: planted violation - a publishing run does not scope a change a run in workspaces cannot see', () => {
+    const answer = plan(
+      ['apps/x/src/features/plan/logic/fund.ts', 'docs/backlog/README.md'],
+      record,
+      'publish',
+      ['x', 'y'],
+      ALL,
+    );
+    // Hand expectation: `docs/` belongs to no workspace, so every step keeps the whole-tree command.
+    for (const step of answer.steps) {
+      expect(runsPerWorkspace(answer, step, SCRIPTS), `step ${step}`).toBe(false);
+    }
+  });
+
+  it('AC3: planted violation - a tooling change is never scoped in publish mode, and no record is still a full run', () => {
+    // Hand expectation (story 026, unchanged): a tooling change can move every check, so the answer keeps all
+    // twelve steps and every workspace; the third mode does not narrow it, and a path under `scripts/` lies in
+    // no workspace, so nothing can be scoped.
+    const tooling = plan(['scripts/affected-checks.mjs'], record, 'publish', ['x', 'y'], ALL);
+    expect(tooling.mode).toBe('publish');
+    expect(tooling.steps).toEqual([...STEPS].sort());
+    expect(tooling.workspaces).toEqual(ALL);
+    for (const step of tooling.steps) {
+      expect(runsPerWorkspace(tooling, step, SCRIPTS), `step ${step}`).toBe(false);
+    }
+    // Hand expectation: with nothing recorded the run is the full plan, whatever the mode says.
+    const noRecord = plan(['apps/x/src/tokens.css'], null, 'publish', ['x', 'y'], ALL);
+    expect(noRecord.mode).toBe('full');
+    for (const step of noRecord.steps) {
+      expect(runsPerWorkspace(noRecord, step, SCRIPTS), `step ${step}`).toBe(false);
+    }
+  });
+
+  it('AC3: planted violation - the data-file rule of story 025 still answers a full run in publish mode', () => {
+    const answer = plan(
+      ['apps/x/src/features/plan/data/fund-list.json'],
+      record,
+      'publish',
+      ['x', 'y'],
+      ALL,
+    );
+    // Hand expectation: a committed data file is the writer's output, so it cannot be scoped, and the
+    // structure gate runs for it even in a publishing run.
+    expect(answer.mode).toBe('full');
+    expect(answer.steps.includes('check:structure')).toBe(true);
+    expect(answer.workspaces).toEqual(ALL);
   });
 });
 

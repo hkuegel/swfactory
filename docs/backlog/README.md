@@ -39,3 +39,4 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 031 | laz         | [Kapitalertragsteuer and Kirchensteuer as checkboxes](../../apps/laz/docs/backlog/031-laz-capital-gain-tax-checkboxes.md)                                 | done   |
 | 032 | laz         | [Shares of each fund to buy now](../../apps/laz/docs/backlog/032-laz-shares-to-buy-now-per-fund.md)                                                       | done   |
 | 033 | laz         | [Phase months without an invented range, typed as a month](../../apps/laz/docs/backlog/033-laz-phase-input-month-typing.md)                               | done   |
+| 034 | platform    | [A publish run checks the whole tree only for the checks that read the whole tree](034-publish-run-scopes-the-workspace-steps.md)                         | done   |

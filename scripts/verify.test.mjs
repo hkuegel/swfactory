@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { plan, STEPS } from './affected-checks.mjs';
 import { acceptsRecord } from './write-fund-list.mjs';
-import { changedSince, commandForStep, expandPaths, pathsOfStatus } from './verify.mjs';
+import {
+  recordForRun,
+  scopeText,
+  changedSince,
+  commandForStep,
+  expandPaths,
+  pathsOfStatus,
+} from './verify.mjs';
 
 // Story 026, fixture mode: stored input and the hand expectation (P16), no request and no repository
 // read (P17). App names are placeholders (`x`, `y`). The runner is tested for the two things that can
@@ -89,6 +96,8 @@ describe('the runner never plans a check without the step that writes what it re
 
 describe('story 029: the command runs a step in the affected workspaces, or in the whole tree', () => {
   const ALL = ['apps/x', 'apps/y', 'packages/platform'];
+  // Hand data: a recorded run, so the mapping answers a scoped plan instead of the full one.
+  const record = { head: 'abc', files: {} };
   // Hand data, written here and not read from the `package.json` files the runner reads: the scripts each
   // workspace defines in its own package.json. `test:scripts` is defined by no workspace.
   const SCRIPTS = {
@@ -257,5 +266,75 @@ describe('story 029: the command runs a step in the affected workspaces, or in t
     expect(answer.changed).toEqual([]);
     expect(answer.steps).toEqual([...STEPS].sort());
     expect(answer.steps.includes('check:structure')).toBe(true);
+  });
+
+  it('AC4: the record names the mode, the workspaces the run ran, and the steps that were scoped', () => {
+    // Hand expectation: the same run that scoped four steps to one workspace must say so in the record, so a
+    // coverage claim cannot be read as a whole-tree run. The answer was produced by the module, the expected
+    // record is written here by hand.
+    const current = { head: 'def', files: { 'apps/x/src/features/plan/logic/fund.ts': 'h1' } };
+    const publish = plan(
+      ['apps/x/src/features/plan/logic/fund.ts'],
+      record,
+      'publish',
+      ['x', 'y'],
+      ALL,
+    );
+    expect(recordForRun(publish, current, SCRIPTS)).toEqual({
+      mode: 'publish',
+      head: 'def',
+      files: current.files,
+      workspaces: ['apps/x'],
+      scopedSteps: ['lint', 'test', 'test:e2e', 'typecheck'],
+    });
+    // Hand expectation: a full run covers the whole tree, so nothing was scoped and all workspaces are named.
+    expect(recordForRun(plan([], record, 'full', ['x', 'y'], ALL), current, SCRIPTS)).toEqual({
+      mode: 'full',
+      head: 'def',
+      files: current.files,
+      workspaces: ALL,
+      scopedSteps: [],
+    });
+    // Hand expectation (story 026 AC2, unchanged): an affected run never writes the record.
+    expect(
+      recordForRun(
+        plan(['docs/backlog/README.md'], record, 'affected', ['x', 'y'], ALL),
+        current,
+        SCRIPTS,
+      ),
+    ).toBeNull();
+  });
+
+  it('AC4: the report names the scope of each step from the same answer the command is built from', () => {
+    const publish = plan(
+      ['apps/x/src/features/plan/logic/fund.ts'],
+      record,
+      'publish',
+      ['x', 'y'],
+      ALL,
+    );
+    // Hand expectation: the scoped step names the workspace, the whole-tree step names the whole tree.
+    expect(scopeText(publish, 'test:e2e', SCRIPTS)).toBe(' in apps/x');
+    expect(scopeText(publish, 'check:dist', SCRIPTS)).toBe(' whole tree');
+    // The two cannot disagree: the command for the same step uses the same scope.
+    expect(commandForStep('test:e2e', publish, ALL, SCRIPTS)).toEqual([
+      'run',
+      'test:e2e',
+      '--if-present',
+      '-w',
+      'apps/x',
+    ]);
+    // Hand expectation: `test:scripts` is not a workspace script, so the root command runs for it.
+    expect(commandForStep('test:scripts', publish, ALL, SCRIPTS)).toEqual(['run', 'test:scripts']);
+    expect(scopeText(publish, 'test:scripts', SCRIPTS)).toBe(' whole tree');
+  });
+
+  it('AC1: a publishing plan for a change outside every workspace keeps the whole-tree command for its steps', () => {
+    const publish = plan(['docs/backlog/README.md'], record, 'publish', ['x', 'y'], ALL);
+    // Hand expectation: eight whole-tree steps, none scoped, because a run that visits workspaces cannot see
+    // the file that made the plan.
+    for (const step of publish.steps) {
+      expect(commandForStep(step, publish, ALL, SCRIPTS), `step ${step}`).toEqual(['run', step]);
+    }
   });
 });

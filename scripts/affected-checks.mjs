@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Story 026: which checks can see a change. Two named modes, `--mode=affected` (the mapping) and
-// `--mode=full`; a run is full when nothing was recorded or when it publishes to `main`.
+// `--mode=full`; a run is full when nothing was recorded. Story 034 adds the third name, `publish`, for a
+// run that publishes: the checks that read the whole tree in one pass stay whole tree, the checks a
+// workspace can run alone run in the workspaces the change can reach (hak's rule B, 2026-11-14).
 //
 // The mapping never names an app (factory files and the platform are app-agnostic): an app comes
 // from the changed path `apps/<name>/...`, or from the whole `apps/` directory when the platform
@@ -29,6 +31,21 @@ export const STEPS = Object.freeze([
   'test:pages',
   'test:e2e',
 ]);
+
+/** The checks a workspace can run alone, so a publishing run scopes them to the reachable workspaces. */
+export const SCOPING_STEPS = Object.freeze(['lint', 'test', 'test:e2e', 'typecheck']);
+
+/**
+ * Story 034, hak's rule B (2026-11-14): the checks that read or write the tree in one pass, so a publishing
+ * run cannot scope them. `build` writes the published site for every app and `check:dist` reads that site,
+ * `build:pages` writes and `test:pages` compares the published pages, `format:check`, `check:structure` and
+ * `check:template` scan the whole tree, `test:scripts` runs the factory scripts. The set is read from the
+ * step list, so the two names cannot drift apart; `build:pages` is here because `test:pages` reads what it
+ * writes (story 026 AC5).
+ */
+export const WHOLE_TREE_STEPS = Object.freeze(
+  STEPS.filter((step) => !SCOPING_STEPS.includes(step)).sort(),
+);
 
 /** The real dependencies: each check reads what its dependency writes (AC5). */
 export const NEEDS = Object.freeze({
@@ -118,15 +135,18 @@ export function appsIn(changedPaths, allApps) {
 
 /**
  * Story 029: whether the runner can run one step in the affected workspaces only. Three conditions, all
- * read as data: the run is an affected run, the workspace defines the script in its own `package.json`
- * (a step the repository does not define per workspace, like `test:scripts`, cannot be scoped), and every
- * changed path lies inside a workspace - a file that belongs to no workspace (`docs/`, a root file) is not
- * seen by a run that only visits workspaces. A full run is never scoped: a full run checks the whole tree,
- * so a file outside the planned workspaces cannot be missed. Story 027 scoped the test steps with the same
- * rule; this generalises it to every step a workspace can run alone.
+ * read as data: the run is an affected run, or a publishing run and the step is one a workspace can run
+ * alone (story 034), the workspace defines the script in its own `package.json` (a step the repository does
+ * not define per workspace, like `test:scripts`, cannot be scoped), and every changed path lies inside a
+ * workspace - a file that belongs to no workspace (`docs/`, a root file) is not seen by a run that only
+ * visits workspaces. A full run is never scoped: a full run checks the whole tree, so a file outside the
+ * planned workspaces cannot be missed. A publishing run is not a full run, so its whole-tree steps keep the
+ * whole-tree command (hak's rule B): the scoping reaches only the four steps named above. Story 027 scoped
+ * the test steps with the same rule; this generalises it to every step a workspace can run alone.
  */
 export function runsPerWorkspace(answer, step, scriptsByWorkspace) {
-  if (answer.mode !== 'affected') return false;
+  if (answer.mode !== 'affected' && answer.mode !== 'publish') return false;
+  if (answer.mode === 'publish' && WHOLE_TREE_STEPS.includes(step)) return false;
   const workspaces = answer.workspaces ?? [];
   const changed = answer.changed ?? [];
   if (workspaces.length === 0 || changed.length === 0) return false;
@@ -218,18 +238,30 @@ export function affectedPlan(changedPaths, allApps, allWorkspaces = []) {
  * change since a recorded full run, never because a pattern calls it unimportant.
  */
 export function plan(changedPaths, record, mode, allApps, allWorkspaces = []) {
+  const paths = changedPaths ?? [];
   // A data-file change is a full run before the record is read, so a recorded run can never make it skip a
   // workspace (story 025, hak's rule of 2026-11-14).
-  if (mode === 'full' || record === undefined || record === null || changedPaths.some(isDataFile)) {
+  if (mode === 'full' || record === undefined || record === null || paths.some(isDataFile)) {
     return {
       mode: 'full',
       // The caller's answer for "nothing recorded" is null, which is still a full run: the change set is
       // empty because there is nothing to compare against, not because nothing changed.
-      changed: [...(changedPaths ?? [])],
+      changed: [...paths],
       steps: [...STEPS].sort(),
       apps: [...allApps].sort(),
       workspaces: [...allWorkspaces].sort(),
     };
   }
-  return affectedPlan(changedPaths, allApps, allWorkspaces);
+  const answer = affectedPlan(paths, allApps, allWorkspaces);
+  // Story 034, hak's rule B: the run that publishes writes the whole site, so the checks that read or write
+  // the tree in one pass are in its plan whatever the change set is; only the four steps a workspace can run
+  // alone are scoped, and the workspaces they run in are the ones the change can reach.
+  if (mode === 'publish') {
+    return {
+      ...answer,
+      mode: 'publish',
+      steps: [...new Set([...WHOLE_TREE_STEPS, ...answer.steps])].sort(),
+    };
+  }
+  return answer;
 }

@@ -19,9 +19,11 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  # Story 026: one job, one install, one build. A run that publishes to main or a
-  # workflow_dispatch run is always a full run (AC4); a pull-request run may use the mapping, so a
-  # change that can only affect the markdown does not start a browser at all (AC1, AC2).
+  # Story 026 and story 034: one job, one install, one build. A run that publishes to main or a
+  # workflow_dispatch run is a publishing run: the checks that read the tree in one pass run whole tree, the
+  # checks a workspace can run alone run in the workspaces the change can reach (story 034 AC1, AC2, AC5), so
+  # a change in one app does not read the other apps. A pull-request run uses the mapping, so a change that
+  # can only affect the markdown does not start a browser at all (story 026 AC1, AC2).
   # node_modules comes from the cache keyed on the lockfile hash and is installed only on a miss (AC7).
   # _site/ is built once, by the plan, and never rebuilt (AC6).
   verify:
@@ -50,7 +52,7 @@ jobs:
       - name: plan
         id: plan
         env:
-          MODE: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && 'full' || 'affected' }}
+          MODE: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && 'publish' || 'affected' }}
           BASE: ${{ github.event.pull_request.base.sha || github.sha }}
         run: node scripts/verify.mjs --plan-only --format=github-output --mode="$MODE" --base="$BASE" --no-record >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
@@ -84,7 +86,8 @@ jobs:
             apps/*/playwright-report
             apps/*/test-results
             packages/platform/test-results
-      # Only a full run publishes, so the artifact is always there when the deployment runs (AC4, AC6).
+      # Only a publishing run publishes, and its plan always names the whole-tree build, so the artifact is
+      # there when the deployment runs (story 034 AC1, story 026 AC6).
       - name: publish
         uses: actions/upload-pages-artifact@v5
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
