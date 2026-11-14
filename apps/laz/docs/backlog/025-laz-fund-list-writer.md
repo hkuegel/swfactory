@@ -502,10 +502,11 @@ Observed through the caller, not only through the module:
 | no write mode; `--full` and `--frozen` together; `--frozen` with no committed file                                         | three refusals, each exit 1 with the rule named                  |
 
 Measured durations of this round (reported, not asserted, story 026 rule): `test:scripts` 59 tests green,
-0.23 s inside the suite and 1.2 s as a runner step; the full run 12 steps, 2 levels, 80.6 s wall clock. Two
-earlier full runs of the same round failed on unrelated apps, one test each (the minesweeper 3D e2e and the
-landing test), and both tests were green on a re-run; they are reported as flakiness under a cold cache, not
-as a regression of this round.
+0.23 s inside the suite and 1.2 s as a runner step; the green full runs 12 steps, 2 levels, 80.6 s (the
+round's code), 84.2 s (the gate 2 commit) and 81.5 s (the merge publish, which is the run that published the
+merged content). Seven full runs of the round were needed in all, four red; the red ones are named in Review
+finding 1, and one of them was this round's own record before prettier had been run on it. The app's own e2e
+run does not read the network; the writer's live path is never executed by a test.
 
 ## Review
 
@@ -579,9 +580,15 @@ pending hak's gate 2. Only the items this round can answer are listed.
 
 Findings of round 2:
 
-1. `[minor] The two earlier full runs failed on unrelated apps: the minesweeper 3D e2e (once) and the
-   landing test (once), each on a single test that is green on a re-run. Both are machine flakiness under a
-   cold cache, not a regression of this round; reported here rather than smoothed over.
+1. `[major] The minesweeper 3D e2e group is not stable on this machine, reported rather than smoothed over.
+Full runs of this round failed on it four times, on a different test each time (the WebGL2 fallback, the
+flash counter, the no-replay case, the state-across-switches case), and once the landing `Facts` test
+   timed out. Run alone, the workspace passes: 108 passed, 2 flaky, where a flaky test is one that failed on
+   its first attempt and passed on the retry. The failures are timeouts while waiting for the guest sign-in
+   button or for an animation probe, under 16 parallel workers. What is not settled here is whether this is a
+   defect of the 3D effects under parallel load or the machine under load; a full run that fails cannot
+   publish, so the publish waits for a green run each time (the green runs of this round are in the Test
+   report). CI on the runner is green on the same tests, so the difference is the local machine, not the code.
 2. `[decision pending] `fits` counts only the fund identity as immovable. If hak wants a market value that
    moved to be refused as well, that is a change to this definition, not to the comparison's code.
    Resolved by hak on 2026-11-14: the definition stands as written.
