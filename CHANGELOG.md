@@ -22,6 +22,11 @@ All notable changes to this project are documented here, following
   nothing is written, so a partial file cannot be committed. The date in the file is the run date given to
   the script, never a clock reading, and the values are stored in the source's own precision, so the file
   does not round (#025).
+- The fund list writer needs a write mode: `--full` writes the whole table from all funds, `--frozen` writes
+  nothing and names each difference with the committed file, and `--full` refuses to write a result that does
+  not fit. CI's live part runs as a frozen comparison step after the publish, so a CI run can never publish
+  a file its own checks contradict, and the checks step names the mode of its test run and the fund data it
+  reads, so a test run reads stored data and never the source (#025).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).
