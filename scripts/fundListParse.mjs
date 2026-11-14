@@ -56,6 +56,14 @@ export function toUnits(text, decimals) {
  * and the field and returns no record, which is what keeps a run from writing a partial file (AC2).
  */
 export function parseFundResponse(text, fund) {
+  // Story 036 AC4: the identity fields are what the fund table shows, so an empty name or an empty ISIN
+  // cannot reach the committed file. They come from the fund table, not from the response, and the rule is
+  // the same as for the four values: one failure names the fund and the field and returns no record.
+  for (const field of ['isin', 'name']) {
+    if (fund[field] === undefined || fund[field] === '') {
+      return { ok: false, fund, field, problem: 'value missing' };
+    }
+  }
   const record = {
     year: fund.year,
     isin: fund.isin,

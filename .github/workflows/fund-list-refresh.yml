@@ -20,9 +20,11 @@ jobs:
       # The run date is passed as an argument, not read from the file (AC1); a fund that cannot be read
       # makes the step fail with the fund and the field named, so nothing is committed (AC2).
       # Story 025, hak's rule of 2026-11-14: the writer runs with `--full`, which writes the whole table
-      # from all seven funds. `--full` compares its result with the committed file first and refuses to
+      # from all nine funds — story 035 extends the table to the funding years of the phase boundaries,
+      # 2027 through 2035. `--full` compares its result with the committed file first and refuses to
       # write when the fund identity does not fit, so a page that moved to a different fund cannot be
-      # committed over the table hak confirmed against his depot.
+      # committed over the table hak confirmed against his depot. A fund the committed file does not have
+      # yet is an addition and does not move an identity, so the grown table fits (story 035).
       - name: read the fund pages
         run: |
           node scripts/write-fund-list.mjs \

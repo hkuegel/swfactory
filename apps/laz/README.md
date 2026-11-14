@@ -22,9 +22,16 @@ Run workflow button, which commits the file. The run date is an argument of the 
 read. The app's own tests read a fixture copy of the file, so a refresh cannot move an expected
 value.
 
-The writer needs a write mode. `--full` writes the whole table from all seven funds, and `--frozen` writes
-nothing: it compares its result with the committed file and names each difference. `--full` compares first
-and refuses to write when the fund identity does not fit the committed file, so a run that cannot verify its
-result leaves the file as it is. CI runs the live part as a `--frozen` step after the publish, and the
-checks step names its test mode (`VITE_TEST_MODE=local`) and its fund data (`LAZ_FUND=fixture`), so a CI run
-reads stored data and never the source.
+The writer needs a write mode. `--full` writes the whole table from all nine funds (story 035 extends it to
+the funding years of the phase boundaries, 2027 through 2035), and `--frozen` writes nothing: it compares its
+result with the committed file and names each difference. `--full` compares first and refuses to write when the
+fund identity does not fit the committed file — a fund the file does not have yet is an addition and fits, a
+committed fund the run did not read does not — so a run that cannot verify its result leaves the file as it is.
+CI runs the live part as a `--frozen` step after the publish, and the checks step names its test mode
+(`VITE_TEST_MODE=local`) and its fund data (`LAZ_FUND=fixture`), so a CI run reads stored data and never
+the source.
+
+The fund table names the fund each row is: `Fondsname` and `ISIN` as the data file stores them, and the column that
+shows the net asset value per share is named `Kurs` (story 036, hak's word of 2026-11-14). The row header stays the
+fund's year, and nothing is formatted for these two columns. The copy of the table's columns lives in
+`src/features/plan/fieldCopy.ts`, which the UI and the tests read as the same strings.

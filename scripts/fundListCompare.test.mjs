@@ -102,10 +102,10 @@ describe('the frozen comparison names each difference (story 025, CI round)', ()
     expect(fits(differences)).toBe(false);
   });
 
-  it('a fund the committed file does not have, and a committed fund this run did not read, are both named', () => {
+  it('a fund the committed file does not have is named as an addition, and a committed fund this run did not read does not fit', () => {
     // Hand expectation: the produced table has one fund, the committed file has two, so all three are
-    // named as identity differences. This is the case hak named: a run that read six of the seven funds
-    // can never be written over the whole table.
+    // named. This is the case hak named: a run that read six of the seven funds can never be written
+    // over the whole table, because the committed funds it did not read are identity differences.
     const produced = [
       {
         year: 2030,
@@ -123,9 +123,43 @@ describe('the frozen comparison names each difference (story 025, CI round)', ()
     ).toEqual([
       'fund 2028 (IE0008UEVOE0) fund identity',
       'fund 2029 (IE000SNLFDR7) fund identity',
-      'fund 2030 (IE000Y2BJVK9) fund identity',
+      'fund 2030 (IE000Y2BJVK9) fund addition',
     ]);
     expect(fits(differences)).toBe(false);
+  });
+
+  it('a fund the committed file does not have is an addition, so the table can grow (story 035)', () => {
+    // Hand expectation: the committed file has the 2028 and 2029 funds, and this run read both of them
+    // plus the 2027 fund. The 2027 fund is named, but no committed identity moved, so a `--full` run may
+    // write the grown table. This is what lets the fund list gain the boundary funds without typing their
+    // values, which is the whole point of story 035: the writer must not be blocked by a table that grows.
+    const produced = [
+      {
+        year: 2027,
+        isin: 'IE000ZOI8OK5',
+        name: 'iBonds EUR Corporate UCITS 2027',
+        navMicroEur: 5663857,
+        ytmBp: 337,
+        avgMaturityHundredths: 61,
+        sharesOutstanding: 162716290,
+      },
+      FUND_2028,
+      FUND_2029,
+    ];
+    const differences = compareCommitted(COMMITTED, produced);
+    expect(differences).toEqual([
+      {
+        fund: 'fund 2027 (IE000ZOI8OK5)',
+        field: 'fund',
+        committed: 'not in the committed file',
+        produced: 'read by this run',
+        kind: 'addition',
+      },
+    ]);
+    expect(fits(differences)).toBe(true);
+    expect(differenceText(differences[0])).toBe(
+      'fund 2027 (IE000ZOI8OK5): fund — committed not in the committed file, new read by this run (addition)',
+    );
   });
 
   it('a committed file that cannot be read as the fund list is named and does not fit', () => {

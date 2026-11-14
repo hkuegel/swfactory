@@ -40,6 +40,13 @@ every row). Dates are ISO `YYYY-MM-DD` calendar dates; money is integer cents fo
 amounts and integer micro-euro for a per-share price, so no float parsing anywhere. The app
 reads it through an import, never a fetch.
 
+The range was amended by story 035 (2026-11-14, hak): the file carries the funding years of the phase
+boundary years, so the entries are 2027 through 2035 in year order, nine of them. The two new entries
+came from a writer run in live mode on 2026-11-14, which is the only way the committed file gains a
+fund (hak's rule of 2026-11-13, unchanged): nothing was typed. The writer's fund table names the nine
+entries with their product page ids, and `fits` accepts a fund the committed file does not have yet as
+an addition, because a table that grows does not move an identity hak confirmed.
+
 The units were amended by story 025 (2026-11-13, hak): the source publishes NAV with six decimals
 (measured 2026-11-13: `5.113521`) and average maturity as a number of years, and integer cents in the
 file would have rounded inside the data, which ADR 0012 reserves for the display. Micro-euro is the

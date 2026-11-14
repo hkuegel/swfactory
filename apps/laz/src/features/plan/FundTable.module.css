@@ -25,7 +25,9 @@
 
 .table {
   width: 100%;
-  min-width: 560px;
+  /* Story 036 added the name and the ISIN columns; the name is the widest value in the table, so the
+     minimum grew with them. Only the wrapper scrolls (UX §5). */
+  min-width: 760px;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
@@ -64,6 +66,22 @@
 .table tbody th {
   background-color: var(--color-surface);
   font-weight: 400;
+}
+
+/* Story 036 AC1: the fund name and the ISIN are the strings the data file stores, shown as text, so they
+   read left like the row header instead of like a figure, and nothing is formatted for them. */
+.identity {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+/* A cell is the containing block for the visually hidden label inside it. Without this the label is
+   positioned against the initial containing block, so the scroller does not clip it and at 320 px the
+   label reaches past the viewport, which makes the document scroll — against UX §5, where only the
+   wrapper scrolls. Story 036 did not create this: its two new columns moved the input cells past
+   320 px, which is what made the escaped label measurable (test report, finding 1). */
+.table td {
+  position: relative;
 }
 
 /* The last column carries the projection; its figures are the ones the label describes (AC5). */

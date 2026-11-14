@@ -40,3 +40,5 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 032 | laz         | [Shares of each fund to buy now](../../apps/laz/docs/backlog/032-laz-shares-to-buy-now-per-fund.md)                                                       | done   |
 | 033 | laz         | [Phase months without an invented range, typed as a month](../../apps/laz/docs/backlog/033-laz-phase-input-month-typing.md)                               | done   |
 | 034 | platform    | [A publish run checks the whole tree only for the checks that read the whole tree](034-publish-run-scopes-the-workspace-steps.md)                         | done   |
+| 035 | laz         | [The fund list funds the first and the last year of the phase](../../apps/laz/docs/backlog/035-laz-funding-year-for-the-phase-boundary-years.md)          | done   |
+| 036 | laz         | [The fund table shows the fund name, the ISIN and the current course](../../apps/laz/docs/backlog/036-laz-fund-table-name-isin-and-course-columns.md)     | done   |

@@ -40,7 +40,9 @@ to the code.
    decision is recorded; a figure the source formats for display is not the unit (story 025, P22). A test is not reported as covering an AC until it has
    been observed running: a file the runner does not pick up proves nothing (story 032, P29). An e2e input is
    typed in the form the parser takes, and the display form appears only in the assertion, because the typed
-   text and the expected figure are two oracles (story 032, P30).
+   text and the expected figure are two oracles (story 032, P30). Write a test title without an
+   apostrophe in a `.mjs` file: vitest's import analysis fails on one, and the file reports no test at all
+   (story 034, P31, hak's approval of 2026-11-14).
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and

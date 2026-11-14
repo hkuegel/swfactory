@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { amountCopy, errorMessage, FIELD_COPY, overrideCopy, TAX_COPY } from './fieldCopy.ts';
+import {
+  COPY,
+  amountCopy,
+  errorMessage,
+  FIELD_COPY,
+  overrideCopy,
+  projectionLabel,
+  TAX_COPY,
+} from './fieldCopy.ts';
 import { MAX_EXACT_UNITS, OVERRIDE_SPECS, fieldSpec } from './logic/fields.ts';
 
 /**
@@ -59,10 +67,25 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
       `Depot am Anfang der Phase (EUR): Wert ist keine ganze Anzahl Cent. Erlaubt: 0 € oder mehr, höchstens 2 Nachkommastellen, ${CENTS}.`,
     );
     expect(errorMessage(overrideCopy('nav', 2028), { kind: 'exact' })).toBe(
-      `NAV in Euro für Jahr 2028: Wert ist keine ganze Anzahl Micro-Euro. Erlaubt: 0 € oder mehr, höchstens 6 Nachkommastellen, ${MICRO}.`,
+      `Kurs in Euro für Jahr 2028: Wert ist keine ganze Anzahl Micro-Euro. Erlaubt: 0 € oder mehr, höchstens 6 Nachkommastellen, ${MICRO}.`,
     );
     // The sign is still its own reason, and the decimals are still a format error.
     expect(errorMessage(FIELD_COPY.amount, { kind: 'format' })).toContain('keine gültige Zahl');
+  });
+
+  it('036 AC1, AC3: the fund row names the fund, and the column that shows the course is named Kurs', () => {
+    // Hand strings from the AC and from hak's wording of 2026-11-14 ("nenne es Kurs wenn es der aktuelle
+    // Kurs ist"), written here rather than read from the module under test (P16).
+    expect(COPY.nameColumn).toBe('Fondsname');
+    expect(COPY.isinColumn).toBe('ISIN');
+    expect(COPY.navColumn).toBe('Kurs');
+    // The input cell of the same column keeps the unit in its label, in the style of the YTM cell, because
+    // a column header cannot name a control inside a cell (story 024 UX §2).
+    expect(overrideCopy('nav', 2028).label).toBe('Kurs in Euro für Jahr 2028');
+    // The copy states no price the source does not publish: the value is the net asset value with its asOf
+    // date, and the projection label says so in the words of story 024 AC5.
+    expect(COPY.navColumn).not.toMatch(/Marktkurs|Preis/u);
+    expect(projectionLabel('2026-12-31')).toContain('kein veröffentlichter Marktwert');
   });
 
   it('033 AC1, AC3: the phase copy quotes the shape of a month, not a range', () => {
