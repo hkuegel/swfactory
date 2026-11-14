@@ -223,7 +223,9 @@ export function plan(changedPaths, record, mode, allApps, allWorkspaces = []) {
   if (mode === 'full' || record === undefined || record === null || changedPaths.some(isDataFile)) {
     return {
       mode: 'full',
-      changed: [...changedPaths],
+      // The caller's answer for "nothing recorded" is null, which is still a full run: the change set is
+      // empty because there is nothing to compare against, not because nothing changed.
+      changed: [...(changedPaths ?? [])],
       steps: [...STEPS].sort(),
       apps: [...allApps].sort(),
       workspaces: [...allWorkspaces].sort(),

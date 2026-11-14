@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { plan, STEPS } from './affected-checks.mjs';
 import { acceptsRecord } from './write-fund-list.mjs';
-import { commandForStep, expandPaths, pathsOfStatus } from './verify.mjs';
+import { changedSince, commandForStep, expandPaths, pathsOfStatus } from './verify.mjs';
 
 // Story 026, fixture mode: stored input and the hand expectation (P16), no request and no repository
 // read (P17). App names are placeholders (`x`, `y`). The runner is tested for the two things that can
@@ -71,7 +71,19 @@ describe('the runner never plans a check without the step that writes what it re
 
   it('an unchanged tree with a record plans nothing', () => {
     // Hand expectation: nothing changed since the recorded full run, so the plan is empty.
-    expect(plan([], { head: 'abc', files: {} }, 'affected', ['x', 'y']).steps).toEqual([]);
+    expect(plan([], { head: 'abc', files: {} }, 'affected', ['x', 'y']).steps.length).toBe(0);
+  });
+
+  it('the caller that has no record hands the plan a null, and the plan still names every step', () => {
+    // Hand expectation: the caller returns null when nothing is recorded (its documented answer), so the
+    // full plan must accept it. The defect was `[...changedPaths]` on that null, which stops the run
+    // before any check happens - found by a full run on a worktree with no record. Tested through the
+    // caller, not only through the exported mapping.
+    const current = { head: 'def', files: { 'scripts/verify.mjs': 'a1' } };
+    expect(changedSince(undefined, current)).toBeNull();
+    expect(plan(changedSince(undefined, current), undefined, 'full', ['x', 'y']).steps.length).toBe(
+      12,
+    );
   });
 });
 
