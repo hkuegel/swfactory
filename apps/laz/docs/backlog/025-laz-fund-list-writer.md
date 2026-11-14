@@ -1,7 +1,7 @@
 ---
 id: 025
 title: Fund list data-file writer (devops), triggered from the UI, tested in fixture mode
-status: in-review # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: chore # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 branch: feature/025-laz-fund-list-writer
@@ -242,6 +242,13 @@ _Append only._
 - 2026-11-14 — Status: set back to `in-review` for the CI round, because the round's rules — the definition
   of `fits`, the two names a run is given, and the write gate — are the orchestrator's decisions and need
   hak's gate 2. The index row is changed in the same commit.
+- 2026-11-14 — Gate 2 (hak, 2026-11-14): approved, everything as reported — the definition of `fits`, the two
+  names, the write gate, the data-file mapping rule, the observed runs and the mutation checks. The open
+  choice from the CI finding is answered by stating reality: the comment in `ci.yml` now names what GitHub
+  does, because a queued run in the same concurrency group is cancelled whatever `cancel-in-progress` says,
+  so the promise that a main run is never cancelled holds only for a run that has started. With the gate, the
+  four pending proposals were approved: P27 in `CLAUDE.md`, P28 in the developer rules, P29 and P30 in the
+  tester rules. Story set to done, index row in the same commit.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -577,6 +584,7 @@ Findings of round 2:
    cold cache, not a regression of this round; reported here rather than smoothed over.
 2. `[decision pending] `fits` counts only the fund identity as immovable. If hak wants a market value that
    moved to be refused as well, that is a change to this definition, not to the comparison's code.
+   Resolved by hak on 2026-11-14: the definition stands as written.
 
 ## Explanation
 
@@ -622,7 +630,7 @@ What went wrong:
 7. These proposals were numbered P13–P17, which story 024 had already used for approved proposals, so the
    same letters named two different rules. Renumbered to P22–P26 when recorded here. **P27 (proposed,
    pending hak):** proposal numbers continue across the backlog and are never reused, so an approved rule
-   can be named unambiguously.
+   can be named unambiguously. Approved by hak on 2026-11-14 and applied to `CLAUDE.md`.
 
 Proposed changes — hak confirmed all open gates on 2026-11-13, so all five are approved and applied:
 

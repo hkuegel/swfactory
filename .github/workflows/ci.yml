@@ -9,8 +9,11 @@ on:
 permissions:
   contents: read
 
-# Runs on main are serialised and never cancelled (a deployment must not be cut off);
-# newer runs of a pull request cancel older ones.
+# Runs on main are serialised, and a run that has started is never cancelled (a deployment must not be cut
+# off); newer runs of a pull request cancel older ones. A run that is still queued in the same group is
+# cancelled by GitHub whatever cancel-in-progress says, so a main push that arrives while another main run
+# is going can lose its run (run #39 on 2026-11-14 was cancelled while queued, hak's decision of
+# 2026-11-14 to state this as reality rather than as a promise).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
