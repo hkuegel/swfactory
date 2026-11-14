@@ -503,10 +503,11 @@ Observed through the caller, not only through the module:
 
 Measured durations of this round (reported, not asserted, story 026 rule): `test:scripts` 59 tests green,
 0.23 s inside the suite and 1.2 s as a runner step; the green full runs 12 steps, 2 levels, 80.6 s (the
-round's code), 84.2 s (the gate 2 commit) and 81.5 s (the merge publish, which is the run that published the
-merged content). Seven full runs of the round were needed in all, four red; the red ones are named in Review
-finding 1, and one of them was this round's own record before prettier had been run on it. The app's own e2e
-run does not read the network; the writer's live path is never executed by a test.
+round's code), 84.2 s (the gate 2 commit), 81.5 s and 81.7 s (the merged content, 81.7 s being the run that
+published). Eight full runs of the round in all, four red and four green; two affected runs went red on the
+same tests. The run that published covers the code as pushed; the two sentences of this paragraph were
+written after it and are covered by prettier and `check:structure` in an affected run. The app's own e2e run
+does not read the network; the writer's live path is never executed by a test.
 
 ## Review
 
