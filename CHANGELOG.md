@@ -96,6 +96,12 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- `laz`: the money fields have no invented cap. A value is refused only when it is negative, has more
+  decimals than its unit, or exceeds the largest integer a calculation can hold exactly; the field copy
+  names the rule of the unit instead of quoting a maximum amount (#030).
+- `laz`: the phase fields accept any month, in the short form `MM.JJJJ`, and a day stays accepted but is
+  not required. The range the design had invented is gone, an entry that is not finished yet is a typing
+  state that names no error, and the defaults are the example phase hak gave, 01.2028 to 03.2034 (#033).
 - Hak's process rules of 2026-11-13 are recorded in `CLAUDE.md` and the role files, after the story
   that produced them was discarded by hak: the proportionate path for a look-only story, review
   rounds appended below the earlier ones so the story can be rebuilt without the chat, a test proves
