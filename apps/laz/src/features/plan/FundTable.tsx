@@ -1,9 +1,10 @@
 import { useId } from 'react';
-import { COPY, overrideCopy, projectionLabel } from './fieldCopy.ts';
-import { formatEuroMicroEur, fundValueText } from './logic/format.ts';
+import { COPY, overrideCopy, projectionLabel, purchaseReasonText } from './fieldCopy.ts';
+import { formatEuro, formatEuroMicroEur, formatShares, fundValueText } from './logic/format.ts';
 import type { OverrideField } from './logic/fields.ts';
 import type { Fund } from './logic/fund.ts';
 import type { FieldError } from './logic/parseInputs.ts';
+import { displayPurchaseCents, type PurchaseRow } from './logic/purchase.ts';
 import { TextField } from './TextField.tsx';
 import styles from './FundTable.module.css';
 
@@ -19,6 +20,10 @@ export interface FundTableProps {
   readonly markers: ReadonlyMap<number, Readonly<Partial<Record<OverrideField, boolean>>>>;
   /** AC5: the projection label is the accessible description of every projection figure. */
   readonly asOf: string;
+  /** Story 032: the purchase side, one row per fund in the order of the table; null while no result is possible. */
+  readonly purchases: readonly PurchaseRow[] | null;
+  /** The depot shown, in cents, so the last purchase part comes from the total (AC2). */
+  readonly totalCents: number | null;
   readonly onOverrideChange: (field: OverrideField, year: number, raw: string) => void;
 }
 
@@ -30,10 +35,15 @@ export function FundTable({
   errors,
   markers,
   asOf,
+  purchases,
+  totalCents,
   onOverrideChange,
 }: FundTableProps) {
   const headingId = useId();
   const labelId = `${headingId}-projection`;
+  // AC2: the shown parts must add up to the shown depot, so the last one is derived from the total.
+  const shownCents =
+    purchases !== null && totalCents !== null ? displayPurchaseCents(purchases, totalCents) : null;
   return (
     <section className={styles.section} aria-labelledby={headingId}>
       <h2 id={headingId}>{COPY.fundsHeading}</h2>
@@ -54,13 +64,24 @@ export function FundTable({
               <th scope="col">{COPY.navColumn}</th>
               <th scope="col">{COPY.ytmColumn}</th>
               <th scope="col">{COPY.projectionColumn}</th>
+              {/* Story 032: the purchase side of the same model (AC1). */}
+              <th scope="col">{COPY.sharesColumn}</th>
+              <th scope="col">{COPY.purchaseColumn}</th>
             </tr>
           </thead>
           <tbody>
-            {fundList.map((fund) => {
+            {fundList.map((fund, index) => {
               const rowOverrides = overrides.get(fund.year) ?? {};
               const rowErrors = errors.get(fund.year) ?? {};
               const rowMarkers = markers.get(fund.year) ?? {};
+              const purchase = purchases?.[index] ?? null;
+              const cents = shownCents?.[index] ?? null;
+              // AC3: no number is invented for a fund outside the phase or for a payout per share of 0.
+              // The cell keeps its dash and names why; while there is no result yet the dash stands alone.
+              const dash = (row: PurchaseRow): string =>
+                row.reason === null
+                  ? COPY.missingAmount
+                  : `${COPY.missingAmount} ${purchaseReasonText(row.reason)}`;
               return (
                 <tr key={fund.year}>
                   <th scope="row">{String(fund.year)}</th>
@@ -82,6 +103,32 @@ export function FundTable({
                   <td>
                     <span className={styles.figure} aria-describedby={labelId}>
                       {formatEuroMicroEur(projections.get(fund.year) ?? 0)}
+                    </span>
+                  </td>
+                  {/* Story 032: the two new columns. The projection label stays the accessible
+                      description of the row's figures (024 AC5, 032 AC3). */}
+                  <td>
+                    <span
+                      className={`${styles.figure} ${purchase?.reason ? styles.reason : ''}`}
+                      aria-describedby={labelId}
+                    >
+                      {purchase === null
+                        ? COPY.missingAmount
+                        : purchase.shares === null
+                          ? dash(purchase)
+                          : formatShares(purchase.shares)}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      className={`${styles.figure} ${purchase?.reason ? styles.reason : ''}`}
+                      aria-describedby={labelId}
+                    >
+                      {purchase === null
+                        ? COPY.missingAmount
+                        : cents === null
+                          ? dash(purchase)
+                          : formatEuro(cents)}
                     </span>
                   </td>
                 </tr>

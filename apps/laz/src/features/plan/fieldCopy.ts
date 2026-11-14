@@ -12,6 +12,7 @@ import {
   type OverrideField,
 } from './logic/fields.ts';
 import type { FieldError } from './logic/parseInputs.ts';
+import type { PurchaseReason } from './logic/purchase.ts';
 import { formatDate, formatMonth } from './logic/format.ts';
 
 export interface FieldCopy {
@@ -151,6 +152,9 @@ export const COPY = {
   navColumn: 'NAV in Euro',
   ytmColumn: 'YTM in Prozent',
   projectionColumn: 'Hochrechnung je Anteil in Euro',
+  /** Story 032: the two columns of the purchase side. Hak's wording is "wieviel ich von jedem ETF JETZT kaufen muss". */
+  sharesColumn: 'Anteile jetzt kaufen',
+  purchaseColumn: 'Kaufpreis heute in Euro',
   fundingLabel: (fund: Fund): string =>
     `Fonds ${String(fund.year)} (Auflösung Dezember ${String(fund.year)})`,
   missingYear: 'kein Fonds für dieses Jahr',
@@ -168,6 +172,18 @@ export const COPY = {
   figure: (direction: Direction): string =>
     direction === 'depot' ? 'Maximale monatliche Auszahlung' : 'Benötigtes Depot für die Phase',
 } as const;
+
+/**
+ * Why a fund row of story 032 shows no purchase. `Auflösung nach Phasenende` is hak's example from AC3;
+ * the other two strings are decisions of this story (Decision log), because AC3 names no string for a
+ * fund that liquidates before the phase begins or for a payout per share of 0, where no number may be
+ * invented. `kein Fonds für dieses Jahr` stays the year table's line for a phase year without a fund.
+ */
+export function purchaseReasonText(reason: PurchaseReason): string {
+  if (reason === 'after-phase-end') return 'Auflösung nach Phasenende';
+  if (reason === 'before-phase-start') return 'Auflösung vor Phasenbeginn';
+  return 'keine Hochrechnung je Anteil';
+}
 
 /** Projection label (AC5), the accessible description of every projection figure. */
 export function projectionLabel(asOf: string): string {

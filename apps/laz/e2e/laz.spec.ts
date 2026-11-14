@@ -458,3 +458,162 @@ test('031 AC1, AC2: no control for a typed rate, the two checkboxes and the Bund
   await expect(kst).not.toBeDisabled();
   await expect(kist).not.toBeDisabled();
 });
+
+// Story 032 – the purchase side of the fund table: `shares = phase-year amount / projected payout per
+// share`, `purchase = shares × NAV`. Hand oracles, recomputed by hand from the fixture copy with the same
+// spans 024 uses (asOf 31.12.2026 → 31.12. of the fund year): the pre-tax factors are ρ = 1,0404516
+// (2028), 1,0769573 (2029), 1,1255649 (2030), 1,1878281 (2031), 1,2655355 (2032), 1,3612328 (2033).
+// A fund row funds the phase year after its liquidation year (024 AC2), and `shares × NAV` cancels the
+// NAV, so a row's purchase is its phase year's amount divided by that factor.
+
+/** Whole Cent as the German display shows them: 1.153.351 Cent → `11.533,51`. The test's own formatting. */
+function germanCents(cents: number): string {
+  const whole = Math.trunc(cents / 100);
+  const fraction = String(Math.abs(cents % 100)).padStart(2, '0');
+  return `${String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${fraction}`;
+}
+
+test('032 AC1: a fund row inside the phase shows the hand shares and the hand purchase at the data-file NAV', async ({
+  page,
+}) => {
+  // Hak's example phase, depot 10.000,00 € (1.000.000 Cent), tax off: hand F = 55,125235818, so the
+  // monthly payout is 18.140,511966417154 Cent and the shown depot is 10.000,00 €. Rows 2028 and 2030.
+  await phaseStartInput(page).fill('01.2028');
+  await phaseEndInput(page).fill('03.2034');
+  await amountInput(page).fill('10000,00');
+
+  const table = fundTable(page);
+  const hand: [string, string, string][] = [
+    ['2028', '55,06', '2.092,22'],
+    ['2030', '46,05', '1.933,96'],
+  ];
+  for (const [year, shares, purchase] of hand) {
+    const row = rowByHeader(table, year);
+    await expect(await cellByHeader(table, row, 'Anteile jetzt kaufen'), `row ${year}`).toHaveText(
+      shares,
+    );
+    await expect(
+      await cellByHeader(table, row, 'Kaufpreis heute in Euro'),
+      `row ${year}`,
+    ).toHaveText(euro(purchase));
+  }
+
+  // AC1, the other state of the same model: KSt alone is 26,375 % (Soli included, church tax off), so the
+  // factor becomes ρ − 0,26375·(ρ − 1) = 1,0304736 for 2028 and the hand figures become 53,85 shares and
+  // 2.046,41 €. The tax is the one the projection column already uses (024 AC4, story 031).
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).check();
+  const row2028 = rowByHeader(table, '2028');
+  await expect(await cellByHeader(table, row2028, 'Anteile jetzt kaufen')).toHaveText('53,85');
+  await expect(await cellByHeader(table, row2028, 'Kaufpreis heute in Euro')).toHaveText(
+    euro('2.046,41'),
+  );
+});
+
+// Case B, chosen so AC2 is not vacuous: rounding the last part on its own would show a different figure
+// than the money rule does. Phase 01.2029–12.2030 (two funded years), monthly target 1.000,01 € =
+// 100.001 Cent. Hand: F = 12/1,0404516 + 12/1,0769573 = 22,675,06…, so the shown depot is
+// 100.001 Cent × F = 2.267.607 Cent = 22.676,07 €.
+test('032 AC2: the shown parts add up to the shown depot, with the last part taken from the total', async ({
+  page,
+}) => {
+  await page.getByRole('radio', { name: 'Auszahlung gegeben, Depot gesucht' }).check();
+  await phaseStartInput(page).fill('01.2029');
+  await phaseEndInput(page).fill('12.2030');
+  await page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true }).fill('1000,01');
+
+  await expect(figure(page, 'Benötigtes Depot für die Phase')).toHaveText(euro('22.676,07'));
+
+  const table = fundTable(page);
+  // Hand parts in Cent: 1.153.351 for row 2028, and the rule's value 2.267.607 − 1.153.351 = 1.114.256
+  // for row 2029, one Cent more than its own rounding (1.114.255 Cent = 11.142,55 €).
+  const parts = [1153351, 1114256];
+  for (const [index, cents] of parts.entries()) {
+    const year = String(2028 + index);
+    await expect(
+      await cellByHeader(table, rowByHeader(table, year), 'Kaufpreis heute in Euro'),
+      `row ${year}`,
+    ).toHaveText(euro(germanCents(cents)));
+  }
+  expect(
+    parts.reduce((sum, cents) => sum + cents, 0),
+    'the shown parts, in whole Cent',
+  ).toBe(2267607);
+
+  // The parts are the parts of the depot, so the last row inside the phase keeps the rule's figure when
+  // the tax changes the total: hand parts for KSt on are 1.165.302 and 1.135.661 Cent, which add up to the
+  // shown depot 23.009,63 €.
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).check();
+  await expect(figure(page, 'Benötigtes Depot für die Phase')).toHaveText(euro('23.009,63'));
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2029'), 'Kaufpreis heute in Euro'),
+  ).toHaveText(euro(germanCents(1135661)));
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2028'), 'Kaufpreis heute in Euro'),
+  ).toHaveText(euro(germanCents(1165302)));
+  expect(1165302 + 1135661, 'the same parts, in whole Cent, with the tax on').toBe(2300963);
+});
+
+// AC3 names two example strings, one for each table: `kein Fonds für dieses Jahr` is the year table's line
+// for a phase year without a funding fund (024 AC2), and `Auflösung nach Phasenende` is the fund row's
+// reason. The fund row on the other side of the phase and a payout per share of 0 have no string in the
+// AC, so the strings the app shows for them are decisions of this story (Decision log) and are asserted
+// here as the app's own wording, not as an oracle.
+test('032 AC3: no purchase for a row that funds no phase year, the dash with its reason, and the projection label stays associated with the row', async ({
+  page,
+}) => {
+  const table = fundTable(page);
+  const sharesCell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Anteile jetzt kaufen');
+  const purchaseCell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Kaufpreis heute in Euro');
+
+  // Empty state: nothing is invented while no result is possible, so the dash stands alone, without a
+  // reason, in both new cells.
+  const row2034Shares = await sharesCell('2034');
+  const row2034Purchase = await purchaseCell('2034');
+  await expect(row2034Shares).toHaveText('–');
+  await expect(row2034Purchase).toHaveText('–');
+
+  // Hand case, tax off, depot 100,00 €: the phase 01.2028–12.2028 has no funding fund for its year, so
+  // the year table keeps its missing-year line, and no fund row funds a phase year of this phase.
+  await phaseStartInput(page).fill('01.2028');
+  await phaseEndInput(page).fill('12.2028');
+  await amountInput(page).fill('100,00');
+  await expect(
+    await cellByHeader(
+      yearTable(page),
+      rowByHeader(yearTable(page), '2028'),
+      'Finanzierung durch Fonds',
+    ),
+  ).toHaveText('kein Fonds für dieses Jahr');
+  await expect(await sharesCell('2028')).toHaveText('– Auflösung nach Phasenende');
+  await expect(await purchaseCell('2028')).toHaveText('– Auflösung nach Phasenende');
+
+  // Hand case on the other side of the phase: 01.2030–12.2030, depot 1.000,00 € and tax off, so
+  // F = 12/1,0769573 = 11,142439108464284 and the monthly payout is 89.746,95668207478 Cent. Row 2029
+  // funds that year: hand shares 25,00 and the hand purchase 1.000,00 €, the only part, so it equals the
+  // shown depot. Row 2028 liquidates before the phase begins, so it shows no number.
+  await phaseStartInput(page).fill('01.2030');
+  await phaseEndInput(page).fill('12.2030');
+  await amountInput(page).fill('1000,00');
+  await expect(await sharesCell('2028')).toHaveText('– Auflösung vor Phasenbeginn');
+  await expect(await sharesCell('2029')).toHaveText('25,00');
+  await expect(await purchaseCell('2029')).toHaveText(euro('1.000,00'));
+
+  // The branch a typed YTM produces: −100 % makes the factor 0, so `amount / payout per share` has no
+  // number and the guard names why instead of inventing one. Hand: the row keeps its dash in both cells,
+  // and the projection figure itself is 0,00 €.
+  await fundInput(page, 'ytm', 2029).fill('-100,00');
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2029'), 'Hochrechnung je Anteil in Euro'),
+  ).toHaveText(euro('0,00'));
+  await expect(await sharesCell('2029')).toHaveText('– keine Hochrechnung je Anteil');
+  await expect(await purchaseCell('2029')).toHaveText('– keine Hochrechnung je Anteil');
+
+  // AC3, second half: the projection label with its asOf stays the accessible description of the row.
+  const fileAsOf = fixtureAsOf();
+  expect(fileAsOf, 'the asOf the label names, from the fixture copy').toBe('2026-12-31');
+  const label = `Diese Beträge sind eine Hochrechnung aus YTM und NAV und kein veröffentlichter Marktwert. Stand der Daten: ${germanDate(fileAsOf)}.`;
+  await expect(row2034Shares.locator('[aria-describedby]')).toHaveAccessibleDescription(label);
+  await expect(row2034Purchase.locator('[aria-describedby]')).toHaveAccessibleDescription(label);
+});
