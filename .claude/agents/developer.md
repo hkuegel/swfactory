@@ -46,7 +46,8 @@ When fixing review findings: address every finding marked blocker/major, reply t
 - A unit is chosen from the value the source carries in its own data, never from a figure the source
   formats for display; measure it before the decision is recorded (story 025, P22). When a unit changes,
   re-derive every bound a copy line quotes in that unit and prove it through the function that reads the
-  field, not by asserting the constant (story 025, P24).
+  field, not by asserting the constant (story 025, P24). Source files are written with the editor tool, never
+  through a shell heredoc, which writes the console code page and breaks non-ASCII text (story 031, P28).
 
 ## Memory
 

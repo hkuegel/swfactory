@@ -37,6 +37,14 @@ request function; the request module is never imported by a test.
 CI runs `test:scripts` in fixture mode, so CI has no dependency on the source. The live run is reported by
 hak after the push (Definition of Done), because a workflow job cannot be tested without a runner.
 
+Hak's CI decision of 2026-11-14 adds the two names the test run is given, so the mode is stated by the run
+instead of falling back to a default: `VITE_TEST_MODE=local` is the mode of a test run, and `LAZ_FUND`
+names the fund data it reads (`fixture` for the stored copy, `committed` for the file the writer writes).
+The live part is not a test run: it runs as its own step after the publish, in `--frozen` mode, which writes
+nothing and names each difference with the committed file. `--full` is the write mode and writes the whole
+table; it refuses to write a result that does not fit the committed fund identity, so a CI run can never
+publish a file its own checks would contradict.
+
 ## Consequences
 
 - The parse module and the fetch module are separate files on purpose: the separation is what makes the
@@ -49,3 +57,6 @@ hak after the push (Definition of Done), because a workflow job cannot be tested
   depends on a specific value, only that a hanging request cannot keep a run open.
 - A key is not part of this design: no free source that carries the needed fields works without a key, and
   a key in a guest bundle would be visible to every visitor, so the app stays keyless (ADR 0013, P15).
+- A test run cannot name the live source: `apps/laz/src/features/plan/logic/fundSource.ts` refuses mode
+  `live`, so the CI checks step cannot reach the network by accident even when the environment is set wrong.
+  This is the same rule as the separation of the parse module, now carried by the name of the run.

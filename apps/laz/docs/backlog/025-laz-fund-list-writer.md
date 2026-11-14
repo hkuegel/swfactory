@@ -220,6 +220,35 @@ _Append only._
 - 2026-11-13 — Gate 2: hak confirmed all open gates, which approves this story's Explanation and its five
   proposals (renumbered P22–P26, see the Retrospective). Story set to done, index row in the same commit.
   The live run against the site and the fund identifiers against the depot stay hak's manual checks.
+- 2026-11-14 — CI round (hak, confirmed twice): the `checks` step runs the fixture/local mode, so a test run
+  reads stored data, and the live part runs as its own step after the publish. The writer must run with
+  `--full`; `--frozen` when the result does not fit.
+- 2026-11-14 — Hak's answer to the question about `--frozen`: it is a write mode of the writer — it compares
+  and writes nothing. `--full` writes the whole table from all seven funds, and a `--full` run whose result
+  does not fit behaves as `--frozen`, so CI can never commit a file its own checks would contradict.
+  Guard tests for this rule are in `scripts/verify.test.mjs`, as hak named.
+- 2026-11-14 — Decision (orchestrator): `fits` means the fund identity — the year, the ISIN and the name —
+  matches the committed file, because those are the funds hak confirmed against his depot. A market value may
+  move, since a move is what a refresh run is for, so a value difference is named but still fits. The
+  file-level asOf is never compared: it is the run date, and every run date differs from the previous one. A
+  fund the committed file does not have, and a committed fund this run did not read, are both named as
+  identity differences, so a run that read six of the seven funds cannot write over the whole table.
+- 2026-11-14 — Decision (orchestrator): the two names a run is given are `VITE_TEST_MODE`, the mode of a test
+  run (`local`), and `LAZ_FUND`, the fund data it reads (`fixture` or `committed`). Both are read in the app's
+  own config only, because a factory or platform file may not name an app. A test run cannot name `live`:
+  that is the mode of the writer's run, and the resolver refuses it.
+- 2026-11-14 — Decision (orchestrator): a change to a committed data file is answered as a full run, so the
+  structure gate is planned for the writer's commit; the mapping reads this as data, not as an app name.
+- 2026-11-14 — Status: set back to `in-review` for the CI round, because the round's rules — the definition
+  of `fits`, the two names a run is given, and the write gate — are the orchestrator's decisions and need
+  hak's gate 2. The index row is changed in the same commit.
+- 2026-11-14 — Gate 2 (hak, 2026-11-14): approved, everything as reported — the definition of `fits`, the two
+  names, the write gate, the data-file mapping rule, the observed runs and the mutation checks. The open
+  choice from the CI finding is answered by stating reality: the comment in `ci.yml` now names what GitHub
+  does, because a queued run in the same concurrency group is cancelled whatever `cancel-in-progress` says,
+  so the promise that a main run is never cancelled holds only for a run that has started. With the gate, the
+  four pending proposals were approved: P27 in `CLAUDE.md`, P28 in the developer rules, P29 and P30 in the
+  tester rules. Story set to done, index row in the same commit.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -438,6 +467,46 @@ the suite and 1.1 s as a runner step; `test -w apps/laz` 9 tests green, 1.4 s; `
 tests green, 5.5 s; the full run 12 steps, 2 levels, 76.7 s wall clock. The app's own e2e run does not read
 the network; the writer's live path is never executed by a test.
 
+### CI round (2026-11-14), tests for the rules hak named
+
+| Rule                                                                        | Test(s)                                                                                                                                                                                                 | Result |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| AC3, the mode of a test run is named by the run                             | `apps/laz/src/features/plan/logic/fundSource.test.ts`: the hand expectations are the defaults CI names, and `live` is refused                                                                           | PASS   |
+| AC4, the fund data a test run reads                                         | the same file names `fixture` as the source CI gives; `fund.test.ts` still compares the app's import with hand values                                                                                   | PASS   |
+| the write gate: only a full run may put a record into the file              | `scripts/verify.test.mjs`: `acceptsRecord('full')` true, `acceptsRecord('frozen')` false                                                                                                                | PASS   |
+| a committed data file is answered as a full run, so the structure gate runs | the same file, with a hand record: mode full, every step, every workspace, the structure gate read as the whole tree                                                                                    | PASS   |
+| a full run plans every step when nothing changed                            | the same file: an empty change list with mode full plans all twelve steps, the structure gate among them                                                                                                | PASS   |
+| the frozen comparison names each difference                                 | `scripts/fundListCompare.test.mjs`: the committed text and the produced records are hand values; one moved value, one moved identity, a fund on each side, an unreadable file, and no difference at all | PASS   |
+
+Mutation proofs for these rules (copies in a scratch directory, never `git checkout`/`restore`/`stash`):
+
+| Mutation on the copy                        | What the copy answers, which the guard test catches                                                              |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| the data-file rule dropped from the mapping | a data-file change is answered as an affected run scoped to one workspace, and the structure gate is not planned |
+| `fits` always true                          | an ISIN that moved from the accumulating to the distributing class would be written over the table hak confirmed |
+| the write gate accepts `frozen`             | a frozen run would put a record into the file                                                                    |
+| the resolver's `live` refusal dropped       | a test run would read the live source, so CI would depend on the site staying readable                           |
+
+The committed data file was not written by this round: the comparison run is a comparison, and the write
+belongs to the UI-triggered workflow, which is the only workflow with a write permission.
+
+Observed through the caller, not only through the module:
+
+| Run                                                                                                                        | Observed                                                         |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| the app's fixture-copy test with `VITE_TEST_MODE=local` and `LAZ_FUND=committed` (the name decides the data the run reads) | red: the hand values are not the committed values                |
+| the same test with `LAZ_FUND=fixture`                                                                                      | green                                                            |
+| `--frozen` against the committed file, in fixture mode, run date 2026-11-14                                                | exit 0, seven funds read, no difference, nothing written         |
+| `--full` against a copy whose 2028 ISIN was planted as the distributing class                                              | exit 1, the fund and the field named, the copy's bytes unchanged |
+| `--full` against a copy that matches the produced table                                                                    | exit 0, the whole table written with the run date                |
+| no write mode; `--full` and `--frozen` together; `--frozen` with no committed file                                         | three refusals, each exit 1 with the rule named                  |
+
+Measured durations of this round (reported, not asserted, story 026 rule): `test:scripts` 59 tests green,
+0.23 s inside the suite and 1.2 s as a runner step; the full run 12 steps, 2 levels, 80.6 s wall clock. Two
+earlier full runs of the same round failed on unrelated apps, one test each (the minesweeper 3D e2e and the
+landing test), and both tests were green on a re-run; they are reported as flakiness under a cold cache, not
+as a regression of this round.
+
 ## Review
 
 _Round 1, 2026-11-13, verdict APPROVED, checklist Version 2._
@@ -485,27 +554,55 @@ in `--mode e2e`, so the displayed asOf is compared with its own source; the fixt
 2. `[nit] scripts/write-fund-list.mjs:60 — an empty fund table reaches the writer with no record and
 throws from the write module instead of reporting; the fund table is never empty today. Fix: report
 `no fund record` in the run's own lines rather than letting the writer module throw.
-3. `[nit] scripts/fundListParse.mjs:33 — the value must appear within 900 characters after the label; a
-   longer block would read as a missing value. Acceptable as a named failure, but the window is an
-   assumption about the response layout and should be stated as such in the module comment, which it is.
+3. `[minor] The round's own formatting: the story record needed prettier before `format:check` could be
+   green, which is the same rule as story 026's, applied to a record that changed.
+
+Round 2 (2026-11-14, the CI round), verdict APPROVED, checklist Version 2, self-check by the orchestrator,
+pending hak's gate 2. Only the items this round can answer are listed.
+
+| Item | Result | Note                                                                                                                                                  |
+| ---- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1   | pass   | each rule hak named has a test: the write gate, the comparison, the data-file mapping rule, the resolver's refusal                                    |
+| C6   | pass   | every refusal is named on the command line: no write mode, two write modes at once, a frozen run without a committed file, a result that does not fit |
+| S2   | pass   | the two names are read in the app's own config only; no credential, no secret; the resolver refuses the live name                                     |
+| S3   | n.a.   | no dependency added                                                                                                                                   |
+| S5   | pass   | the command-line paths were run by hand: the green frozen comparison, the refused planted difference, the three refusals                              |
+| T1   | pass   | the full run is green: 12 steps, 2 levels (the durations are in the Test report)                                                                      |
+| T2   | pass   | the comparison oracle is hand text and hand records, not the file it checks (P16); the guard tests call the rule as a function                        |
+| T3   | pass   | four mutation checks on copies show that each rule, not a convention, is what catches the planted violation                                           |
+| T5   | pass   | the new modules have their own tests; the writer's write path is observed through its caller                                                          |
+| K4   | pass   | `check:structure` green; the app names appear only in the app's own files, and `.github/workflows` is not read by rule 1                              |
+| K6   | pass   | status `in-review`, index row equal to it, changed in the same commit                                                                                 |
+| K7   | pass   | the Decision log is append-only; the Explanation was rewritten to stay within 15 lines                                                                |
+| K8   | pass   | the app README and the CHANGELOG carry the write modes and the two names                                                                              |
+| K9   | pass   | prettier green from the repo root, including this record                                                                                              |
+
+Findings of round 2:
+
+1. `[minor] The two earlier full runs failed on unrelated apps: the minesweeper 3D e2e (once) and the
+   landing test (once), each on a single test that is green on a re-run. Both are machine flakiness under a
+   cold cache, not a regression of this round; reported here rather than smoothed over.
+2. `[decision pending] `fits` counts only the fund identity as immovable. If hak wants a market value that
+   moved to be refused as well, that is a change to this definition, not to the comparison's code.
+   Resolved by hak on 2026-11-14: the definition stands as written.
 
 ## Explanation
 
-The fund list the calculator reads is now produced by a script, not typed by hand.
-The script reads one product page per fund and takes four values from it: the net asset
-value, the average yield, the average maturity, and the number of shares.
-Values are stored in the source's own precision, so nothing is rounded inside the file;
-rounding happens only when the app displays a number.
-The default mode reads stored copies of the pages, so a test run never contacts the site,
-and a test proves this by failing if the network path is reached.
-A run that cannot read a fund names the fund and the field and writes nothing at all,
-so a half file can never appear, and the trigger fails instead of committing one.
-The date in the file is the run date given to the script, never a reading of a clock.
-The trigger is the workflow's run button: it runs the live mode and commits the file,
-and that commit starts the normal build and the publish, which is what makes the values visible.
-Not verified here: one live run against the site, and the fund identifiers, which must still be
-confirmed against the depot. The stored page shows the distributing share class, where the
-story table lists the accumulating one.
+The fund list the calculator reads is produced by a script, not typed by hand.
+It reads one product page per fund and takes four values from it: net asset value,
+average yield, average maturity, and the number of shares, in the source's own
+precision, so nothing is rounded inside the file; rounding happens only at display.
+The default mode reads stored copies, so a test run never contacts the site, and a
+test proves this by failing if the network path is reached. CI names the mode of its
+test run and the fund data it reads, so a run reads stored data by name, not default.
+A run that cannot read a fund names fund and field and writes nothing at all, so a
+half file can never appear, and the trigger fails instead of committing one.
+A run needs a write mode: one writes the whole table, the other compares and writes
+nothing; a result that does not fit the committed fund identity leaves the file as it
+is, so CI can never publish a file its own checks would contradict. The trigger is
+the workflow's run button, and its commit starts the build and the publish.
+Not verified here: one live run against the site, and the fund identifiers against
+the depot.
 
 ## Retrospective
 
@@ -533,7 +630,7 @@ What went wrong:
 7. These proposals were numbered P13–P17, which story 024 had already used for approved proposals, so the
    same letters named two different rules. Renumbered to P22–P26 when recorded here. **P27 (proposed,
    pending hak):** proposal numbers continue across the backlog and are never reused, so an approved rule
-   can be named unambiguously.
+   can be named unambiguously. Approved by hak on 2026-11-14 and applied to `CLAUDE.md`.
 
 Proposed changes — hak confirmed all open gates on 2026-11-13, so all five are approved and applied:
 

@@ -54,9 +54,19 @@ function isTooling(path) {
   );
 }
 
+/**
+ * A committed data file is the output of a writer script, not source the mapping can scope: the run that
+ * changes it can move a hand oracle and the built page at once, so the run is full and `check:structure`
+ * is planned for it (story 025, hak's rule for the writer's commit, 2026-11-14). Read app-agnostic, as
+ * every mapping rule is.
+ */
+function isDataFile(path) {
+  return path.endsWith('.json') && path.includes('/data/');
+}
+
 /** The groups a path belongs to; empty means the mapping cannot say what would see it (full run). */
 export function groupsOf(path) {
-  if (isTooling(path)) return ['tooling'];
+  if (isTooling(path) || isDataFile(path)) return ['tooling'];
   const groups = [];
   if (path.endsWith('.md')) groups.push('markdown');
   if (path.startsWith('templates/')) groups.push('template');
@@ -208,7 +218,9 @@ export function affectedPlan(changedPaths, allApps, allWorkspaces = []) {
  * change since a recorded full run, never because a pattern calls it unimportant.
  */
 export function plan(changedPaths, record, mode, allApps, allWorkspaces = []) {
-  if (mode === 'full' || record === undefined || record === null) {
+  // A data-file change is a full run before the record is read, so a recorded run can never make it skip a
+  // workspace (story 025, hak's rule of 2026-11-14).
+  if (mode === 'full' || record === undefined || record === null || changedPaths.some(isDataFile)) {
     return {
       mode: 'full',
       changed: [...changedPaths],

@@ -19,10 +19,15 @@ jobs:
           node-version-file: .nvmrc
       # The run date is passed as an argument, not read from the file (AC1); a fund that cannot be read
       # makes the step fail with the fund and the field named, so nothing is committed (AC2).
+      # Story 025, hak's rule of 2026-11-14: the writer runs with `--full`, which writes the whole table
+      # from all seven funds. `--full` compares its result with the committed file first and refuses to
+      # write when the fund identity does not fit, so a page that moved to a different fund cannot be
+      # committed over the table hak confirmed against his depot.
       - name: read the fund pages
         run: |
           node scripts/write-fund-list.mjs \
             --mode=live \
+            --full \
             --run-date="$(date -u +%Y-%m-%d)" \
             --out=apps/laz/src/features/plan/data/fund-list.json
       - name: commit the file when it changed

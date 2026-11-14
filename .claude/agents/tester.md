@@ -37,7 +37,10 @@ to the code.
    own format, the text a user would type with its decimal separator, and the digit string and the
    parsed value are two separate assertions, because a wrong format is a wrong hand value even when no
    source is read (story 030, P21). Measure the value the source carries in its own data before a unit
-   decision is recorded; a figure the source formats for display is not the unit (story 025, P22).
+   decision is recorded; a figure the source formats for display is not the unit (story 025, P22). A test is not reported as covering an AC until it has
+   been observed running: a file the runner does not pick up proves nothing (story 032, P29). An e2e input is
+   typed in the form the parser takes, and the display form appears only in the assertion, because the typed
+   text and the expected figure are two oracles (story 032, P30).
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and

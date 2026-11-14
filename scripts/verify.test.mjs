@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { plan } from './affected-checks.mjs';
+import { plan, STEPS } from './affected-checks.mjs';
+import { acceptsRecord } from './write-fund-list.mjs';
 import { commandForStep, expandPaths, pathsOfStatus } from './verify.mjs';
 
 // Story 026, fixture mode: stored input and the hand expectation (P16), no request and no repository
@@ -206,5 +207,43 @@ describe('story 029: the command runs a step in the affected workspaces, or in t
     const answer = plan(['apps/x/src/tokens.css'], undefined, 'full', ['x', 'y'], ALL);
     expect(answer.workspaces).toEqual(ALL);
     expect(commandForStep('test', answer, ALL, SCRIPTS)).toEqual(['run', 'test']);
+  });
+
+  it('story 025, the CI round: the write gate accepts a record only for a full run', () => {
+    // Hand expectation (hak, 2026-11-14): `--full` writes the whole table, `--frozen` compares and never
+    // writes, so a frozen run can never put a record into the file.
+    expect(acceptsRecord('full')).toBe(true);
+    expect(acceptsRecord('frozen')).toBe(false);
+  });
+
+  it('story 025, the CI round: a data-file change is answered as a full run, so the structure gate runs', () => {
+    // Hand expectation (hak, 2026-11-14): a committed data file is the writer's output, not source the
+    // mapping can scope. With a recorded run the mapping would answer a scoped run for a file inside a
+    // workspace, so the rule is that a data-file change is answered as a full run: every step, every
+    // workspace, and `check:structure` read as the whole tree.
+    const answer = plan(
+      ['apps/x/src/features/plan/data/fund-list.json'],
+      { head: 'abc', files: {} },
+      'affected',
+      ['x', 'y'],
+      ALL,
+    );
+    expect(answer.mode).toBe('full');
+    expect(answer.steps).toEqual([...STEPS].sort());
+    expect(answer.steps.includes('check:structure')).toBe(true);
+    expect(answer.workspaces).toEqual(ALL);
+    expect(commandForStep('check:structure', answer, ALL, SCRIPTS)).toEqual([
+      'run',
+      'check:structure',
+    ]);
+  });
+
+  it('story 025, the CI round: a full run plans every step when nothing changed', () => {
+    // Hand expectation: the run that publishes to main is full even for an empty change list, so the
+    // writer's commit can never be verified by a plan that skips the structure gate.
+    const answer = plan([], { head: 'abc', files: {} }, 'full', ['x', 'y'], ALL);
+    expect(answer.changed).toEqual([]);
+    expect(answer.steps).toEqual([...STEPS].sort());
+    expect(answer.steps.includes('check:structure')).toBe(true);
   });
 });

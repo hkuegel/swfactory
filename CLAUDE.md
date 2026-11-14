@@ -97,6 +97,9 @@ The backlog must be enough to rebuild the app without any chat history:
 - **Retro** — after each story the orchestrator analyses what went wrong and proposes
   concrete edits to agents, this file or the templates. Only hak-approved proposals
   are applied; agents never rewrite their own role files.
+- **Proposal numbers (P27, hak 2026-11-14):** numbered once across the backlog and never reused, so an
+  approved rule can be named unambiguously. A proposal pending approval is named by its number, and the
+  number is not given to another rule while it is open.
 
 ## Conventions
 

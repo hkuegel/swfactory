@@ -7,6 +7,9 @@ import { FUND_LIST, FUND_LIST_AS_OF } from './fund.ts';
  * other values (asOf 2026-11-13, fund 2028 with NAV 5677761 micro-euro, the accumulating variant), so
  * this test fails when the app reads that file instead. It compares the app's import with hand values,
  * never with the file it parses (P16), and it is the only test that names the fixture copy as the source.
+ * Story 025's CI round (hak, 2026-11-14) names this source in the CI checks step with `LAZ_FUND=fixture`
+ * and `VITE_TEST_MODE=local`, so the source is stated by the run, not by a default; `fundSource.test.ts`
+ * holds that rule and refuses a test run that names the live source.
  */
 describe('fund list source (story 025, ADR 0013)', () => {
   it('reads the fixture copy, and the hand values are not the data file values', () => {

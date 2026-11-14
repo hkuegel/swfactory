@@ -22,6 +22,11 @@ All notable changes to this project are documented here, following
   nothing is written, so a partial file cannot be committed. The date in the file is the run date given to
   the script, never a clock reading, and the values are stored in the source's own precision, so the file
   does not round (#025).
+- The fund list writer needs a write mode: `--full` writes the whole table from all funds, `--frozen` writes
+  nothing and names each difference with the committed file, and `--full` refuses to write a result that does
+  not fit. CI's live part runs as a frozen comparison step after the publish, so a CI run can never publish
+  a file its own checks contradict, and the checks step names the mode of its test run and the fund data it
+  reads, so a test run reads stored data and never the source (#025).
 - `laz`: tax is two checkboxes instead of a field for a percentage. Capital gains tax is 25 % on the gain with
   the solidarity surcharge on it, 26,375 %; church tax is computed on the capital gains tax, not on the gain,
   at 8 % in Bayern and Baden-Württemberg and 9 % in the other states, with Bayern as the default and all sixteen
