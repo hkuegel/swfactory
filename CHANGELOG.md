@@ -27,6 +27,11 @@ All notable changes to this project are documented here, following
   at 8 % in Bayern and Baden-Württemberg and 9 % in the other states, with Bayern as the default and all sixteen
   states listed with the rate each uses. Church tax counts only when capital gains tax is checked, and the rates
   are stored as whole millionths of a percent because 1,375 % is not a whole basis point (#031).
+- `laz`: the fund table shows how many shares of each fund would have to be bought today and what that costs.
+  Shares are the amount of a phase year divided by the projected payout per share, the cost is that number times
+  the NAV, and the parts add up to the shown depot because the last part is taken from the shown total, which can
+  differ from the separately rounded last part by a cent. The two new columns are in the fund table only, shares
+  have two decimals, and a fund outside the phase shows the dash with the reason named in the cell (#032).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).
