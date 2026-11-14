@@ -138,6 +138,12 @@ All notable changes to this project are documented here, following
   defines (`test:scripts`, `check:structure`, `check:template`), a change with a path in no
   workspace, and every full run keep the whole-tree command, so a root file is never skipped; the
   plan prints which steps are scoped (#029).
+- `npm run verify` has a third mode, `--mode=publish` (hak's rule B). The checks that read or write the tree
+  in one pass run whole tree in a publishing run; the checks a workspace can run alone (`typecheck`, `lint`,
+  `test`, `test:e2e`) run in the workspaces the change can reach, so a change in one app does not start the
+  browser tests of another app in the run that publishes. A record is written by a `full` or `publish` run and
+  names the workspaces it ran and the steps it scoped, so a run that covered one workspace cannot be read as a
+  run that checked the whole tree; CI names `publish` for a push to main and for a run started from the UI (#034).
 - `npm run test:pages` no longer builds the site: `npm run build:pages` produces `_site/`, and
   `test:pages` only tests it, so `_site/` is built once per pipeline. Run `npm run build:pages`
   before `npm run test:pages` when you call them separately (#026).
