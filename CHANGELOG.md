@@ -22,6 +22,11 @@ All notable changes to this project are documented here, following
   nothing is written, so a partial file cannot be committed. The date in the file is the run date given to
   the script, never a clock reading, and the values are stored in the source's own precision, so the file
   does not round (#025).
+- `laz`: tax is two checkboxes instead of a field for a percentage. Capital gains tax is 25 % on the gain with
+  the solidarity surcharge on it, 26,375 %; church tax is computed on the capital gains tax, not on the gain,
+  at 8 % in Bayern and Baden-Württemberg and 9 % in the other states, with Bayern as the default and all sixteen
+  states listed with the rate each uses. Church tax counts only when capital gains tax is checked, and the rates
+  are stored as whole millionths of a percent because 1,375 % is not a whole basis point (#031).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).
