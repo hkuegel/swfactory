@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Story 026: the runner. It asks the mapping which checks can see the change, runs that plan in
-// levels, and reports the levels and the durations. Two named modes (P17): `--mode=affected` uses the
-// mapping, `--mode=full` runs everything. Without a recorded full run every check runs (AC2): a check
-// is skipped only when its inputs are unchanged since a recorded full run, never because a pattern
-// calls it unimportant. Durations are reported, never asserted (story 026, Out of scope).
+// levels, and reports the levels and the durations. Three named modes (P17): `--mode=affected` uses the
+// mapping, `--mode=full` runs everything, `--mode=publish` runs the whole-tree checks whole tree and the
+// workspace checks in the workspaces the change can reach (story 034, hak's rule B). Without a recorded run
+// every check runs (AC2): a check is skipped only when its inputs are unchanged since a recorded run, never
+// because a pattern calls it unimportant. Durations are reported, never asserted (story 026, Out of scope).
 //
 // Options:
-//   --mode=affected|full   the named mode (default: affected when a full run is recorded, else full)
+//   --mode=affected|full|publish   the named mode (default: affected when a run is recorded, else full)
 //   --paths=a,b            the changed paths, instead of reading them from git (dry run of a mapping)
 //   --base=<ref>           a commit that stands for the last full run (the CI pull-request base: every
 //                          run that publishes to main is a full run, so main is the record in CI)
@@ -127,7 +128,7 @@ function readRecord(file) {
   }
 }
 
-/** Paths changed since the recorded full run (AC2); null when nothing is recorded. */
+/** Paths changed since the recorded run (AC2); null when nothing is recorded. */
 export function changedSince(record, current) {
   if (record === undefined) return null;
   const paths = new Set();
@@ -140,6 +141,33 @@ export function changedSince(record, current) {
     if (record.files[path] !== hash) paths.add(path);
   }
   return [...paths].sort();
+}
+
+/**
+ * Story 034: the record content for a run that can be read as a coverage claim. It names the mode of the run,
+ * the workspaces it ran, and the steps that ran in those workspaces. A run that did not cover the whole tree
+ * cannot write a record, so `affected` answers null; `full` and `publish` write, and only a green run reaches
+ * this write (the caller's gate). `scopedSteps` is what the runner observed, given as data.
+ */
+export function recordForRun(answer, current, scriptsByWorkspace) {
+  if (answer.mode !== 'full' && answer.mode !== 'publish') return null;
+  return {
+    mode: answer.mode,
+    head: current.head,
+    files: current.files,
+    workspaces: [...(answer.workspaces ?? [])].sort(),
+    scopedSteps: answer.steps
+      .filter((step) => runsPerWorkspace(answer, step, scriptsByWorkspace))
+      .sort(),
+  };
+}
+
+/** Story 034: the scope the report prints for one step, read from the same answer the command is built from,
+ *  so the report and the command cannot disagree about where a step ran. */
+export function scopeText(answer, step, scriptsByWorkspace) {
+  return runsPerWorkspace(answer, step, scriptsByWorkspace)
+    ? ` in ${(answer.workspaces ?? []).join(', ')}`
+    : ' whole tree';
 }
 
 /** The workspaces of the repository, read from package.json's `workspaces` field, never a hard-coded
@@ -165,10 +193,10 @@ export function workspacesHere() {
 }
 
 /**
- * Story 029: the command for one step. A step that a workspace can run alone runs in the affected
- * workspaces only; a step that reads the whole tree at once, or a change that touches a file outside
- * every workspace, keeps the root command. An empty scope is never executed as an empty scope: it runs in
- * every workspace (story 027, AC2).
+ * Story 029: the command for one step. A step that a workspace can run alone runs in the workspaces the plan
+ * names - the affected workspaces, or the workspaces a publishing run reaches (story 034); a step that reads
+ * the whole tree at once, or a change that touches a file outside every workspace, keeps the root command. An
+ * empty scope is never executed as an empty scope: it runs in every workspace (story 027, AC2).
  */
 export function commandForStep(step, answer, allWorkspaces, scriptsByWorkspace = {}) {
   const scope = answer.workspaces?.length ? answer.workspaces : allWorkspaces;
@@ -239,14 +267,14 @@ function printPlan(answer, byLevel, stream = process.stdout, scriptsByWorkspace 
     `verify: mode ${answer.mode}, ${answer.steps.length} of ${STEPS.length} steps, ` +
       `chain ${Math.max(...byLevel.keys()) + 1} levels`,
   ];
-  if (answer.mode === 'affected') {
+  if (answer.mode !== 'full') {
     lines.push(`  changed: ${answer.changed.length === 0 ? 'nothing' : answer.changed.join(', ')}`);
     lines.push(`  apps: ${answer.apps.length === 0 ? 'none' : answer.apps.join(', ')}`);
     const skipped = STEPS.filter((step) => !answer.steps.includes(step)).sort();
     lines.push(`  skipped: ${skipped.length === 0 ? 'nothing' : skipped.join(', ')}`);
   }
-  // Story 029: the plan shows which steps run in which workspaces, so a run that covers one workspace is
-  // not read as a full run. A step that cannot be scoped is not named here.
+  // Story 029 and story 034: the plan shows which steps run in which workspaces, so a run that covers one
+  // workspace is not read as a full run. A step that cannot be scoped is not named here.
   const scoped = answer.steps.filter((step) => runsPerWorkspace(answer, step, scriptsByWorkspace));
   if (scoped.length > 0) {
     lines.push(`  workspaces: ${answer.workspaces.join(', ')} (${scoped.join(', ')})`);
@@ -314,12 +342,10 @@ async function main() {
     );
     for (const r of done) {
       results.push(r);
-      // Story 029: the scope is printed, so a run that covers one workspace is not read as a full run.
-      const scope = runsPerWorkspace(answer, r.step, scriptsByWorkspace)
-        ? ` in ${answer.workspaces.join(', ')}`
-        : ' whole tree';
+      // Story 029 and story 034: the scope is printed, so a run that covers one workspace is not read as a
+      // full run.
       console.log(
-        `  level ${level} ${r.step}: ${r.code === 0 ? 'ok' : `FAILED (${r.code})`} ${shown(r.seconds)}${scope}`,
+        `  level ${level} ${r.step}: ${r.code === 0 ? 'ok' : `FAILED (${r.code})`} ${shown(r.seconds)}${scopeText(answer, r.step, scriptsByWorkspace)}`,
       );
       if (r.code !== 0 && r.out !== '') console.log(r.out);
     }
@@ -331,14 +357,14 @@ async function main() {
     return 1;
   }
 
-  // Only a successful full run records (AC2), and only when the caller allows a write.
-  if (answer.mode === 'full' && !flag('no-record')) {
+  // Only a successful run that covers the whole tree records (AC2), and only when the caller allows a
+  // write. A publishing run records as well, because the next run compares against it, and its record names
+  // the workspaces it ran (story 034).
+  const recordToWrite = recordForRun(answer, current, scriptsByWorkspace);
+  if (recordToWrite !== null && !flag('no-record')) {
     mkdirSync(join(ROOT, '.tmp'), { recursive: true });
-    writeFileSync(
-      recordFile,
-      `${JSON.stringify({ mode: 'full', head: current.head, files: current.files }, null, 2)}\n`,
-    );
-    console.log(`verify: full run recorded in ${recordFile.replace(ROOT, '')}`);
+    writeFileSync(recordFile, `${JSON.stringify(recordToWrite, null, 2)}\n`);
+    console.log(`verify: ${answer.mode} run recorded in ${recordFile.replace(ROOT, '')}`);
   }
   console.log(
     `verify: ok, ${results.length} step(s), ${shown((Date.now() - start) / 1000)} wall clock`,
