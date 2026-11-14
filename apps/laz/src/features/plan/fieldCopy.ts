@@ -64,13 +64,23 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
     formatWord: 'keine gültige Zahl',
     unit: 'Cent',
   },
-  taxRate: {
-    label: 'Steuersatz in Prozent',
-    range: '0 bis 50 %',
-    hint: '0 bis 50 %, höchstens 2 Nachkommastellen; wird nur benutzt, wenn die Steuer angehakt ist.',
-    formatWord: 'keine gültige Zahl',
-  },
 };
+
+/**
+ * The tax controls of story 031. The rates are the measured facts of 2026-11-13, so the copy quotes
+ * them; no control of this block can be invalid, because a checkbox and a select cannot hold a value
+ * outside their own options.
+ */
+export const TAX_COPY = {
+  legend: 'Steuer auf den Gewinn',
+  kstLabel: 'Kapitalertragsteuer (25 %)',
+  kstHint:
+    'Der Solzzuschlag von 5,5 % auf die Kapitalertragsteuer ist enthalten, das sind 26,375 % auf den Gewinn.',
+  kistLabel: 'Kirchensteuer auf die Kapitalertragsteuer',
+  kistHint:
+    '8 % in Bayern und Baden-Württemberg, 9 % in den anderen Bundesländern; wird nur gerechnet, wenn die Kapitalertragsteuer angehakt ist.',
+  bundeslandLabel: 'Bundesland für die Kirchensteuer',
+} as const;
 
 /** The amount field exists once; its label follows the direction, its rule is the rule of its unit (UX §2, story 030). */
 export function amountCopy(direction: Direction): FieldCopy {
@@ -128,7 +138,6 @@ export const COPY = {
   directionLegend: 'Rechenrichtung',
   depotRadio: 'Depot gegeben, Auszahlung gesucht',
   payoutRadio: 'Auszahlung gegeben, Depot gesucht',
-  taxCheckbox: 'Steuer auf den Gewinn anwenden',
   resultHeading: 'Ergebnis',
   inputsHeading: 'Eingaben',
   yearsHeading: 'Jahresübersicht',

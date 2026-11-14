@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { amountCopy, errorMessage, FIELD_COPY, overrideCopy } from './fieldCopy.ts';
+import { amountCopy, errorMessage, FIELD_COPY, overrideCopy, TAX_COPY } from './fieldCopy.ts';
 import { MAX_EXACT_UNITS, OVERRIDE_SPECS, fieldSpec } from './logic/fields.ts';
 
 /**
@@ -48,9 +48,10 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     // The spec has no maximum for a money field, so the copy cannot quote one.
     expect(fieldSpec('amount').max).toBeNull();
     expect(OVERRIDE_SPECS.nav.max).toBeNull();
-    // A field that keeps a bound that belongs to what the value means still quotes a range (the tax
-    // rate is removed by 031; until then its 0 – 50 % is not a money rule).
-    expect(fieldSpec('taxRate').max).toBe(5000);
+    // Story 031 removed the percent bound of a typed rate, so no field of the form quotes a range that is
+    // not the rule of its own unit; the fund-row YTM cell keeps the bound a percent means.
+    expect(fieldSpec('phaseStart').max).toBeNull();
+    expect(OVERRIDE_SPECS.ytm.max).toBe(10000);
   });
 
   it('AC2: the error names the reason of the unit instead of a maximum amount', () => {
@@ -79,8 +80,8 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     expect(errorMessage(FIELD_COPY.phaseEnd, { kind: 'format' })).toBe(
       'Phase Ende (Monat): kein gültiges Datum. Erlaubt: Monat und Jahr, zum Beispiel 03.2034; ein ergänzter Tag muss ein echter Tag dieses Monats sein.',
     );
-    // Without a range in the spec the copy cannot quote one: the phase fields have no bounds, while the
-    // rate field keeps the bound that belongs to what a percent means.
+    // Without a range in the spec the copy cannot quote one: the phase fields have no bounds, and story 031
+    // removed the field for a typed rate, so no field of the form has a percent bound.
     for (const field of ['phaseStart', 'phaseEnd'] as const) {
       expect(fieldSpec(field).min).toBeNull();
       expect(fieldSpec(field).max).toBeNull();
@@ -88,5 +89,21 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     for (const copy of [FIELD_COPY.phaseStart, FIELD_COPY.phaseEnd]) {
       expect(`${copy.hint} ${copy.range}`).not.toMatch(/2027|2035|TT\.MM\.JJJJ/u);
     }
+  });
+
+  it('031 AC1, AC2: the tax copy quotes the measured rates and the field for a typed rate is gone', () => {
+    // Hand oracle: the strings of the story, written here from the measured facts of 2026-11-13.
+    expect(TAX_COPY.kstLabel).toBe('Kapitalertragsteuer (25 %)');
+    expect(TAX_COPY.kstHint).toBe(
+      'Der Solzzuschlag von 5,5 % auf die Kapitalertragsteuer ist enthalten, das sind 26,375 % auf den Gewinn.',
+    );
+    expect(TAX_COPY.kistLabel).toBe('Kirchensteuer auf die Kapitalertragsteuer');
+    expect(TAX_COPY.kistHint).toBe(
+      '8 % in Bayern und Baden-Württemberg, 9 % in den anderen Bundesländern; wird nur gerechnet, wenn die Kapitalertragsteuer angehakt ist.',
+    );
+    expect(TAX_COPY.bundeslandLabel).toBe('Bundesland für die Kirchensteuer');
+    // The copy has no entry for a typed rate: the accessibility tree shows no such control (AC1).
+    expect(Object.keys(FIELD_COPY)).toEqual(['phaseStart', 'phaseEnd', 'amount']);
+    expect(Object.keys(FIELD_COPY)).not.toContain('taxRate');
   });
 });

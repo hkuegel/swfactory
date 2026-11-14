@@ -1,6 +1,7 @@
 /**
- * Raw field texts → integer cents, basis points and whole phase months (ADR 0012, Technical
- * design). One error per invalid field; the rate is parsed only while the tax checkbox is checked.
+ * Raw field texts → integer cents and whole phase months (ADR 0012, Technical design). One error per
+ * invalid field. Story 031 removed the typed rate, so the tax is not parsed here: it comes from the
+ * checkboxes through `taxFromState`.
  */
 
 import {
@@ -20,8 +21,6 @@ export interface ParsedInputs {
   readonly phaseEnd: string;
   /** Cents, in the unit of the chosen direction. */
   readonly amountCents: number;
-  /** 0 while the tax checkbox is unchecked, because the field is not read then. */
-  readonly taxRateBp: number;
 }
 
 export type FieldError =
@@ -165,16 +164,14 @@ export function parseField(spec: FieldSpec, raw: string): FieldResult {
 }
 
 /**
- * The phase fields, the amount field and the rate. The rate is required and parsed only while `taxOn`
- * is true; otherwise it produces no error and `taxRateBp` is 0. The amount field has no maximum
- * (story 030) and the phase fields have no range (story 033); a phase field that is not complete yet
- * names no error, so it appears in neither the values nor the errors.
+ * The three fields of the form. Story 031 removed the typed rate, so nothing here reads a rate; the
+ * phase fields have no range (story 033) and the amount field has no maximum (story 030). A phase field
+ * that is not complete yet names no error, so it appears in neither the values nor the errors.
  */
-export function parseInputs(raw: RawInputs, taxOn: boolean): ParseResult {
+export function parseInputs(raw: RawInputs): ParseResult {
   const errors: Partial<Record<FieldId, FieldError>> = {};
   const values: Partial<Record<FieldId, number>> = {};
   for (const field of FIELD_IDS) {
-    if (field === 'taxRate' && !taxOn) continue;
     const result = parseField(fieldSpec(field), raw[field]);
     if (result.ok) values[field] = result.value;
     else if (result.error !== null) errors[field] = result.error;
@@ -183,14 +180,12 @@ export function parseInputs(raw: RawInputs, taxOn: boolean): ParseResult {
   const phaseStart = values.phaseStart;
   const phaseEnd = values.phaseEnd;
   const amount = values.amount;
-  const taxRate = values.taxRate;
 
   if (phaseStart !== undefined && phaseEnd !== undefined && phaseEnd < phaseStart) {
     errors.phaseEnd = { kind: 'endBeforeStart', start: monthName(phaseStart) };
   }
 
-  // One error per invalid field: nothing is calculated while a field is invalid (UX design §3),
-  // and the rate counts as an error only while the checkbox is checked.
+  // One error per invalid field: nothing is calculated while a field is invalid (UX design §3).
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   if (phaseStart === undefined || phaseEnd === undefined || amount === undefined) {
     return { ok: false, errors };
@@ -202,7 +197,6 @@ export function parseInputs(raw: RawInputs, taxOn: boolean): ParseResult {
       phaseStart: monthName(phaseStart),
       phaseEnd: monthName(phaseEnd),
       amountCents: amount,
-      taxRateBp: taxOn ? (taxRate ?? 0) : 0,
     },
   };
 }

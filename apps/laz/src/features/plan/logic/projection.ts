@@ -7,11 +7,14 @@
 
 import { FUND_LIST_AS_OF, liquidationDate, type Fund } from './fund.ts';
 
-/** Tax as the form gives it: `on` is the checkbox, `rateBp` is 0 while it is unchecked. */
+/** One percent as the model counts it (story 031): the rates are stored in millionths of a percent because 1,375 % is not a whole basis point. */
+export const RATE_UNIT = 1_000_000;
+
+/** Tax as story 031 gives it: `on` is the Kapitalertragsteuer checkbox, `rateMillionths` is the rate on the gain in millionths of a percent (1 % = 1 000 000), 0 while the checkbox is unchecked. */
 export interface Tax {
   readonly on: boolean;
-  /** 0..5000, 1 % = 100 basis points. */
-  readonly rateBp: number;
+  /** Millionths of a percent; the church tax is only in this value while `on` is true (story 031). */
+  readonly rateMillionths: number;
 }
 
 /** Actual calendar days from `asOf` to the liquidation date; `Date.UTC` parts only (risk 2). */
@@ -34,7 +37,7 @@ export function dayCount(asOf: string, liquidation: string): number {
 export function payoutFactor(fund: Fund, tax: Tax, asOf: string = FUND_LIST_AS_OF): number {
   const rho = Math.pow(1 + fund.ytmBp / 10000, dayCount(asOf, liquidationDate(fund)) / 365);
   if (!tax.on) return rho;
-  return rho - (tax.rateBp / 10000) * Math.max(0, rho - 1);
+  return rho - (tax.rateMillionths / RATE_UNIT) * Math.max(0, rho - 1);
 }
 
 /** Payout per share in micro-euro, unrounded: `navMicroEur · ρ′` (AC1, AC4 of 024). */

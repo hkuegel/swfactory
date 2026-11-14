@@ -1,5 +1,5 @@
-/** The fields of the form, in the order of the form (UX design §1). */
-export type FieldId = 'phaseStart' | 'phaseEnd' | 'amount' | 'taxRate';
+/** The fields of the form, in the order of the form (UX design §1). Story 031 removed the typed rate: the rates come from the checkboxes. */
+export type FieldId = 'phaseStart' | 'phaseEnd' | 'amount';
 
 /** Which way the app calculates; decides the label and the range of the amount field. */
 export type Direction = 'depot' | 'payout';
@@ -26,7 +26,7 @@ export interface FieldSpec {
 }
 
 /** Form order; also the order in which the first invalid field is named. */
-export const FIELD_IDS: readonly FieldId[] = ['phaseStart', 'phaseEnd', 'amount', 'taxRate'];
+export const FIELD_IDS: readonly FieldId[] = ['phaseStart', 'phaseEnd', 'amount'];
 
 /** A whole calendar month as `year * 12 + month`, which is how the phase ranges compare. */
 export function monthKey(year: number, month: number): number {
@@ -51,16 +51,16 @@ export function monthKeyOf(name: string): number {
 
 /**
  * The rules the copy quotes. Money fields have no maximum, only the decimals of their unit and the
- * exact-integer bound of that unit (story 030); the tax rate keeps 0 – 50 % until story 031 replaces it
- * with the statutory rates; a phase month has no range (story 033): the 1.1.2027 – 31.12.2034 bound 024
- * had was not a business rule, because a phase year the fund list cannot fund is already reported as a
- * missing year (024 AC2). The amount field exists once, with the rule of the chosen direction.
+ * exact-integer bound of that unit (story 030); a phase month has no range (story 033): the 1.1.2027 –
+ * 31.12.2034 bound 024 had was not a business rule, because a phase year the fund list cannot fund is
+ * already reported as a missing year (024 AC2). Story 031 removed the typed rate field, so no field of
+ * the form has a percent bound of its own any more; the fund-row YTM cell keeps -100 % to 100 %. The
+ * amount field exists once, with the rule of the chosen direction.
  */
 export function fieldSpec(field: FieldId): FieldSpec {
   if (field === 'amount') {
     return { min: 0, max: null, decimals: 2, date: false };
   }
-  if (field === 'taxRate') return { min: 0, max: 5000, decimals: 2, date: false };
   return { min: null, max: null, decimals: 0, date: true };
 }
 /**

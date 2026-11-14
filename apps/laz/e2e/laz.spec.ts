@@ -204,8 +204,6 @@ test('AC6: a guest session makes no request of its own, writes nothing to storag
   await phaseStartInput(page).fill('01.01.2028');
   await phaseEndInput(page).fill('31.03.2034');
   await amountInput(page).fill('10000,00');
-  await page.getByRole('checkbox', { name: 'Steuer auf den Gewinn anwenden', exact: true }).check();
-  await page.getByLabel('Steuersatz in Prozent', { exact: true }).fill('25');
   await fundInput(page, 'nav', 2030).fill('40,00');
 
   const origin = new URL(page.url()).origin;
@@ -231,14 +229,14 @@ test('AC6: a guest session makes no request of its own, writes nothing to storag
   expect(await page.evaluate(async () => (await indexedDB.databases()).length)).toBe(0);
   expect(await context.cookies()).toEqual([]);
 
-  // The announced text is the UX §4 wording with the hand-oracle figures for this state: tax 25 %
-  // gives F = 56,844419 → 17.591,876 cents per month (175,92 €) and 1.108.288 cents for the 63
-  // phase months (11.082,88 €); the NAV override does not change F, because F uses the payout
-  // factor per euro. Asserting the announced string against the oracle, not against the visible
-  // figures, is what keeps the live region from being a copy of them.
+  // The announced text is the UX §4 wording with the hand-oracle figures for this state: tax off gives
+  // F = 55,125236 → 18140,512 cents per month (181,41 €) and 1.142.852 cents for the 63 phase months
+  // (11.428,52 €); the NAV override does not change F, because F uses the payout factor per euro.
+  // Asserting the announced string against the oracle, not against the visible figures, is what keeps the
+  // live region from being a copy of them. Story 031 removed the typed rate, so this state has no tax.
   await page.waitForTimeout(900); // past the 700 ms live-region delay
   await expect(liveText()).resolves.toMatch(
-    /^Maximale monatliche Auszahlung: 175,92\s€\. Summe der finanzierten Jahre: 11\.082,88\s€\.$/,
+    /^Maximale monatliche Auszahlung: 181,41\s€\. Summe der finanzierten Jahre: 11\.428,52\s€\.$/,
   );
 
   // Only an input changes the result: double clicks, keyboard-only focus moves and the debounce
@@ -257,8 +255,11 @@ test('AC6: a guest session makes no request of its own, writes nothing to storag
   await amountInput(page).fill('12000,00');
   await page.waitForTimeout(900);
   expect(await resultText(page)).not.toBe(before);
+  // Hand: 1.200.000 cents / F (tax off, F = 55,125236) = 21.768,614 cents = 217,69 €, and the 63 funded
+  // phase months give 1.371.422,7 cents = 13.714,23 €. Both figures are derived from F, not read from the
+  // app, and this state has no tax, because the tax is a checkbox now (story 031).
   await expect(liveText()).resolves.toMatch(
-    /^Maximale monatliche Auszahlung: 211,10\s€\. Summe der finanzierten Jahre: 13\.299,46\s€\.$/,
+    /^Maximale monatliche Auszahlung: 217,69\s€\. Summe der finanzierten Jahre: 13\.714,23\s€\.$/,
   );
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
 });
@@ -387,17 +388,73 @@ test('033 AC3: the phase fields start with the example phase hak gave, are reach
     phaseStartInput(page),
     phaseEndInput(page),
     amountInput(page),
-    page.getByLabel('Steuersatz in Prozent', { exact: true }),
+    page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }),
+    page.getByRole('checkbox', { name: 'Kirchensteuer auf die Kapitalertragsteuer', exact: true }),
+    page.getByLabel('Bundesland für die Kirchensteuer', { exact: true }),
   ];
   for (const field of fields) {
     await expect(field, `field ${field}`).not.toBeDisabled();
   }
 
-  // The form order of `FIELD_IDS`: Beginn, Ende, Betrag, Steuersatz.
+  // The form order of `FIELD_IDS` (Beginn, Ende, Betrag), then the tax controls in the order the form
+  // renders them (story 031 replaced the typed rate).
   await phaseStartInput(page).focus();
   await expect(phaseStartInput(page)).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(phaseEndInput(page)).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(amountInput(page)).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }),
+  ).toBeFocused();
+});
+
+// Story 031, AC1 and AC2: the typed rate is gone, the rates are the measured ones, and the church tax
+// counts only while the Kapitalertragsteuer checkbox is checked.
+test('031 AC1, AC2: no control for a typed rate, the two checkboxes and the Bundesland select, with hand rates', async ({
+  page,
+}) => {
+  await open(page);
+
+  // AC1: the accessibility tree has no control for a typed rate.
+  await expect(page.getByLabel('Steuersatz in Prozent', { exact: true })).toHaveCount(0);
+  const kst = page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true });
+  const kist = page.getByRole('checkbox', {
+    name: 'Kirchensteuer auf die Kapitalertragsteuer',
+    exact: true,
+  });
+  const land = page.getByRole('combobox', {
+    name: 'Bundesland für die Kirchensteuer',
+    exact: true,
+  });
+
+  // AC2: the select lists the 16 Bundesländer with the rate each one uses, starting at Bayern (hak's
+  // default of 2026-11-13).
+  await expect(land.getByRole('option')).toHaveCount(16);
+  await expect(land).toHaveValue('bayern');
+  await expect(land.getByRole('option').first()).toHaveText('Bayern (8 %)');
+
+  // Hand case on one fund row, so the projection is a plain multiplication: NAV 40,00 € typed, YTM 100 %,
+  // and the file's asOf (31.12.2026) is 731 days before the liquidation of 2028, so the factor is
+  // 2^(731/365) = 4,0076034. The figures below are hand values derived from that factor, not read from
+  // the app: 40.000.000 micro-euro times the factor, once with the rate taken off the gain.
+  const table = fundTable(page);
+  const row = rowByHeader(table, '2028');
+  const shown = await cellByHeader(table, row, 'Hochrechnung je Anteil in Euro');
+  await fundInput(page, 'nav', 2028).fill('40,00');
+  await fundInput(page, 'ytm', 2028).fill('100,00');
+  await expect(shown).toHaveText(euro('160,30')); // no tax
+  await kst.check();
+  await expect(shown).toHaveText(euro('128,57')); // 26,375 %
+  await kist.check();
+  await expect(shown).toHaveText(euro('126,17')); // 28,375 %, Bayern at 8 %
+  await land.selectOption('brandenburg');
+  await expect(shown).toHaveText(euro('125,87')); // 28,625 %
+  // AC2, second half: the church tax is computed on the Kapitalertragsteuer, so it is ignored while that
+  // checkbox is unchecked, and the figure goes back to the pre-tax projection.
+  await kst.uncheck();
+  await expect(shown).toHaveText(euro('160,30'));
+  await expect(kst).not.toBeDisabled();
+  await expect(kist).not.toBeDisabled();
 });
