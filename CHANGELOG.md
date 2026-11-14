@@ -143,7 +143,9 @@ All notable changes to this project are documented here, following
   `test`, `test:e2e`) run in the workspaces the change can reach, so a change in one app does not start the
   browser tests of another app in the run that publishes. A record is written by a `full` or `publish` run and
   names the workspaces it ran and the steps it scoped, so a run that covered one workspace cannot be read as a
-  run that checked the whole tree; CI names `publish` for a push to main and for a run started from the UI (#034).
+  run that checked the whole tree; CI names `publish` for a push to main and for a run started from the UI, and
+  for a push the run compares against the commit main was at before the push, so the change it publishes is the
+  change it checks (#034).
 - `npm run test:pages` no longer builds the site: `npm run build:pages` produces `_site/`, and
   `test:pages` only tests it, so `_site/` is built once per pipeline. Run `npm run build:pages`
   before `npm run test:pages` when you call them separately (#026).

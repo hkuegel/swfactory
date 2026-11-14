@@ -67,8 +67,10 @@ Two kinds of check behave differently, and that is the whole of this story:
   the scope of every step, so a run that covered one workspace cannot be read as a run that checked the whole
   tree. A green publishing run writes the record, a red one writes nothing, and `--no-record` writes nothing.
 - **AC5:** CI names the mode for the event: `publish` for a push to `main` and for a run started from the UI,
-  `affected` for a pull request. Measured as the expression in the plan step, read for each event by hand,
-  not as a test that reads the repository.
+  `affected` for a pull request, and it names the change the run publishes: the pull-request base, the commit
+  `main` was at before a push, or the pushed commit for a run started from the UI. Without the second, a
+  publishing run has no changed path, so nothing can be scoped and the workspace steps are skipped. Measured as
+  the expression in the plan step, read for each event by hand, not as a test that reads the repository.
 
 ## Out of scope
 
@@ -159,6 +161,11 @@ green on this content in the full run. In that run `test:e2e` was green on the s
 first, with the two 3D cases story 025 already names; the run that publishes this story was green in all twelve
 steps.
 
+CI observation for AC5 (run `43616278535`, commit `988da31`, the first publishing run on CI): the plan printed
+`mode publish, 8 of 12 steps`, `changed: nothing`, `apps: none`, `skipped: lint, test, test:e2e, typecheck`.
+The base was the pushed commit itself, so the run had no changed path, nothing could be scoped, and no app test
+ran. That is finding 1 below, and the fix is the base expression in the plan step.
+
 Defects found: none in the runner. The minesweeper 3D e2e instability recorded in story 025 (Review finding 1)
 is a `[major]` finding that this story does not fix; with the publish run scoping `test:e2e` to the changed app,
 a `laz`-only change no longer runs that group, which removes the blocking effect hak asked about, but the group
@@ -166,7 +173,9 @@ still runs for a change that reaches the minesweeper app.
 
 ## Review
 
-Verdict: APPROVED, round 1.
+Verdict: CHANGES_REQUESTED at round 2, APPROVED at round 1.
+
+Round 1:
 
 - `[minor]` The hand run is a stub tree, so it shows where the commands go, not that a real check passes in the
   scoped workspace. A real scoped publish run will be observed on CI with the next `laz` change.
@@ -174,6 +183,16 @@ Verdict: APPROVED, round 1.
   defensive. Kept, because the record is read as a coverage claim by the next run.
 - Accepted residual risk (hak, rule B): a machine or GPU change is not a changed path, so a scoped run can look
   green for a workspace it did not run.
+
+Round 2 (2026-11-14, read from the first publishing run on CI, run `43616278535`):
+
+- `[major]` finding 1 — the plan step took the pushed commit as the base for a push, so a publishing run had no
+  changed path, could scope nothing, and skipped the four workspace steps: it published the site without running
+  any app test (`mode publish, 8 of 12 steps`, `changed: nothing`, `apps: none`). The base for a push is the
+  commit `main` was at before the push, which is now the expression in the plan step and part of AC5. A run
+  started from the UI has no change to compare against, so it keeps the whole-tree checks; that is stated as the
+  rule here rather than assumed, and the next `laz` change on CI must show the plan naming `apps/laz` for the
+  four steps.
 
 ## Explanation
 
@@ -187,11 +206,21 @@ Nothing is skipped that a publishing run could miss: a file belonging to no work
 committed data file, or a run with nothing recorded still checks everything. And the record of a publishing run
 now names the workspaces it ran and the steps it scoped, so a coverage claim can be read as what it was.
 
+A publishing run also names the change it is publishing: for a push it compares against the commit main was at
+before the push, because a run that compares against the commit it just pushed sees no change at all and would
+skip every test that belongs to one app.
+
 ## Retrospective
 
-- One round, no defects. One hand expectation was corrected by the implementation (the tooling change keeps the
-  mode it was given), which is the second time this story's own expectation and the rules of an earlier story
-  disagreed; the earlier stories' rules won, as they should.
+- One round with no defects, then round 2 from the first publishing run on CI: the base the plan used was the
+  pushed commit, so a publishing run had nothing to scope and ran no app test. The rule needed the commit `main`
+  was at before the push, which is what the plan step now names. The story's own AC5 did not say which base a
+  publishing run uses; a criterion that names the mode but not the change it compares against is not complete,
+  so AC5 now names both.
+- One hand expectation was corrected by the implementation: a tooling change in a publishing run keeps the mode
+  it was given, with all twelve steps and nothing scoped, because the record must still say which run wrote it.
+  This is the second time this story's own expectation and the rules of an earlier story disagreed; the earlier
+  stories' rules won, as they should.
 - A test title with an apostrophe breaks vitest's import analysis in a `.mjs` file. Proposed change to
   `tester.md`: write test titles without an apostrophe, as P31. Pending hak's approval.
 - No process rule changed by this story beyond the mode itself: the whole-tree checks are the ones that read
