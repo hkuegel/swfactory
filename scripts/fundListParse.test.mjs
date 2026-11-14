@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseFundResponse } from './fundListParse.mjs';
 import { buildFileJson } from './fundListWriter.mjs';
-import { run } from './write-fund-list.mjs';
+import { FUND_TABLE, run } from './write-fund-list.mjs';
 
 // Story 025, fixture mode. The stored response is the test's INPUT; the expected numbers below are
 // written by hand from what that response prints, so the oracle is not the file the parse reads (P16).
@@ -23,6 +23,30 @@ const HAND_RECORD = {
   ytmBp: 376,
   avgMaturityHundredths: 162,
   sharesOutstanding: 191664314,
+};
+
+/**
+ * The two boundary funds of story 035, with the hand values read from their stored responses on
+ * 2026-11-14: each field anchor appears once in its own page, so these are the values that page prints.
+ */
+const HAND_2027 = {
+  year: 2027,
+  isin: 'IE000ZOI8OK5',
+  name: 'iBonds EUR Corporate UCITS 2027',
+  navMicroEur: 5663857,
+  ytmBp: 337,
+  avgMaturityHundredths: 61,
+  sharesOutstanding: 162716290,
+};
+
+const HAND_2035 = {
+  year: 2035,
+  isin: 'IE000O1FWAW6',
+  name: 'iBonds EUR Corporate UCITS 2035',
+  navMicroEur: 4917561,
+  ytmBp: 443,
+  avgMaturityHundredths: 867,
+  sharesOutstanding: 8999331,
 };
 
 const readFixture = (name) =>
@@ -87,5 +111,51 @@ describe('fund list writer (fixture mode)', () => {
     expect(called).toBe(0);
     expect(answer.content).not.toBeNull();
     expect(answer.lines).toEqual(['fund 2028 (IE0008UEVOE0): read']);
+  });
+
+  it('AC2 of story 035: the fund table covers the funding years of the phase boundaries, 2027 through 2035', () => {
+    // Hand expectation: nine entries in year order, the two new ones carrying the identifiers the story
+    // read from the source on 2026-11-14.
+    expect(FUND_TABLE.map((entry) => entry.year)).toEqual([
+      2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035,
+    ]);
+    const boundary = FUND_TABLE.filter((entry) => entry.year === 2027 || entry.year === 2035);
+    expect(boundary.map((entry) => `${entry.year} ${entry.isin} ${entry.productId}`)).toEqual([
+      '2027 IE000ZOI8OK5 332475',
+      '2035 IE000O1FWAW6 344489',
+    ]);
+  });
+
+  it('the two stored boundary responses parse to the hand values read on 2026-11-14', () => {
+    for (const [file, hand] of [
+      ['332475.html', HAND_2027],
+      ['344489.html', HAND_2035],
+    ]) {
+      const result = parseFundResponse(readFixture(file), {
+        year: hand.year,
+        isin: hand.isin,
+        name: hand.name,
+      });
+      expect(result.ok, file).toBe(true);
+      expect(result.record, file).toEqual(hand);
+    }
+  });
+
+  it('AC2 of story 035: a fixture run without a response for one boundary fund names it and writes nothing', async () => {
+    const answer = await run({
+      mode: 'fixture',
+      runDate: '2026-11-14',
+      table: [
+        { year: 2027, isin: 'IE000ZOI8OK5', name: 'iBonds EUR Corporate UCITS 2027' },
+        { year: 2035, isin: 'IE000O1FWAW6', name: 'iBonds EUR Corporate UCITS 2035' },
+      ],
+      read: (entry) => (entry.year === 2035 ? null : readFixture('332475.html')),
+      request: noRequest,
+    });
+    expect(answer.content).toBeNull();
+    expect(answer.lines).toEqual([
+      'fund 2027 (IE000ZOI8OK5): read',
+      'fund 2035 (IE000O1FWAW6): no stored response in fixture mode',
+    ]);
   });
 });

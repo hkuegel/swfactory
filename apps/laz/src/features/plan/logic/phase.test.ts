@@ -28,43 +28,52 @@ describe('phase (ADR 0012, the one closed form)', () => {
       }
     }
 
-    // Hand oracles: F = 55,125236 (tax off) and F = 56,844419 (tax on, r 25 %), so depot 10.000,00 €
-    // gives 18140,512 cents = 181,41 € and 17591,876 cents = 175,92 €; the value 024 measured at its
-    // old cap, 200.000,00 €, gives 362810,239 cents = 3.628,10 € (tax off).
+    // Hand oracles on the fixture copy as story 035 extended it (nine funds, so 2028 is funded by the
+    // 2027 fund): F = 66,947895916 (tax off) and F = 68,710921111 (tax on, r 25 %), so depot
+    // 10.000,00 € = 1.000.000 Cent gives 14936,989226 cents = 149,37 € and 14553,727178 cents =
+    // 145,54 €. The value 024 measured at its old cap, 200.000,00 € = 20.000.000 cents, gives
+    // 298739,785 cents = 2.987,40 € (tax off).
     // Story 030, AC3: a value above that cap follows the same rule. Hand: 100.000.000 cents / F
-    // (tax off) = 1.814.051,19 cents = 18.140,51 € for 1.000.000,00 €.
+    // (tax off) = 1.493.698,923 cents = 14.936,99 €.
     const monthlyOff = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_OFF);
     const monthlyTaxed = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_25);
-    expect(formatEuro(monthlyOff)).toBe('181,41\u00a0€');
-    expect(formatEuro(monthlyTaxed)).toBe('175,92\u00a0€');
+    expect(formatEuro(monthlyOff)).toBe('149,37\u00a0€');
+    expect(formatEuro(monthlyTaxed)).toBe('145,54\u00a0€');
     expect(formatEuro(payoutFromDepotCents(20000000, FUND_LIST, PHASE, TAX_OFF))).toBe(
-      '3.628,10\u00a0€',
+      '2.987,40\u00a0€',
     );
     expect(formatEuro(payoutFromDepotCents(100000000, FUND_LIST, PHASE, TAX_OFF))).toBe(
-      '18.140,51\u00a0€',
+      '14.936,99\u00a0€',
     );
 
     // Finding 8, made falsifiable: `formatEuro(Math.round(x))` equals `formatEuro(x)` for every x, so
-    // the single rounding at display is checked against hand values instead. The internal value is not
-    // already a whole cent, and feeding the SHOWN figure back misses the depot by more than one cent
-    // (the amplification risk 1 names): 26,9 cents tax off, 7,0 cents tax on.
-    expect(Number.isInteger(monthlyOff)).toBe(false);
-    expect(Number.isInteger(monthlyTaxed)).toBe(false);
-    expect(Math.round(monthlyOff)).toBe(18141);
-    expect(Math.round(monthlyTaxed)).toBe(17592);
-    expect(Math.abs(depotFromPayoutCents(18141, FUND_LIST, PHASE, TAX_OFF) - 1000000)).toBeCloseTo(
-      26.9,
+    // the single rounding at display is checked against hand values instead. Hand case on the extended
+    // copy, depot 10.003,00 € = 1.000.300 cents: the internal value is not already a whole cent
+    // (14941,470323 cents tax off, 14558,093296 cents tax on), and feeding the SHOWN figure back misses
+    // the depot by more than one cent, because F is a multiplier: 14941 × F = 1.000.268,51 cents, a
+    // miss of 31,49 cents tax off, and 14558 × F = 1.000.293,59, a miss of 6,41 cents tax on.
+    const backOff = payoutFromDepotCents(1000300, FUND_LIST, PHASE, TAX_OFF);
+    const backTaxed = payoutFromDepotCents(1000300, FUND_LIST, PHASE, TAX_25);
+    // The unrounded model value is not a whole Cent, which is what makes the display rounding a step:
+    // `Math.round` of it is an integer by definition, so the claim is about the value before rounding.
+    expect(Number.isInteger(backOff)).toBe(false);
+    expect(Number.isInteger(backTaxed)).toBe(false);
+    expect(Math.round(backOff)).toBe(14941);
+    expect(Math.round(backTaxed)).toBe(14558);
+    expect(Math.abs(depotFromPayoutCents(14941, FUND_LIST, PHASE, TAX_OFF) - 1000300)).toBeCloseTo(
+      31.49,
       1,
     );
-    expect(Math.abs(depotFromPayoutCents(17592, FUND_LIST, PHASE, TAX_25) - 1000000)).toBeCloseTo(
-      7.0,
+    expect(Math.abs(depotFromPayoutCents(14558, FUND_LIST, PHASE, TAX_25) - 1000300)).toBeCloseTo(
+      6.41,
       1,
     );
   });
 
   it('033 AC1: a phase outside the fund list keeps every phase year and totals 0,00 €', () => {
     // Hand oracle: no phase year has a funding fund, so the sum is 0 cents = 0,00 €, and no year is
-    // dropped. Before the list: 2026-01 to 2026-12 would need the December 2025 liquidation.
+    // dropped. Before the list: 2026-01 to 2026-12 would need the December 2025 liquidation. This is
+    // the measurement story 035 AC3 names for 024 AC2: a year outside the extended list, not 2028.
     const before: Phase = { startMonth: '2026-01', endMonth: '2026-12' };
     const beforePlan = buildPlan(FUND_LIST, before, TAX_OFF, 1000000, 'depot');
     expect(phaseYears(before)).toEqual([2026]);
@@ -73,15 +82,41 @@ describe('phase (ADR 0012, the one closed form)', () => {
     expect(formatEuro(beforePlan.totalCents)).toBe('0,00\u00a0€');
     expect(displayYearCents(beforePlan)).toEqual([null]);
 
-    // After the list: 2036-01 to 2037-02 needs the December 2035 and 2036 liquidations, and both years
-    // stay in the table. Hand: 12 months and 2 months.
-    const after: Phase = { startMonth: '2036-01', endMonth: '2037-02' };
+    // After the list as story 035 extended it: 2036-01 to 12.2036 is funded by the 2035 fund, so the
+    // case here is the year after it: 2037-01 to 2038-02 needs the December 2036 and 2037 liquidations,
+    // and both years stay in the table. Hand: 12 months and 2 months.
+    const after: Phase = { startMonth: '2037-01', endMonth: '2038-02' };
     const afterPlan = buildPlan(FUND_LIST, after, TAX_OFF, 1000000, 'depot');
-    expect(phaseYears(after)).toEqual([2036, 2037]);
+    expect(phaseYears(after)).toEqual([2037, 2038]);
     expect(afterPlan.years.map((row) => row.months)).toEqual([12, 2]);
     expect(afterPlan.years.map((row) => row.fundingFund)).toEqual([null, null]);
     expect(displayYearCents(afterPlan)).toEqual([null, null]);
     expect(formatEuro(afterPlan.totalCents)).toBe('0,00\u00a0€');
+  });
+
+  it('035 AC1: the phase boundary years name the fund that funds them', () => {
+    // Hand case: the phase hak named, 01.2028 to 03.2036, depot 10.000,00 € = 1.000.000 Cent, tax off.
+    // F = 83,532002665, so the monthly payout is 11971,459657 cents = 119,71 €.
+    // 2028 is funded by the 2027 fund, 2036 by the 2035 fund, and 2036 has three phase months.
+    // Hand amounts in cents: 143657,515887 for a 12-month year, 35914,378972 for the three months of
+    // 2036, so the shown lines are 143658 for the eight full years and 1185175 − 1149264 = 35911 for the
+    // last line, which adds up to the shown total 11.851,75 €. No full year is invented for 2036.
+    const phase: Phase = { startMonth: '2028-01', endMonth: '2036-03' };
+    const plan = buildPlan(FUND_LIST, phase, TAX_OFF, 1000000, 'depot');
+    expect(phaseYears(phase)).toEqual([2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036]);
+    const first = plan.years.find((row) => row.year === 2028);
+    const last = plan.years.find((row) => row.year === 2036);
+    expect(first?.fundingFund?.year).toBe(2027);
+    expect(first?.months).toBe(12);
+    expect(last?.fundingFund?.year).toBe(2035);
+    expect(last?.months).toBe(3);
+    expect(last?.yearAmountCents).toBeCloseTo(35914.378972, 6);
+    expect(plan.phaseFactor).toBeCloseTo(83.532002665, 9);
+    expect(displayYearCents(plan)).toEqual([
+      143658, 143658, 143658, 143658, 143658, 143658, 143658, 143658, 35911,
+    ]);
+    expect(formatEuro(plan.totalCents)).toBe('11.851,75\u00a0€');
+    expect(formatEuro(plan.monthlyCents)).toBe('119,71\u00a0€');
   });
 
   it('031 AC3: the round trip of 024 AC3 holds within one cent for every checkbox state', () => {

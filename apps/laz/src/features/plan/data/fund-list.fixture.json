@@ -2,6 +2,15 @@
   "asOf": "2026-12-31",
   "funds": [
     {
+      "year": 2027,
+      "isin": "DE000FIX27",
+      "name": "iBonds EUR Corporate UCITS 2027 (hand fixture)",
+      "navMicroEur": 36000000,
+      "ytmBp": 150,
+      "avgMaturityHundredths": 62,
+      "sharesOutstanding": 900000
+    },
+    {
       "year": 2028,
       "isin": "DE000FIX28",
       "name": "iBonds EUR Corporate UCITS 2028 (hand fixture)",
@@ -63,6 +72,15 @@
       "ytmBp": 500,
       "avgMaturityHundredths": 762,
       "sharesOutstanding": 1600000
+    },
+    {
+      "year": 2035,
+      "isin": "DE000FIX35",
+      "name": "iBonds EUR Corporate UCITS 2035 (hand fixture)",
+      "navMicroEur": 52000000,
+      "ytmBp": 550,
+      "avgMaturityHundredths": 862,
+      "sharesOutstanding": 1700000
     }
   ]
 }

@@ -24,11 +24,18 @@ import { fetchFundPage } from './fundListSource.mjs';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
- * The fund table: the researched ISINs of story 025's Context, plus the product page id the source
  * The fund table: hak's answer of 2026-11-13 is the accumulating share class for every fund, and each
- * accumulating ISIN resolves to the product page id stored as a response, so a live run can read all seven.
+ * accumulating ISIN resolves to the product page id stored as a response, so a live run can read all of
+ * them. Story 035 adds the two boundary funds: 2027 funds the phase year 2028 and 2035 funds 2036, so the
+ * table covers 2027 through 2035. The identifiers of those two were read from the source on 2026-11-14.
  */
 export const FUND_TABLE = [
+  {
+    year: 2027,
+    isin: 'IE000ZOI8OK5',
+    name: 'iBonds EUR Corporate UCITS 2027',
+    productId: '332475',
+  },
   {
     year: 2028,
     isin: 'IE0008UEVOE0',
@@ -70,6 +77,12 @@ export const FUND_TABLE = [
     isin: 'IE000UY6XF65',
     name: 'iBonds EUR Corporate UCITS 2034',
     productId: '339290',
+  },
+  {
+    year: 2035,
+    isin: 'IE000O1FWAW6',
+    name: 'iBonds EUR Corporate UCITS 2035',
+    productId: '344489',
   },
 ];
 
@@ -192,8 +205,9 @@ async function main() {
     return 1;
   }
   if (!result.fits) {
+    const blockers = result.differences.filter((difference) => difference.kind === 'identity');
     console.error(
-      `nothing written: the result does not fit the committed file (${result.differences.length} identity difference(s))`,
+      `nothing written: the result does not fit the committed file (${blockers.length} identity difference(s))`,
     );
     return 1;
   }

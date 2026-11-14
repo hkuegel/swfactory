@@ -117,6 +117,11 @@ All notable changes to this project are documented here, following
 - `laz`: the phase fields accept any month, in the short form `MM.JJJJ`, and a day stays accepted but is
   not required. The range the design had invented is gone, an entry that is not finished yet is a typing
   state that names no error, and the defaults are the example phase hak gave, 01.2028 to 03.2034 (#033).
+- `laz`: the fund list covers the funding years of the phase boundaries, 2027 through 2035, so the example
+  phase has a funding fund for its first year, and a phase ending 03.2036 has one for its last year and shows
+  the three months that are actually paid. The writer reports a fund the committed file does not have as an
+  addition, which does not make the result unfit, and its message counts only the identity differences; the
+  nine values in the committed file came from a live run on 2026-11-14, nothing was typed (#035).
 - Hak's process rules of 2026-11-13 are recorded in `CLAUDE.md` and the role files, after the story
   that produced them was discarded by hak: the proportionate path for a look-only story, review
   rounds appended below the earlier ones so the story can be rebuilt without the chat, a test proves

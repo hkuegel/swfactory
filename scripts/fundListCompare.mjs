@@ -25,7 +25,8 @@ const labelOf = (fund) => `fund ${String(fund.year)} (${fund.isin})`;
  */
 const labelFor = (committed, record) => labelOf(committed ?? record);
 
-/** One difference as the run reports it. `kind` is `identity` (the result does not fit) or `value`. */
+/** One difference as the run reports it. `kind` is `identity` (the result does not fit), `value`, or
+ * `addition` (a fund the committed file does not have yet, which does not make the result unfit). */
 export function compareCommitted(committedText, records) {
   let file;
   try {
@@ -54,12 +55,15 @@ export function compareCommitted(committedText, records) {
     producedYears.add(record.year);
     const committed = byYear.get(record.year);
     if (committed === undefined) {
+      // Story 035 (hak's answer of 2026-11-14, the fund list extends to 2027 and 2035): a fund the
+      // committed file does not have cannot have moved, so it is named as an addition and the table may
+      // grow. What must not move is the identity of a fund the committed file already has.
       out.push({
         fund: labelFor(undefined, record),
         field: 'fund',
         committed: 'not in the committed file',
         produced: 'read by this run',
-        kind: 'identity',
+        kind: 'addition',
       });
       continue;
     }
@@ -89,9 +93,13 @@ export function compareCommitted(committedText, records) {
   return out.sort((a, b) => a.fund.localeCompare(b.fund) || a.field.localeCompare(b.field));
 }
 
-/** Hak's "passt": a run that writes may only write a table whose fund identity matches the committed file. */
+/** Hak's "passt": a run that writes may only write a table whose fund identity matches the committed
+ * file. An addition (a fund the file does not have yet) does not move an identity hak confirmed, so it
+ * fits; a committed fund that this run did not read does not fit, which is the case hak named. */
 export function fits(differences) {
-  return differences.every((difference) => difference.kind === 'value');
+  return differences.every(
+    (difference) => difference.kind === 'value' || difference.kind === 'addition',
+  );
 }
 
 /** How one difference is printed by a run. */

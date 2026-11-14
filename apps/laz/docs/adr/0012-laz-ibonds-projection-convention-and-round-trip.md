@@ -93,3 +93,24 @@ identity and keeps `ρ′` a constant per fund, which is what makes the closed f
 - If hak later wants the fund's actual weighted average maturity as the horizon, or a fund bought
   before asOf, or a carryover of money between phase years, this ADR is reopened and every oracle
   in story 024 must be recomputed.
+
+## Amendment (story 035, 2026-11-14, hak)
+
+The fund list now covers the funding years of the phase's boundary years: 2027 through 2035, so the
+example phase has a funding fund for its first year, and a phase that ends in March 2036 has one for
+its last year. The rules above are unchanged. A phase year counts only its phase months, which is what
+hak's second request of 2026-11-14 confirms: three monthly payments for 2036, not an invented full
+year. A phase year whose funding year is not in the list is still reported as a year with no amount;
+story 024 AC2 is now measured on a year outside the extended list (2026 needs the December 2025
+liquidation), because the example phase inside the list has no missing year any more.
+
+The horizon rule stays as this ADR has it, so both new funds use 31.12. of their maturity year. The source
+names a fixed maturity of 15.12.2027 for the 2027 fund and 02.12.2035 for the 2035 fund, with the shares
+redeemed the day after in both cases, which would put each horizon inside the maturity year; hak has not
+answered whether the app should use the source's date, so the rule is not changed for one fund (story 035,
+open question 3), and the difference is a month for 2035 and two weeks for 2027.
+
+The hand oracles that read the fixture copy were recomputed for the nine funds: F = 66,947895916 (tax
+off) for the example phase 01.2028–03.2034, and the day counts gain 365 (2027) and 3287 (2035). The
+two rows in the copy continue its hand pattern; the values the stored pages print are different, and
+the tests that read the stored pages are the script tests of story 025, not the app's.
