@@ -85,9 +85,9 @@ Two kinds of check behave differently, and that is the whole of this story:
 
 ## Open questions
 
-1. Whether the flaky minesweeper 3D e2e group gets a defect story of its own, or is accepted as machine load
-   under 16 parallel workers with only the publishing run required to be green (story 025, Review finding 1).
-   Hak's decision.
+1. Answered 2026-11-14 (hak): the flaky minesweeper 3D e2e group gets no defect story of its own; the
+   instability is accepted as machine load under 16 parallel workers, where only the run that publishes has to
+   be green.
 
 ## Decision log
 
@@ -107,6 +107,9 @@ Two kinds of check behave differently, and that is the whole of this story:
   paths, so a change in a workspace always runs that workspace, and a change in no workspace is never scoped.
 - 2026-11-14 — Decision (orchestrator): CI names `publish` for a push to `main` and for a UI run, `affected`
   for a pull request, so the CI comment and the plan step say the same thing.
+- 2026-11-14 — Q (open question 1): does the flaky minesweeper 3D e2e group get a defect story of its own? —
+  A (hak): no, the instability is accepted as machine load under 16 parallel workers, where only the run that
+  publishes has to be green. No defect story was opened.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
