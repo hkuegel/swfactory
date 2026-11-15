@@ -105,6 +105,9 @@ Append only._
 - 2026-11-14 — Gate 2: hak approved the record, the four retro proposals, and the commit, and gave the go-ahead to
   commit and push. The merge is hak's, and CI sees the pushed content through the merge, on his reading of
   2026-11-14 ("leave it to the merge").
+- 2026-11-14 — Q (asked after the merge): do the four approved retro proposals become rules in `tester.md`? —
+  A (hak): no, they stay as the record of this story, so no P-number is opened for them and the next free number
+  stays P32. No role file and no checklist item changes by this story.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
