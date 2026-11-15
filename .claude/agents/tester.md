@@ -2,7 +2,7 @@
 name: tester
 description: QA / test engineer. Use after implementation to verify every acceptance criterion with automated tests (unit, component, e2e), and to reproduce bugs with a failing test before they are fixed.
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
+model: strata/iq2_xs
 memory: project
 color: orange
 ---

@@ -2,7 +2,7 @@
 name: product-owner
 description: Product owner. Use to turn a raw idea, feature request or bug report into a well-formed user story with testable acceptance criteria in a backlog (docs/backlog/ for the shared platform, apps/<name>/docs/backlog/ for an app). Use before any design or implementation work starts.
 tools: Read, Write, Edit, Glob, Grep
-model: sonnet
+model: strata/iq2_xs
 memory: project
 color: yellow
 ---

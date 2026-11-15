@@ -2,7 +2,7 @@
 name: ux-designer
 description: UX/UI designer. Use for stories with user-facing UI to define component structure, screen states, interactions and accessibility before implementation.
 tools: Read, Write, Edit, Glob, Grep
-model: sonnet
+model: strata/iq2_xs
 memory: project
 color: pink
 ---

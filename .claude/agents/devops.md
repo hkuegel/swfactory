@@ -2,7 +2,7 @@
 name: devops
 description: DevOps / build engineer. Use for anything about the toolchain - dependencies, npm scripts, Vite/TS/ESLint/Vitest/Playwright configuration, CI pipelines in .github/workflows, build and deployment.
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
+model: strata/iq2_xs
 memory: project
 color: cyan
 ---
