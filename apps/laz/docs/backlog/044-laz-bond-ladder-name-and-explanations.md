@@ -350,4 +350,4 @@ were the only place a rule could live, and it is the thing hak asked to move. Si
   this story's runner named its backup directory `$T` and its loop item `$t`, which is how the restore step
   silently failed. Proposed wording: "a mutation check reports the file back to its pristine state as an
   assertion of the runner, not as a step of the script; a runner that cannot show the equality cannot report
-  the mutation check." Pending hak's approval.
+  the mutation check." Approved by hak on 2026-11-15 ("ok, für P32") and applied to `.claude/agents/tester.md`, rule 3.
