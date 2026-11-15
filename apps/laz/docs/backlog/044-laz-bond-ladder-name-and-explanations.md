@@ -101,6 +101,11 @@ chat. Append only._
   5173, and 5174 stays free for the e2e runs, because the e2e-mode sign-in fake is bound to 5174 and a dev
   server on that port makes the sign-in tests time out. The server that had been on 5173 belonged to another
   checkout (`swfactory-main`) and was ended at hak's request.
+- 2026-11-15 — hak's instruction: open the pull request and merge for him. Normally the agents cannot do
+  this (`gh` is not installed here, story 026 says the green CI run is open until hak opens the pull request
+  or dispatches); at his request the GitHub API was used with the token that was already in the environment,
+  and nothing was printed of it. PR #7, run 43712372709, is recorded in the Test report; the merge is done
+  after the run of the pushed content is green.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -239,9 +244,11 @@ free the laz group passed 57, as counted above, and the plan for this change doe
 all, so no minesweeper result is needed for this story.
 
 CI: the branch push alone starts no run, because the workflow runs on a push to `main`, a pull request or a
-`workflow_dispatch`. The green CI run of the Definition of Done is open until hak opens the pull request or
-dispatches the workflow (`gh` is not installed on this machine, story 026); the run id goes into this
-section when the run exists.
+`workflow_dispatch`. The run of the pull request (PR #7, opened by the agents at hak's request on
+2026-11-15) is **run 43712372709**: `pull_request`, plan mode `affected`, 8 of 12 steps, apps `laz`, green. That
+is the run that covers the words of this story, because the whole-tree checks in it ran on this content and
+the workspace steps ran for `laz` and the platform. The run that publishes is the run of the merge to `main`;
+its id goes below when it exists.
 
 ### Mutation check
 
