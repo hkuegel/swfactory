@@ -15,8 +15,10 @@ yourself. Track the steps with the task list. After each step, read the story fi
 confirm the agent did its part before moving on. Collect every "Suggested for
 CLAUDE.md" item the agents return — you need them in the retro.
 
-**Model economy:** pass `model: haiku` for regression runs of the `tester` and for
-small doc edits (Decision log entries, status changes, index rows). For follow-ups
+**Model economy:** every agent file has `model: inherit`, so a run uses the model OpenCode
+itself runs on — here the only local model, `strata/iq2_xs`. Do not pass a model alias
+(`sonnet`, `opus`, `haiku`): an alias the environment does not have ends the run with an
+error, which is what killed two runs on 2026-11-15. For follow-ups
 within the same story (review fixes, answers to questions), resume the agent with
 SendMessage instead of starting a new one — it keeps its context. But when the remaining
 work is small and self-contained, prefer a fresh agent: its cost is then measurable (a
