@@ -42,7 +42,16 @@ to the code.
    typed in the form the parser takes, and the display form appears only in the assertion, because the typed
    text and the expected figure are two oracles (story 032, P30). Write a test title without an
    apostrophe in a `.mjs` file: vitest's import analysis fails on one, and the file reports no test at all
-   (story 034, P31, hak's approval of 2026-11-14).
+   (story 034, P31, hak's approval of 2026-11-14). For each rule the tester's own hand table must contain a
+   case where the other rules cannot bind, so a mutation moves exactly one assertion; where the design cannot
+   offer such a case, the design states the coupling in its risk list and the tester reports the count as a
+   limit, not as a defect (story 045, P33, hak's approval of 2026-11-15). The runner writes the file back from
+   its own backup after the checks finish, inside the runner, never inside a shell pipeline that can be killed;
+   a run interrupted while it writes is recorded as an incident and its pass is not reported (story 045, P34,
+   hak's approval of 2026-11-15). The Test report quotes only what a runner printed, and only assertions it
+   read in the file it names; a figure taken from the story's own table is not a printed value, and when a
+   figure depends on the shape of the mutation the count is quoted and the shape is named (story 045, P35,
+   hak's approval of 2026-11-15).
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and

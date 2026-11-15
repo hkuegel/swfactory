@@ -43,3 +43,13 @@ input cells share once, as the footnote below the table (`COPY.fundFootnote`), i
 a copy can have no `hint` of its own, and `TextField` renders no hint paragraph then. Each input still keeps its
 visually hidden label of field and year, because a column header cannot name a control inside a cell, and the
 override marker is still the description of its own input.
+
+Story 045 adds the flat rate for accumulating funds (Vorabpauschale, § 18 InvStG) as a term-constant parameter
+in the tax block, prefilled with `2,24` % (70 % × the Basiszins of 2026) and counted only when capital gains tax
+is checked. The base of a calendar year is the value at the start of that year times the rate, capped by the
+year's actual increase and floored at 0; asOf's own year counts with the whole months before its month; the year
+of liquidation does not count. The fund table's column `Pauschalsteuer über die Haltedauer in Euro` shows each
+fund's payment, the fund section states the sum once, and the searched depot includes the payments, because they
+come from the settlement account and the fund's own value is not reduced. The tax at liquidation reads the gain
+minus the bases already taxed, so no base is taxed twice (ADR 0015). Every dash in the new column names its
+reason; the strings are in `src/features/plan/fieldCopy.ts` as the rest of the copy is.

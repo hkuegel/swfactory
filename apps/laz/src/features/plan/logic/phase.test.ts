@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { FLAT_OFF, type FlatRate } from './flat.ts';
 import { FUND_LIST } from './fund.ts';
 import { formatEuro } from './format.ts';
 import {
   buildPlan,
   depotFromPayoutCents,
   displayYearCents,
+  flatCashCents,
   payoutFromDepotCents,
+  phaseFactor,
   phaseYears,
 } from './phase.ts';
 import type { Phase } from './phase.ts';
@@ -17,13 +20,17 @@ const PHASE: Phase = { startMonth: '2028-01', endMonth: '2034-03' };
 const TAX_OFF: Tax = { on: false, rateMillionths: 0 };
 const TAX_25: Tax = { on: true, rateMillionths: 250000 };
 
+/** Story 045: the flat rate is 0 in these hand cases, so `cash` is 0 and `P = D / F` is the pair ADR 0012
+ * gives; the hand values of 024, 030, 031 and 035 are unchanged by the new parameter. `FLAT_OFF` is the
+ * shape the rate has when 0 is typed in the field. */
+
 describe('phase (ADR 0012, the one closed form)', () => {
   it('AC3: the round trip depot → monthly payout → depot differs by at most one cent', () => {
     for (const tax of [TAX_OFF, TAX_25]) {
       for (const depotCents of [0, 1000000, 20000000, 100000000]) {
         // The unrounded internal value is fed back, not the shown text (risk 1).
-        const monthlyCents = payoutFromDepotCents(depotCents, FUND_LIST, PHASE, tax);
-        const back = depotFromPayoutCents(monthlyCents, FUND_LIST, PHASE, tax);
+        const monthlyCents = payoutFromDepotCents(depotCents, FUND_LIST, PHASE, tax, FLAT_OFF);
+        const back = depotFromPayoutCents(monthlyCents, FUND_LIST, PHASE, tax, FLAT_OFF);
         expect(Math.abs(back - depotCents)).toBeLessThanOrEqual(1);
       }
     }
@@ -35,14 +42,14 @@ describe('phase (ADR 0012, the one closed form)', () => {
     // 298739,785 cents = 2.987,40 € (tax off).
     // Story 030, AC3: a value above that cap follows the same rule. Hand: 100.000.000 cents / F
     // (tax off) = 1.493.698,923 cents = 14.936,99 €.
-    const monthlyOff = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_OFF);
-    const monthlyTaxed = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_25);
+    const monthlyOff = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_OFF, FLAT_OFF);
+    const monthlyTaxed = payoutFromDepotCents(1000000, FUND_LIST, PHASE, TAX_25, FLAT_OFF);
     expect(formatEuro(monthlyOff)).toBe('149,37\u00a0€');
     expect(formatEuro(monthlyTaxed)).toBe('145,54\u00a0€');
-    expect(formatEuro(payoutFromDepotCents(20000000, FUND_LIST, PHASE, TAX_OFF))).toBe(
+    expect(formatEuro(payoutFromDepotCents(20000000, FUND_LIST, PHASE, TAX_OFF, FLAT_OFF))).toBe(
       '2.987,40\u00a0€',
     );
-    expect(formatEuro(payoutFromDepotCents(100000000, FUND_LIST, PHASE, TAX_OFF))).toBe(
+    expect(formatEuro(payoutFromDepotCents(100000000, FUND_LIST, PHASE, TAX_OFF, FLAT_OFF))).toBe(
       '14.936,99\u00a0€',
     );
 
@@ -52,21 +59,58 @@ describe('phase (ADR 0012, the one closed form)', () => {
     // (14941,470323 cents tax off, 14558,093296 cents tax on), and feeding the SHOWN figure back misses
     // the depot by more than one cent, because F is a multiplier: 14941 × F = 1.000.268,51 cents, a
     // miss of 31,49 cents tax off, and 14558 × F = 1.000.293,59, a miss of 6,41 cents tax on.
-    const backOff = payoutFromDepotCents(1000300, FUND_LIST, PHASE, TAX_OFF);
-    const backTaxed = payoutFromDepotCents(1000300, FUND_LIST, PHASE, TAX_25);
+    const backOff = payoutFromDepotCents(1000300, FUND_LIST, PHASE, TAX_OFF, FLAT_OFF);
+    const backTaxed = payoutFromDepotCents(1000300, FUND_LIST, PHASE, TAX_25, FLAT_OFF);
     // The unrounded model value is not a whole Cent, which is what makes the display rounding a step:
     // `Math.round` of it is an integer by definition, so the claim is about the value before rounding.
     expect(Number.isInteger(backOff)).toBe(false);
     expect(Number.isInteger(backTaxed)).toBe(false);
     expect(Math.round(backOff)).toBe(14941);
     expect(Math.round(backTaxed)).toBe(14558);
-    expect(Math.abs(depotFromPayoutCents(14941, FUND_LIST, PHASE, TAX_OFF) - 1000300)).toBeCloseTo(
-      31.49,
-      1,
-    );
-    expect(Math.abs(depotFromPayoutCents(14558, FUND_LIST, PHASE, TAX_25) - 1000300)).toBeCloseTo(
-      6.41,
-      1,
+    expect(
+      Math.abs(depotFromPayoutCents(14941, FUND_LIST, PHASE, TAX_OFF, FLAT_OFF) - 1000300),
+    ).toBeCloseTo(31.49, 1);
+    expect(
+      Math.abs(depotFromPayoutCents(14558, FUND_LIST, PHASE, TAX_25, FLAT_OFF) - 1000300),
+    ).toBeCloseTo(6.41, 1);
+  });
+
+  it('045 AC5, the round trip with a nonzero flat rate: the same cash in both directions', () => {
+    // The tester's own arithmetic on the fixture copy, tax 26,375 %, flat 2,24 %, asOf written as
+    // 1.1.2027 so the whole-month rule cannot bind here, and funds whose YTM is above the rate so the cap
+    // cannot move this test either (P32). Phase 01.2031–12.2034, monthly target 100,00 € = 10.000 Cent.
+    // The funding funds are 2030, 2031, 2032, 2033 (a phase year is funded by the fund of the year
+    // before); their flat taxes are 76,698488 + 109,573624 + 147,208175 + 190,496279 = 523,976566 Cent
+    // (`cash`), and ρ′ = 1,1106674062 · 1,1630871390 · 1,2274430132 · 1,3054920822, so
+    // F = 40,0900417691 and D = 10.000 × F + cash = 401.424,394258 Cent -> shown 401.424 Cent = 4.014,24 €.
+    const phase: Phase = { startMonth: '2031-01', endMonth: '2034-12' };
+    const tax: Tax = { on: true, rateMillionths: 263750 };
+    const flat: FlatRate = { hundredths: 224 };
+    const asOf = '2027-01-01';
+
+    // Assertion 1 pins that both directions use the same `cash`: the round trip is self-consistent, so a
+    // cash read in only one direction cannot keep it, while a change of the cash's VALUE cannot move it.
+    const depot = depotFromPayoutCents(10000, FUND_LIST, phase, tax, flat, asOf);
+    expect(
+      Math.abs(payoutFromDepotCents(depot, FUND_LIST, phase, tax, flat, asOf) - 10000),
+    ).toBeLessThanOrEqual(1);
+    // The shown figure fed back: (401.424 − 523,976566) / F = 9.999,990166 Cent, a miss of 0,01 Cent.
+    expect(
+      Math.abs(payoutFromDepotCents(401424, FUND_LIST, phase, tax, flat, asOf) - 10000),
+    ).toBeLessThanOrEqual(1);
+
+    // Assertion 2 pins `cash` itself, and that only the funds that fund a phase year are in the depot: the
+    // whole list would give 1.131,130246 Cent here, not 523,976566 Cent.
+    expect(flatCashCents(FUND_LIST, phase, tax, flat, asOf)).toBeCloseTo(523.976566, 6);
+    expect(phaseFactor(FUND_LIST, phase, tax, flat, asOf)).toBeCloseTo(40.090041769, 7);
+    expect(formatEuro(depot)).toBe('4.014,24\u00a0€');
+
+    // Control, the pair ADR 0012 gives without cash: the same phase with the rate 0 has no cash, and the
+    // hand factor uses the tax-on factors with base 0, ρ′ = 1,0924058614 · 1,1381840425 · 1,1954412359 ·
+    // 1,2658053575, so F = 41,0463037208 and the shown depot is 410.463,037208 Cent = 4.104,63 €.
+    expect(flatCashCents(FUND_LIST, phase, tax, FLAT_OFF, asOf)).toBe(0);
+    expect(formatEuro(depotFromPayoutCents(10000, FUND_LIST, phase, tax, FLAT_OFF, asOf))).toBe(
+      '4.104,63\u00a0€',
     );
   });
 
@@ -75,7 +119,7 @@ describe('phase (ADR 0012, the one closed form)', () => {
     // dropped. Before the list: 2026-01 to 2026-12 would need the December 2025 liquidation. This is
     // the measurement story 035 AC3 names for 024 AC2: a year outside the extended list, not 2028.
     const before: Phase = { startMonth: '2026-01', endMonth: '2026-12' };
-    const beforePlan = buildPlan(FUND_LIST, before, TAX_OFF, 1000000, 'depot');
+    const beforePlan = buildPlan(FUND_LIST, before, TAX_OFF, FLAT_OFF, 1000000, 'depot');
     expect(phaseYears(before)).toEqual([2026]);
     expect(beforePlan.fundedYears).toEqual([]);
     expect(beforePlan.totalCents).toBe(0);
@@ -86,7 +130,7 @@ describe('phase (ADR 0012, the one closed form)', () => {
     // case here is the year after it: 2037-01 to 2038-02 needs the December 2036 and 2037 liquidations,
     // and both years stay in the table. Hand: 12 months and 2 months.
     const after: Phase = { startMonth: '2037-01', endMonth: '2038-02' };
-    const afterPlan = buildPlan(FUND_LIST, after, TAX_OFF, 1000000, 'depot');
+    const afterPlan = buildPlan(FUND_LIST, after, TAX_OFF, FLAT_OFF, 1000000, 'depot');
     expect(phaseYears(after)).toEqual([2037, 2038]);
     expect(afterPlan.years.map((row) => row.months)).toEqual([12, 2]);
     expect(afterPlan.years.map((row) => row.fundingFund)).toEqual([null, null]);
@@ -102,7 +146,7 @@ describe('phase (ADR 0012, the one closed form)', () => {
     // 2036, so the shown lines are 143658 for the eight full years and 1185175 − 1149264 = 35911 for the
     // last line, which adds up to the shown total 11.851,75 €. No full year is invented for 2036.
     const phase: Phase = { startMonth: '2028-01', endMonth: '2036-03' };
-    const plan = buildPlan(FUND_LIST, phase, TAX_OFF, 1000000, 'depot');
+    const plan = buildPlan(FUND_LIST, phase, TAX_OFF, FLAT_OFF, 1000000, 'depot');
     expect(phaseYears(phase)).toEqual([2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036]);
     const first = plan.years.find((row) => row.year === 2028);
     const last = plan.years.find((row) => row.year === 2036);
@@ -131,8 +175,8 @@ describe('phase (ADR 0012, the one closed form)', () => {
     for (const state of states) {
       const tax = taxFromState(state);
       for (const depotCents of [0, 1000000, 20000000, 100000000]) {
-        const monthly = payoutFromDepotCents(depotCents, FUND_LIST, PHASE, tax);
-        const back = depotFromPayoutCents(monthly, FUND_LIST, PHASE, tax);
+        const monthly = payoutFromDepotCents(depotCents, FUND_LIST, PHASE, tax, FLAT_OFF);
+        const back = depotFromPayoutCents(monthly, FUND_LIST, PHASE, tax, FLAT_OFF);
         expect(Math.abs(back - depotCents)).toBeLessThanOrEqual(1);
       }
     }

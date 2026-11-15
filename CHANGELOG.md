@@ -44,6 +44,14 @@ All notable changes to this project are documented here, following
   labels name the first and the last month as a sentence. The rule the fund table printed in every input cell is
   printed once, as the footnote below the table, and no cell repeats it; each input keeps its own label of field
   and year, and the override marker is still the description of its own input (#044).
+- `laz`: the flat rate for an accumulating fund, the `Vorabpauschale` of § 18 InvStG, is a field in the tax block
+  with the value the law gives for 2026 prefilled, 2,24 %, and it stays the same over the whole term. It counts
+  only when capital gains tax is checked. The fund table gains the column `Pauschalsteuer über die Haltedauer in
+Euro`: the base of each counted year is the value at the start of that year times the rate, never more than the
+  year's actual increase, and the year of liquidation does not count; the fund section states the sum of these
+  payments once. The searched depot includes them, because the payments are paid from the settlement account and
+  the fund's own value is not reduced. The tax at liquidation reads the gain minus the bases already taxed, so no
+  base is taxed twice (#045).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).

@@ -74,7 +74,9 @@ export function PhaseForm({
         </label>
       </fieldset>
 
-      {FIELD_IDS.map((field) => (
+      {/* Story 045: the flat field is not rendered here but inside the tax block below, so the Tab order
+          follows the form order of `FIELD_IDS`, where `flatRate` is last (UX §1). */}
+      {FIELD_IDS.filter((field) => field !== 'flatRate').map((field) => (
         <TextField
           key={field}
           copy={field === 'amount' ? amountCopy(direction) : FIELD_COPY[field]}
@@ -125,6 +127,18 @@ export function PhaseForm({
             ))}
           </select>
         </div>
+        {/* Story 045 AC1: the field for the flat rate, the last control of the block. It is never disabled,
+            like every other control of the form (024 AC3), and its copy says the rate counts only in the
+            tax case. `field-flatRate` keeps the id pattern the other fields have. */}
+        <TextField
+          copy={FIELD_COPY.flatRate}
+          inputId="field-flatRate"
+          value={raw.flatRate}
+          error={errors.flatRate}
+          onChange={(value) => {
+            onField('flatRate', value);
+          }}
+        />
       </fieldset>
     </form>
   );

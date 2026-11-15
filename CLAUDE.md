@@ -244,7 +244,10 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   through the exported function (story 026, R3 and nit 6).
 - **Which checks run:** `npm run verify` runs the checks a change can affect; durations are reported,
   never asserted. A run that publishes to `main` is always a full run, and the gate 2 full run is the
-  oracle for what the mapping could have missed (story 026, R4).
+  oracle for what the mapping could have missed (story 026, R4). Call the full run as
+  `node scripts/verify.mjs --mode=full --no-record`, not as `npm run verify --mode=full`: npm eats the flags
+  as npm config, the script falls back to the affected mode, and a recorded run reports "nothing to run"
+  (story 045, P36, hak's approval of 2026-11-15).
 - **No live request, no repository read** in a test, and the mode is named in every call; a script that
   a test imports runs its scan only when it is executed directly (story 026).
 - **Cost table carries data:** a row is measured or says `not measured` with the reason; a table that
