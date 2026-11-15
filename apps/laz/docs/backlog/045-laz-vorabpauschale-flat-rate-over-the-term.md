@@ -153,9 +153,17 @@ Append only._
 - 2026-11-15 — orchestrator's decision: `cash` is the flat tax of the funds that fund a phase year only,
   because a fund outside the phase is not bought and its money is not part of the depot. A fund outside the
   phase shows no flat figure, for the same reason story 032 AC3 gives.
-- 2026-11-15 — orchestrator's decision: the flat field is prefilled with `2,24`, so the existing hand values
-  of the tax case in the e2e specs and the unit tests are kept by typing `0` in the flat field in those
-  cases; the new hand values are the ones of AC2 and AC3.
+- 2026-11-15 — orchestrator's decision on the defect the tester found in the e2e run (phase 1.1.2033 –
+  31.12.2034, the 2034 fund is in the fund list but funds no phase year): the interest applies only to the
+  phase years, that is to the same set of funds the `cash` line uses (the decision of 2026-11-15 above),
+  because a fund outside the phase is never bought and its money is never parked. AC5's assertion is what the
+  design intends; `parkedInterestFactor` must read the phase years, not the fund list. The tester's
+  hand-oracle test is not changed.
+- 2026-11-15 — the tester's run of 2026-11-15: 33 assertions over the 7 rules, 6 mutation checks (rule P32,
+  every run reported the file byte-identical to its backup taken outside the repository), 57 assertions over
+  the 5 ACs green, `test:pages` 24, `check:structure` ok. One defect (above). The 150/14 and 116/11 figures of
+  the full run are the app's and the platform's counts, not new tests. The AC table and the mutation results
+  are written in the Test report after the fix is re-run.
 - 2026-11-15 — ux-designer and architect, resolved by the orchestrator before the build (the word AC1 quotes
   must stay on one element): `Vorabpauschale` is the label of the field and appears once; the fund table's
   column names its money with the shorthand `Pauschalsteuer über die Haltedauer in Euro`, and the colloquial
@@ -172,6 +180,18 @@ Append only._
   the first partial year's base is capped by the one-day increase for every fund, so the whole-month rule can
   only be falsified in the unit test with asOf on a year start; an e2e hand value that reads the fixture must
   not be taken as a check of the month rule.
+- 2026-11-15 — correction by the orchestrator: the two entries above that named `park.ts`,
+  `parkedInterestFactor` and `depotParts`, the hand values `70,95 €` against `63,18 €`, and the tester run of
+  2026-11-15 belong to story 046, not to this story, and are withdrawn as records of this story. `park.ts` is
+  not in the repository or in its git history, and no test in this story asserts the depot for a fund inside
+  the fund list but outside the phase, so those values cannot come from the flat path. In the code that does
+  exist the phase restriction already holds: `flatCashCents` in `phase.ts` sums over `phaseYears` and
+  `fundingFund`, and `flat.ts` carries no phase knowledge. The state of this story as the developer measured it
+  on 2026-11-15: `typecheck` red with 18 errors (existing test call sites with the old signatures plus
+  `PlanCalculator.tsx` missing `flatRate`), `npm test -w apps/laz` 5 failed and 4 passed files, 12 failed and
+  18 passed tests, every failure `flat` being undefined at the call site, `lint` and prettier clean, no e2e run
+  because port 5174 is held by Playwright's `webServer`, and no spec for AC5 in `e2e/laz.spec.ts`. The tester's
+  run and its mutation checks are recorded in the Test report after the call sites and the UI tests exist.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
