@@ -146,6 +146,10 @@ export function FundTable({
           </tbody>
         </table>
       </div>
+      {/* Story 044: the rule the input cells used to repeat in every cell is stated once here, below the
+          table. It is not an input's description, so the description of an override cell stays the marker
+          alone (024 AC5). */}
+      <p className={styles.footnote}>{COPY.fundFootnote}</p>
     </section>
   );
 }

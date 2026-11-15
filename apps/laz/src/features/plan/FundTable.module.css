@@ -75,6 +75,15 @@
   overflow-wrap: anywhere;
 }
 
+/* Story 044: the shared rule of the input cells, read once below the table (the same rule as the year
+   table's footnote). */
+.footnote {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
 /* A cell is the containing block for the visually hidden label inside it. Without this the label is
    positioned against the initial containing block, so the scroller does not clip it and at 320 px the
    label reaches past the viewport, which makes the document scroll — against UX §5, where only the

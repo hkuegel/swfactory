@@ -1,6 +1,10 @@
 # App `laz`
 
-An app on the software factory's platform, created from `templates/app` by `/new-app`.
+An app on the software factory's platform, created from `templates/app` by `/new-app`. The name it
+shows is **Bond ladder** (story 044): one fund per year, each fund liquidated in December, and the
+money of a fund pays the phase year after it. The app id, the folder, the package name and the
+published path stay `laz`, because the CI workflow, the landing page's app list and the published URL
+read them.
 It calculates the payout phase of a Lebensarbeitszeitkonto: the maximum monthly payout a
 depot funds over a phase of the length you choose, or the depot a target monthly payout
 would need. The payout per share is a projection from YTM and NAV, not a published market
@@ -34,4 +38,8 @@ the source.
 The fund table names the fund each row is: `Fondsname` and `ISIN` as the data file stores them, and the column that
 shows the net asset value per share is named `Kurs` (story 036, hak's word of 2026-11-14). The row header stays the
 fund's year, and nothing is formatted for these two columns. The copy of the table's columns lives in
-`src/features/plan/fieldCopy.ts`, which the UI and the tests read as the same strings.
+`src/features/plan/fieldCopy.ts`, which the UI and the tests read as the same strings. Story 044 states the rule the
+input cells share once, as the footnote below the table (`COPY.fundFootnote`), instead of printing it in every cell:
+a copy can have no `hint` of its own, and `TextField` renders no hint paragraph then. Each input still keeps its
+visually hidden label of field and year, because a column header cannot name a control inside a cell, and the
+override marker is still the description of its own input.

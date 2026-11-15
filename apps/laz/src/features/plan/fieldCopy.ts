@@ -19,7 +19,8 @@ export interface FieldCopy {
   readonly label: string;
   /** The rule the error quotes: a range that belongs to what the value means, or the rule of its unit (story 030). */
   readonly range: string;
-  readonly hint: string;
+  /** Story 044: a table cell has no hint of its own, its rule is the section's footnote, so a copy can have none. */
+  readonly hint?: string;
   /** `kein gültiges Datum` for the phase fields, `keine gültige Zahl` for the numbers (UX §2). */
   readonly formatWord: 'keine gültige Zahl' | 'kein gültiges Datum';
   /** The field's unit, named in the error when a value is not an exact whole unit (story 030). */
@@ -44,18 +45,21 @@ function moneyRule(unit: string, decimals: number, suffix = ''): string {
 
 export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
   phaseStart: {
-    label: 'Phase Beginn (Monat)',
+    // Story 044: the label is a sentence, so it says what the field is, not what it is called in the code.
+    label: 'Erster Monat der Auszahlungsphase',
     // Story 033: no range. The rule is the shape of a month, so the error names the shape, not a range.
     range:
       'Monat und Jahr, zum Beispiel 01.2028; ein ergänzter Tag muss ein echter Tag dieses Monats sein',
-    hint: 'Erster Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 01.2028; ein Tag kann ergänzt werden.',
+    // Story 044: the hint is what to type; what the field means is the label, so the two no longer repeat
+    // each other.
+    hint: 'Format MM.JJJJ, zum Beispiel 01.2028; ein Tag kann ergänzt werden.',
     formatWord: 'kein gültiges Datum',
   },
   phaseEnd: {
-    label: 'Phase Ende (Monat)',
+    label: 'Letzter Monat der Auszahlungsphase',
     range:
       'Monat und Jahr, zum Beispiel 03.2034; ein ergänzter Tag muss ein echter Tag dieses Monats sein',
-    hint: 'Letzter Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 03.2034; ein Tag kann ergänzt werden; muss nach dem Beginn liegen.',
+    hint: 'Format MM.JJJJ, zum Beispiel 03.2034; ein Tag kann ergänzt werden; muss nach dem Beginn liegen.',
     formatWord: 'kein gültiges Datum',
   },
   amount: {
@@ -97,7 +101,8 @@ export function amountCopy(direction: Direction): FieldCopy {
   return FIELD_COPY.amount;
 }
 
-/** The input cells of a fund row carry their own visually hidden label (UX §2). */
+/** Story 044: the fund input cells keep their visually hidden label (024 UX §2), but have no hint of
+ * their own, because the rule the cells share is stated once in the section's footnote. */
 export function overrideCopy(field: OverrideField, year: number): FieldCopy {
   // The NAV cell's decimal rule follows its unit, micro-euro (story 025), and it has no amount cap
   // (story 030); the YTM cell keeps 2 decimals and the range of a percent.
@@ -105,7 +110,6 @@ export function overrideCopy(field: OverrideField, year: number): FieldCopy {
     return {
       label: `Kurs in Euro für Jahr ${String(year)}`,
       range: moneyRule('Micro-Euro', 6),
-      hint: 'Wert aus der Fondsliste; eigener Wert, höchstens 6 Nachkommastellen; der Wert muss eine ganze Anzahl Micro-Euro sein.',
       formatWord: 'keine gültige Zahl',
       unit: 'Micro-Euro',
     };
@@ -113,7 +117,6 @@ export function overrideCopy(field: OverrideField, year: number): FieldCopy {
   return {
     label: `YTM in Prozent für Jahr ${String(year)}`,
     range: '-100,00 bis 100,00 %',
-    hint: 'Wert aus der Fondsliste; eigener Wert, höchstens 2 Nachkommastellen.',
     formatWord: 'keine gültige Zahl',
   };
 }
@@ -121,7 +124,8 @@ export function overrideCopy(field: OverrideField, year: number): FieldCopy {
 /** The field's error text; always names the field and the rule it broke (UX §2, story 030). */
 export function errorMessage(copy: FieldCopy, error: FieldError): string {
   if (error.kind === 'endBeforeStart') {
-    return `Phase Ende (Monat): muss nach dem Beginn liegen (${formatMonth(error.start)}). Erlaubt: ein Monat ab dem Beginn.`;
+    // Story 044: the wording quotes the label it is given, so it cannot disagree with the label.
+    return `${copy.label}: muss nach dem Beginn liegen (${formatMonth(error.start)}). Erlaubt: ein Monat ab dem Beginn.`;
   }
   const word =
     error.kind === 'empty'
@@ -134,16 +138,25 @@ export function errorMessage(copy: FieldCopy, error: FieldError): string {
   return `${copy.label}: ${word}. Erlaubt: ${copy.range}.`;
 }
 
-/** Radiogroup, checkbox, table caption and the strings of the result area (UX §2). */
+/** The app name, the intro, the copy of the controls, table captions and the strings of the result area (UX §2). */
 export const COPY = {
-  directionLegend: 'Rechenrichtung',
-  depotRadio: 'Depot gegeben, Auszahlung gesucht',
-  payoutRadio: 'Auszahlung gegeben, Depot gesucht',
+  /** Story 044 (hak): the name the user sees. The app id stays `laz`, so the published path and the CI
+   * paths do not move; `index.html` carries the same string as its `<title>`. */
+  appTitle: 'Bond ladder',
+  /** Story 044: the first text of the app content, the one that explains what the app calculates. */
+  intro:
+    'Ein Bond ladder ist eine Staffel von Fonds, einer pro Jahr. Jeder Fonds wird am 31. Dezember seines ' +
+    'Jahres aufgelöst, und das Geld dieses Fonds finanziert die Auszahlungen des Jahres danach. Diese App ' +
+    'zeigt, welche monatliche Auszahlung ein Depot über eine Phase trägt, oder welches Depot eine ' +
+    'gewünschte monatliche Auszahlung braucht.',
+  directionLegend: 'Was ist gegeben und was wird gesucht?',
+  depotRadio: 'Das Depot ist gegeben, gesucht wird die monatliche Auszahlung',
+  payoutRadio: 'Die monatliche Auszahlung ist gegeben, gesucht wird das Depot',
   resultHeading: 'Ergebnis',
   inputsHeading: 'Eingaben',
   yearsHeading: 'Jahresübersicht',
   captionPrefix: 'Auszahlungsphase',
-  fundsHeading: 'Fondsplan',
+  fundsHeading: 'Fondsstaffel',
   scrollerLabel: 'Jahresübersicht, horizontal scrollbar',
   yearColumn: 'Jahr',
   monthsColumn: 'Monate',
@@ -170,8 +183,15 @@ export const COPY = {
     'Jedes Phase-Jahr wird durch die Auflösung des Fonds im Dezember des Vorjahres finanziert. ' +
     'Ein Jahr ohne Fonds wird ohne Betrag gezeigt und zählt nicht in der Summe.',
   marker: 'Wert vom Nutzer eingegeben',
-  fundCaption: 'Fondsliste nach Jahr',
-  fundScrollerLabel: 'Fondsplan, horizontal scrollbar',
+  fundCaption: 'Ein Fonds pro Jahr, aufgelöst am 31. Dezember des Jahres',
+  fundScrollerLabel: 'Fondsstaffel, horizontal scrollbar',
+  /** Story 044: the rule the input cells shared, written once. The cells keep their own label because a
+   * column header cannot name a control inside a cell (024 UX §2). */
+  fundFootnote:
+    'Die Werte in den Kurs- und YTM-Zellen stammen aus der Fondsliste und können überschrieben werden; ' +
+    'ein überschriebener Wert wird markiert und die Hochrechnung rechnet mit ihm. Kurs: höchstens 6 ' +
+    'Nachkommastellen, der Wert muss eine ganze Anzahl Micro-Euro sein. YTM: höchstens 2 ' +
+    'Nachkommastellen.',
   emptyResult: 'Noch kein Ergebnis: bitte Phase und Betrag ausfüllen.',
   invalidResult: 'Kein Ergebnis möglich. Bitte die markierten Felder korrigieren.',
   noFundingYear: 'Kein Ergebnis möglich: die Phase hat kein Jahr mit einem Fonds.',
