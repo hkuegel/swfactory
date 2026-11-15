@@ -1,4 +1,4 @@
----
+﻿---
 id: 046
 title: The payout falls monthly, and money that is not yet needed can be parked on a deposit account for a rate that is a parameter
 status: designed # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
@@ -167,6 +167,44 @@ Append only._
   (`4,29 €`, `11,96 €`, `1.188,04 €`) do not move, so no acceptance criterion changes. The paragraph in the
   model section is corrected because the story is the source of truth for the tester's oracles; the numbers of
   the earlier run are not treated as measurements.
+- 2026-11-15 — the ux-designer's run wrote its UX section in the session's checkout (`swfactory`), not in the
+  story worktree (`swfactory-046`), because that role has no shell and its permission denies writing outside its
+  own working directory; the orchestrator copied the section into the story file here and reverted the copy it
+  left in the other checkout. The text is the ux-designer's, unchanged.
+- 2026-11-15 — orchestrator's resolutions on the ux-designer's two open points, applied to its section before it
+  was copied: (1) the new columns are in the year table, as AC4 says, so AC4's sum line lives in the year section;
+  the ux-designer's first version had put them in the fund table because the money rule lives there, and it named
+  that conflict for the orchestrator to resolve. (2) The balance column is dropped: AC4 names only the interest and
+  the tax on it, `displayParkCents` produces only `{ interestCents, taxCents }`, and the money that waits at the
+  start of the phase year is already the year table's existing amount column (`yearAmountMicroEur`, AC5's
+  `1.188,04 €`). A column showing a figure the logic does not produce cannot be asserted. No negative parts: the
+  parked money is not a part of the depot, so story 032 AC2's money rule, `displayFundParts` and `flatPartsSum`
+  are unchanged.
+- 2026-11-15 — the ux-designer's other decisions stand as written: the native `CheckboxOption` is kept and
+  `role="switch"` is rejected (the platform has no switch component and a switch would need a new component and a
+  new role in the tests for no accessibility gain), the legend and the control label are two different strings, the
+  tax is its own column with its own reason function, and the sum line keeps one base string with the tax sentence
+  added only in the tax case.
+- 2026-11-15 — the ux-designer's fourth pass completed the reason map to the machine reasons the design names, in
+  its first-match-wins order, and renamed the copy object to `DEPOSIT_COPY` (the name the design gives and the
+  code implements): `option-off` → `Geld wird nicht geparkt (Option aus)` (new), `no-funding-fund` →
+  `kein Fonds für dieses Jahr` (story 024's existing `COPY.missingYear`, reused), `no-money-to-park` →
+  `kein Geld zum Parken (Wert nicht positiv)` (new), `no-rate` → `kein Zinssatz` (new), and the tax column reads
+  `Steuer nicht angehakt` (story 045's existing string) before the interest column's reason, because there is no
+  tax without interest. The phase-side reasons stay story 032's strings. Before this pass the section gave a text
+  for only two of the four reasons, so the map could not be asserted for the others. The design's sentence that
+  `option-off` "reuses copy the app already has" is not true: `fieldCopy.ts` has no string for the parking option
+  off, only `Steuer nicht angehakt` for the tax case and `COPY.missingYear` for the funding reason. The
+  ux-designer's new string is the copy of record; the design line is not rewritten here, because the design
+  section is the architect's work.
+- 2026-11-15 — orchestrator's naming resolutions, applied to the UX section before it was copied: the field id is
+  `depositRate` as the design names it (the UX had `parkRate`), so `FIELD_IDS`, `fieldSpec`, `FIELD_COPY` and the
+  `<label for>` read one name, and `depositRate` stays last in `FIELD_IDS`, which keeps the first-invalid-field
+  wording of 033 and 045 unchanged. `DEPOSIT_COPY` is the block's copy object, the shape `TAX_COPY` has (legend,
+  control label, hint); the two headers, the sum line and the facts stay in the app's single `COPY` object, as
+  story 045's strings do, because the tests read `COPY.flatColumn` there. The control is a checkbox, so the
+  design's word "switch label" reads as the block's control label; the accessible name is the label string, not
+  the legend.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -174,11 +212,223 @@ Append only._
 
 _ux-designer: component tree, states (loading/empty/error/success), interactions, accessibility notes._
 
-To be written after gate 1.
+The tree of 044 and 045 stays. The form gains one fieldset of its own, the year table gains two last columns,
+and the year section gains two paragraphs. The fund table gains nothing: no column, no paragraph, no new string.
+Nothing else moves: no new component, no new live region, no new colour token.
+
+```text
+PlanCalculator
+  intro paragraph                      unchanged (044)
+  section.inputs                       <form aria-labelledby=h2 "Eingaben">
+    fieldset + legend                  "Was ist gegeben und was wird gesucht?", two native radios
+    Field "Erster Monat der Auszahlungsphase"
+    Field "Letzter Monat der Auszahlungsphase"
+    Field amount (label follows the direction, unchanged)
+    fieldset + legend "Steuer auf den Gewinn" (031, unchanged)
+    fieldset + legend "Geld auf dem Tagesgeldkonto parken"    new block (Q5), the last fieldset of the form
+      CheckboxOption                                        the one control, a native checkbox
+      Field "Zinssatz in Prozent"                           new, the last control of the block
+  section.result                       unchanged; a negative figure reads as the model returns it
+  section.years                        <section aria-labelledby=h2 "Jahresübersicht">
+    year table                         table, caption "Auszahlungsphase …", two new last columns
+    sum line <p>                       new, the year section states the sums once
+    facts paragraph <p>                new, the rules AC4 names, stated once here
+    footnote <p>                       unchanged, the year table's own rule, still the last paragraph
+  section.funds                        unchanged, no new column and no new paragraph
+```
+
+The two new paragraphs go below the table, before the existing footnote, in the section named by the year
+heading, because the figures the sum is over are the year table's rows; the fund section states nothing for the
+parked path. Every new cell is read by its header text, as every column of this app is (CLAUDE.md).
+
+The block is rendered after the tax block, and its field is the last control of the block, so the Tab order and
+the form order of `FIELD_IDS` stay one order: radios, phase fields, amount, the two tax checkboxes, the
+select, the flat field, then the parking checkbox, then the rate field, then the result section. `depositRate` is
+last in `FIELD_IDS`, which is what keeps the first-invalid-field wording of 033 and 045 unchanged. The new
+columns add no tab stop; the sum line and the facts paragraph are read when the year section is entered.
+
+The control is a native checkbox through `CheckboxOption`, not `role="switch"`. Reason: story 031's tax block
+is the model of a block with a legend, one control and the rule under the control as its description, the app
+has no switch component (`packages/platform/src/components/` holds only `Button`), and the existing specs read
+this shape as `getByRole('checkbox')` and `check()`. A switch would need a new component, a second block shape
+and a new role in the tests for no accessibility gain: the state change happens on a focused native control,
+which announces itself, so no live region is needed for it either.
+
+The legend names the block; the label names what the control does, and it is not a substring of the legend, so
+the group name and the control name stay two different strings. The rate field is never disabled, even while
+the option is off — a control that is off changes what the app calculates, not what the user can type (024 AC3),
+and the condition is in its hint, because the hint is the field's description and the paragraph below the table
+cannot be it.
+
+The columns are the two AC4 names: the interest the parked money earns and the tax on it. The money that waits
+at the start of the phase year is shown by the year table's existing amount column, not by a new one: that
+column reads `yearAmountMicroEur`, the money that must be at the start of the phase year, which in AC5's hand
+example is `1188,0409375 €` and reads `1.188,04 €` — so the tester reads it as the existing column, and no figure
+is asserted for a balance the logic does not produce. Each new figure is rounded once at display (`roundEuroCents`,
+ADR 0012): `displayParkCents(plan)` gives `{ interestCents, taxCents }` for a year, `parkSumsCents(shown)` the
+sums the sum line states, so a reader adding either column gets the figure the section states. The parked money
+is not a part of the depot, so story 032 AC2's money rule is unchanged: `displayFundParts` and `flatPartsSum`
+still read the purchase parts and the flat parts and add up to the shown depot with the last part derived from
+the total, and `displayYearCents` keeps its rule that the last year line is the total minus the other lines. The
+shares in the fund table follow the amount the model computes for the year, so story 032 AC1 holds while the
+option is off (AC5).
+
+### States
+
+- First render: the option is off and the rate is prefilled `2,50`, no error before the first edit (024 §3).
+  Nothing is usable yet, so the result area shows the empty string and the year table is not rendered at all.
+  Once a phase and an amount give a plan, the interest cell reads `– Geld wird nicht geparkt (Option aus)` and
+  the tax cell reads `– Steuer nicht angehakt` while the Kapitalertragsteuer is off, or `– Geld wird nicht
+geparkt (Option aus)` when the tax is on and the option off; no sum line is shown, and the figures of 024 and
+  045 do not move: with the option off nothing is calculated anywhere, the amount column reads the year's amount
+  unchanged (`1.200,00 €` for a full year at `P = 100 €`), and the fund table stays as story 032 renders it.
+- Success, option on, tax off: the interest cell shows the gross interest — `16,25 €` for the hand example,
+  `1,25 €` for a three-month year — the tax cell reads `– Steuer nicht angehakt` (the existing string of 032,
+  named once here), the existing amount column shows `1.183,75 €` for that full year, and the year section states
+  its interest sum once below the table; the tax sum is stated only when a row has a tax figure.
+- Success, option on, tax on: the interest cell `16,25 €`, the tax cell `4,29 €` at `26,375 %`, the existing
+  amount column `1.188,04 €`, and the sum line names both sums, so a reader adding either column gets the figure
+  the section states.
+- Error, a rate outside `0,00 bis 100,00 %` or not a whole number: the error names the field and the rule it
+  broke, in the existing pattern, below the hint, with `aria-invalid`, and only after the first edit of this
+  field. The result area shows the no-result callout and the year table, with its two new columns, is removed
+  while a field is invalid (024 §3), so no parked figure is shown anywhere. A `2,505` is a format error (3
+  Nachkommastellen), `100,01` is a range error, an empty field is `Wert fehlt`.
+- Empty: no figure anywhere (option off, or the rate is 0, or no fund inside the phase) — no sum line, nothing
+  invented for an empty sum (the display rule 045 records); the facts paragraph stays while a result is possible
+  and the section is mounted, because it states the rule and not a figure. With the option on and the rate `0`
+  both new cells read `– kein Zinssatz` and the amount column shows the year's amount as the control case. A
+  phase year without phase months keeps the reason 032 already gives it, because AC2 invents no interest for it.
+- Loading: none, the app has no request and no storage write (024 AC6).
+
+### Interactions
+
+- Typing stores the raw text unchanged, `inputMode="decimal"` (the field cannot hold a negative value, so the
+  negative-range rule of CLAUDE.md does not apply), and the figures recompute on every keystroke. Focus stays in
+  the field being edited; the checkbox never moves focus, and no control becomes disabled, so no focus target
+  has to be named.
+- The checkbox is one click and one `change`; the whole row is the label, like every row of 031, so box and text
+  are one 44 px target. Its state change announces through the control itself; no new live region is mounted.
+- The existing debounced live region names the rate through the existing wording when it is the first invalid
+  field (`Kein Ergebnis: Zinssatz in Prozent ist ungültig.`), which is a new string for the region, so it
+  announces. The parked sum is not added to the live text (045's risk 9).
+
+### Accessibility
+
+- The fieldset's legend is the accessible name of the group, and the checkbox is a control with its own
+  accessible name (its label) with the hint as its accessible description through `aria-describedby`. The rate
+  field keeps a real `<label for="field-depositRate">` and its hint as its description; the error is added to the
+  same description with `aria-invalid`. No `role="alert"`.
+- A column header cannot name a control inside a cell, so the fund table's input cells keep their visually
+  hidden labels of field and year (`Kurs in Euro für Jahr 2028`, `YTM in Prozent für Jahr 2028`) and no hint of
+  their own; the shared rule stays the fund section's footnote (044). The new year columns hold no input, so
+  they add no label.
+- The year table is a real table with `th scope="col"` for its four existing headers and the two new headers, its
+  caption
+  `Auszahlungsphase …` (the phase period, `COPY.captionPrefix`) stays unchanged, and the row header stays the
+  phase year; the fund table keeps its caption, its columns and its `th scope="row"` headers unchanged, and tests
+  read a new cell by its header text, never by position (CLAUDE.md).
+- The new cells are plain text: the projection label is the accessible description of the fund section's
+  figures (024 AC5), not of the year table's, so the year table's figures keep no description and a dash reads
+  as `– kein Zinssatz` with its reason, not as a figure.
+- The sum line and the facts paragraph are paragraph text in the year section, never a `dt` and never part of
+  the live region, so `valueOf` is not used for them; the existing debounced live region stays mounted empty
+  from the first render and keeps its wording.
+- Contrast (hand computed, the tester re-checks with a tool): the new headers `--color-text` on
+  `--color-surface-subtle` 14.62 light / 11.96 dark, the new figures `--color-text` on `--color-surface` 17.16 /
+  14.10, the dashes with their reasons, the sum line and the facts paragraph `--color-text-muted` on
+  `--color-surface` 7.78 / 7.64; the legend and the control label `--color-text` on `--color-surface`, the hints
+  `--color-text-muted` on `--color-surface`. The one new element that carries a state is the checkbox box, whose
+  edge is `--color-edge` on `--color-surface`, 4.21 light / 5.86 dark, above the 3:1 bound. Focus and the invalid
+  field keep the existing indicators. Forced colours: nothing new carries a state by colour, the box keeps its
+  1 px CanvasText border and the invalid field its 1 px CanvasText border with the icon.
+- Dark mode: no new colour, every new element reuses the existing rules, so the values above hold in both
+  schemes. Below 600 px: only the year section's own wrapper scrolls (`role="region"`, name
+  `Jahresübersicht, horizontal scrollbar`), so the two new columns make the year table wider without ever
+  scrolling the page sideways; the new headers wrap as the other headers do and a figure wraps inside its cell;
+  the two new paragraphs stack below the table like the footnote, and the new block stacks in the form with the
+  fieldset rules of 031.
 
 ### Copy (exact strings)
 
-To be written after gate 1.
+`DEPOSIT_COPY` (the block's copy, the name the design gives it, the shape `TAX_COPY` has; the columns, the sum
+line and the facts live in the app's single `COPY` object, as 045's do; each string lives on one element):
+
+- legend: `Geld auf dem Tagesgeldkonto parken`
+- control label: `Zinsen auf das Geld, das noch nicht gebraucht wird`
+- control hint: `Die Auszahlung fällt am letzten Tag jedes Phase-Monats, das Geld wartet bis dahin, und das
+Depot, das die App sucht, wird um die Zinsen kleiner, die das wartende Geld bringt.`
+
+`FIELD_COPY.depositRate` (the field id is `depositRate`, as the design names it, so `FIELD_IDS` and
+`fieldSpec` read one name):
+
+- label: `Zinssatz in Prozent`
+- range: `0,00 bis 100,00 %`
+- hint: `Prozentsatz, höchstens 2 Nachkommastellen. Er gilt für das Geld, das zu Beginn eines Monats noch für
+die späteren Monate desselben Jahres braucht; er bleibt über die Laufzeit gleich und zählt nur, wenn die
+Option an ist.`
+- formatWord: `keine gültige Zahl`
+- unit: `Hundertstel Prozent`
+
+The errors the pattern gives for these strings:
+
+- `Zinssatz in Prozent: keine gültige Zahl. Erlaubt: 0,00 bis 100,00 %.`
+- `Zinssatz in Prozent: Wert außerhalb des erlaubten Bereichs. Erlaubt: 0,00 bis 100,00 %.`
+- `Zinssatz in Prozent: Wert ist keine ganze Anzahl Hundertstel Prozent. Erlaubt: 0,00 bis 100,00 %.`
+- `Zinssatz in Prozent: Wert fehlt. Erlaubt: 0,00 bis 100,00 %.`
+
+`COPY.parkColumn` (the interest of the phase year): `Zinsen über das Phase-Jahr in Euro`
+
+`COPY.parkTaxColumn` (the tax on that interest, the tax case only): `Steuer auf die Zinsen in Euro`
+
+`COPY.parkSumLine` (the year section's paragraph, never a `dd`; `{zinsen}` and `{steuer}` are
+`formatEuro` of the shown cents, so the reader adding either column gets the figure the section states; the
+second sentence is part of the string only when a row has a tax figure, and nothing is invented for an empty
+sum): `Summe der Zinsen über die Phase-Jahre: {zinsen}.` plus, in the tax case,
+`Steuer auf die Zinsen: {steuer}.`
+
+`COPY.parkFacts` (the rules AC4 names, stated once, in the year section below the table, not in the
+fund section; a copy has no `hint` of its own, so this is paragraph text): `Die Zinsen werden einfach gerechnet,
+auf dem Geld, das bis zur Auszahlung wartet; innerhalb eines Jahres werden die Zinsen nicht verzinst. Die Steuer
+auf die Zinsen wird am Zufluss gerechnet, und das Jahr des Zuflusses ist das Phase-Jahr.`
+
+The reason texts, read in the year table's cells, in the first-match-wins order the design gives, each text
+written once and read as the full line text of the cell:
+
+`parkReasonText` (the interest column):
+
+- `option-off` → `Geld wird nicht geparkt (Option aus)` (new)
+- `no-funding-fund` → `kein Fonds für dieses Jahr` (the existing string, `COPY.missingYear`, reused; the same
+  text the year table's funding cell already reads for a phase year without a fund)
+- `no-money-to-park` → `kein Geld zum Parken (Wert nicht positiv)` (new; the money for the year is not
+  positive, so the account would go below null and no negative interest is invented)
+- `no-rate` → `kein Zinssatz` (new, a string of this story)
+- a phase-side reason keeps the strings of story 032 unchanged: `Auflösung nach Phasenende`,
+  `Auflösung vor Phasenbeginn`, `keine Hochrechnung je Anteil`.
+
+`parkTaxReasonText` (the tax column): `outside-tax-case` → `Steuer nicht angehakt` (the existing string of
+story 045, named once here), then the interest column's reasons in the same order, because there is no tax
+without interest. A row can show two dashes with two different reasons, so each column reads its own one, and
+the tester reads a dash by its full line text.
+
+Substring notes for the tester: `Tagesgeldkonto` occurs once, in the legend. `parken` occurs once as the exact
+string, in the legend; in the reasons it appears as `geparkt` (`Geld wird nicht geparkt (Option aus)`) and as
+`Parken` (`kein Geld zum Parken (Wert nicht positiv)`), so a case-insensitive query for `parken` finds three
+places and the legend is read as its own full line text. `Fonds` occurs in the reason `kein Fonds für dieses
+Jahr`, which is read twice: as the year table's funding cell and as the interest cell's reason for
+`no-funding-fund`, so the tester reads a dash by its full line text, never by position. `Zinssatz` occurs twice,
+in the field label and in the reason `kein Zinssatz`, so the field is read by its label and the dash by its full
+line text. `Zinsen` occurs in six strings — the control label, the control hint, the interest header, the tax
+header, the sum line and the facts paragraph — and `Steuer` in the tax legend, the KSt label, the Kirchensteuer
+label, 045's header (`Pauschalsteuer`), 045's reason, 045's facts, this story's tax header, the tax reason, the
+sum line and the facts paragraph, so all of these are read as full line texts or as the columnheader.
+`Phase-Monat` occurs once, in the control hint; `Phase-Jahr` in the interest header, the sum line and the facts
+paragraph. `Euro` occurs in three headers of the fund table, the two new headers of the year table, the hidden
+labels of the input cells and the amount label, so tests read the whole header; the year table's existing amount
+header (`Betrag für das Jahr`) is the column that shows the money that waits, so tests read it by that header
+text. `Jahresübersicht` stays in the year heading and the scroller label, and `Eingaben` still occurs once, in
+the form heading that names the form for the sign-in probe. Both sum lines are paragraph text, never a `dd`:
+045's in the fund section, this story's in the year section.
 
 ## Technical design
 
