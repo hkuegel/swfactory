@@ -2,7 +2,7 @@
 name: reviewer
 description: Code reviewer (correctness, security, maintainability). Use after the tester passes a story, before anything is merged. Read-only on code; returns APPROVED or CHANGES_REQUESTED.
 tools: Read, Glob, Grep, Bash, Edit
-model: strata/iq2_xs
+model: inherit
 memory: project
 color: red
 ---
