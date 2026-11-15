@@ -192,6 +192,10 @@ Append only._
   18 passed tests, every failure `flat` being undefined at the call site, `lint` and prettier clean, no e2e run
   because port 5174 is held by Playwright's `webServer`, and no spec for AC5 in `e2e/laz.spec.ts`. The tester's
   run and its mutation checks are recorded in the Test report after the call sites and the UI tests exist.
+- 2026-11-15 — the entry I deleted on 2026-11-15 while writing the correction above (the Decision log is
+  append-only, so it is restored here): "orchestrator's decision: the flat field is prefilled with `2,24`, so
+  the existing hand values of the tax case in the e2e specs and the unit tests are kept by typing `0` in the
+  flat field in those cases; the new hand values are the ones of AC2 and AC3."
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
