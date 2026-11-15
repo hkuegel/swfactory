@@ -1,7 +1,7 @@
 ---
 id: 046
 title: The payout falls monthly, and money that is not yet needed can be parked on a deposit account for a rate that is a parameter
-status: ready # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: designed # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size: M # S | M | L (story 026). S = at most three ACs: needs only the Explanation, no Review section and no Cost table.
@@ -65,8 +65,8 @@ For a phase year with `m` phase months and a monthly target `P`:
   model that exists today.
 
 Hand example for the interest, `P = 100 €`, rate `2,50 %`, one full phase year:
-`6,5 × 100 × 0,025 = 16,25 €`; tax case at `26,375 %` (no church tax): `4,2909375 €`, net `11,9590625 €`;
-money needed at the start of that year `1188,0409375 €`. A partial phase year of three months:
+`6,5 × 100 × 0,025 = 16,25 €`; tax case at `26,375 %` (no church tax): `4,2859375 €`, net `11,9640625 €`;
+money needed at the start of that year `1188,0359375 €`. A partial phase year of three months:
 `100 × 0,025 × 12/24 = 1,25 €`, tax `0,3296875 €`, net `0,9203125 €`. These are the oracles the tester uses.
 
 ## Acceptance criteria
@@ -153,6 +153,20 @@ Append only._
   tests, all `flat` undefined at the call site), it has no spec in `e2e/laz.spec.ts`, and this story has no
   design, code or tests yet. The mutation check the tester described is not reportable until an assertion of
   AC5 exists.
+- 2026-11-15 — the architect's ratio argument (`whole list / phase = 9/2 = 4,5`) is withdrawn for the four
+  values above: it holds only for the parking term, whose base is the constant monthly target. The four values
+  are story 045's flat cash, whose base is the fund's value at the start of each year capped by that year's
+  increase, and recomputing them on the committed fixture with story 045's rules reproduces all four exactly
+  (fund 2032 `1,4735 €` + fund 2033 `1,9067 €` = `3,3803 €` for the phase years 2033 and 2034, whose funds are
+  the funds of the year before; whole list `11,3229 €`; difference `7,9426 €`; fund 2034 `2,4075 €`, the fund
+  inside the list but outside the phase). They are not measurements of a run, they are hand arithmetic that
+  holds; the run that first recorded them stays withdrawn.
+- 2026-11-15 — correction of the hand example in the model section, found by the architect when it recomputed
+  the values with a script: the tax of the full phase year is `4,2859375 €`, not `4,2909375 €`; the net is
+  `11,9640625 €`, and the money needed at the start of the year `1188,0359375 €`. The three displayed figures
+  (`4,29 €`, `11,96 €`, `1.188,04 €`) do not move, so no acceptance criterion changes. The paragraph in the
+  model section is corrected because the story is the source of truth for the tester's oracles; the numbers of
+  the earlier run are not treated as measurements.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -170,7 +184,485 @@ To be written after gate 1.
 
 _architect: affected modules, new files, data flow, types/interfaces, dependencies, risks, ADR links._
 
-To be written after gate 1.
+ADR 0016 – the parked balance enters the phase factor as a term, not as a new fund:
+[0016-laz-parked-balance-enters-the-phase-factor-as-a-term.md](../adr/0016-laz-parked-balance-enters-the-phase-factor-as-a-term.md).
+
+The closed form, in the shape the code uses:
+
+- `F = Σ m_y / ρ′_y` — unchanged, exactly the factor ADR 0012 gives; `m_y = monthsInYear(phase, year)` and
+  `ρ′_y` is `payoutFactor` with the same `flatBaseFactor` the flat path uses;
+- `K = Σ k_y / ρ′_y` with `k_y = (hundredths / 10000) · m_y(m_y + 1) / 24 · (1 − τ)`, where
+  `τ = tax.rateMillionths / RATE_UNIT` (`0` outside the tax case) and `hundredths` is the rate in whole
+  hundredths of a percent (2,50 % is 250). `K` is summed over `phaseYears` + `fundingFund`, the same loop
+  `flatCashCents` uses (the gate-1 decision of 2026-11-15): a fund outside the phase is never bought, so its
+  money is never parked;
+- `D = P · (F − K) + cash` and `P = (D − cash) / (F − K)` — one inverse pair, `cash` is story 045's line.
+  The story's `F = Σ (m_y − k_y) / ρ′_y` is this `F − K`; the code subtracts the two sums, so the option-off
+  path is `F − 0`, which is exact;
+- the term applies only where there is money to park: the account cannot go below zero, so `P ≤ 0` means
+  `K` is not applied at all (AC2). With the money known, `D = P · (positive ? F − K : F) + cash`; with the
+  depot known, `net = D − cash` and `P = net / (net > 0 ? F − K : F)`. `F − K > 0` over the field's whole
+  range (`k_y < m_y` for every `m_y ≤ 12` at a rate ≤ 100 %), so `net > 0 ⇔ P > 0`: the branch is the sign of
+  the money, not of the rate. With the option off, the rate 0 or a negative monthly target, both directions
+  are exactly today's expressions.
+
+Convention worth naming so it is not "fixed" later: the interest is earned during the phase year, but the
+model nets it at the _start_ of that year and discounts it with the year's `ρ′` — the closed form hak's
+answer of 2026-11-15 fixed. It is one simple accrual on the waiting balance (Q2), not a month-by-month
+simulation and not interest on interest; a per-month table is out of scope.
+
+### Affected files
+
+- **new** `apps/laz/src/features/plan/logic/deposit.ts` — the deposit account's arithmetic (option, interest,
+  tax, net, term); no phase knowledge, no reasons.
+- **new** `apps/laz/src/features/plan/logic/deposit.test.ts` — the AC2/AC3 hand oracles.
+- `logic/fields.ts` — `FieldId`, `FIELD_IDS`, `fieldSpec('depositRate')`, the stale percent-bound comment.
+- `logic/parseInputs.ts` (+ `parseInputs.test.ts`) — the fifth field and its error.
+- `logic/phase.ts` (+ `phase.test.ts`) — `K`, the sign branch, the row figures and reasons, the display pair;
+  `phaseFactor`, `flatCashCents` and `displayYearCents` unchanged.
+- `logic/purchase.ts` (+ `purchase.test.ts`) — the net year amount into `shares`.
+- `logic/format.ts` — `roundEuroCents` moves here from `purchase.ts`: one money rounding for both paths.
+- `fieldCopy.ts` (+ `fieldCopy.test.ts`) — the field, the block, the two columns, the sum line, the facts,
+  the reason strings.
+- `PhaseForm.tsx` — the option's own fieldset (the last block) and its props.
+- `YearTable.tsx` — the two columns, the sum paragraph, the facts paragraph.
+- `PlanCalculator.tsx` — the switch state, the prefill, the derived `DepositOption`.
+- `e2e/laz.helpers.ts` — `depositSwitch`, `depositInput`, `yearRegion`.
+- `e2e/laz.spec.ts` — 046 AC1/AC4/AC5 and 033 AC3's control list.
+- **unchanged**: `logic/projection.ts`, `logic/flat.ts`, `logic/fund.ts`, `FundTable.tsx`,
+  `ResultSummary.tsx`, `TextField.tsx`, `CheckboxOption.tsx`, `data/fund-list.json` and its writer.
+
+### Dependency order
+
+`fields.ts` → `parseInputs.ts` → `deposit.ts` (new) → `phase.ts` → `purchase.ts` → `fieldCopy.ts`, with
+`format.ts` read by `phase.ts` and `purchase.ts` and no cycle in either direction.
+`deposit.ts` imports `projection.ts` (`Tax`, `RATE_UNIT`) and nothing else, and it holds no phase knowledge
+and no reason strings, the way `flat.ts` does (story 045): it knows a month count, the rate and the tax.
+The phase sum is read over the phase years in `phase.ts`, and the reasons stay in the module that owns the
+row (the pattern story 045 recorded), so `fieldCopy.ts` imports `phase.ts`, not `deposit.ts`. `projection.ts`
+is not touched: the parked money is not invested in a fund, so `payoutFactor` and the flat credit rule keep
+their meaning (ADR 0016).
+
+Story 045's branch is not in this worktree: there is no `flat.ts` here, `FieldId` has no `flatRate`, and
+`phase.ts` has no `cash`. AC5 reads `cash`, so the developer works from story 045's merged code, not from
+the commit this branch was cut at.
+
+### New module
+
+`apps/laz/src/features/plan/logic/deposit.ts` — the deposit account's own path: the month sum of one phase
+year, the interest it earns, the tax on it at the Zufluss, the net interest and the term `k_y`. Only the
+names a caller reads are exported; the month sum is internal, so a fix is tested through its callers
+(CLAUDE.md, story 026 R3).
+
+```ts
+import { RATE_UNIT, type Tax } from './projection.ts';
+
+/** The option as the form reads it: the switch of AC1 and the rate in whole hundredths of a percent
+ * (2,50 % is 250, the unit the flat field of story 045 uses), constant over the whole term (hak's Q1). */
+export interface DepositOption {
+  /** the switch; off means no interest is calculated anywhere (AC1) */
+  readonly on: boolean;
+  /** whole hundredths of a percent; 0 is the rate that pays nothing */
+  readonly hundredths: number;
+}
+
+/** The state the app starts with: off, so the first render and every existing hand value stay (AC1). */
+export const DEPOSIT_OFF: DepositOption = { on: false, hundredths: 0 };
+
+/** (1 + 2 + … + m) / 12 = m(m + 1) / 24 year units, 0 for m = 0 (AC2). Internal: it is the body of the
+ * interest, the net and the term below, and the one expression AC2's figure and AC5's term share (risk 4). */
+// monthSum(months) — internal
+
+/** The interest of one phase year, micro-euro, unrounded, in the sign-safe shape the code uses:
+ * `max(0, monthlyMicroEur) × (hundredths / 10000) × monthSum(months)`. It takes the MONTHLY money, because
+ * the story's formula is `P × rate × m(m+1)/24`; a year amount (`P·m`) would need `(m+1)/24` and hides an
+ * `m` (risk 7). It is 0 when the option is off, the rate is 0 or there is no month, and it is never
+ * negative (AC2), because a deposit account cannot go below zero. */
+export function parkInterestMicroEur(
+  monthlyMicroEur: number,
+  deposit: DepositOption,
+  months: number,
+): number;
+
+/** The tax on that interest at the Zufluss (hak's Q4), micro-euro, unrounded, with the rate story 031
+ * gives; 0 outside the tax case, where the gross interest is what reduces the money the plan needs (AC3). */
+export function parkTaxMicroEur(interestMicroEur: number, tax: Tax): number;
+
+/** The net interest of one phase year (AC3, AC5): `parkInterestMicroEur − parkTaxMicroEur`, in one call, so
+ * the year table's two figures and the fund row's shares cannot drift apart. */
+export function parkNetMicroEur(
+  monthlyMicroEur: number,
+  deposit: DepositOption,
+  months: number,
+  tax: Tax,
+): number;
+
+/** One phase year's term `k_y = (hundredths / 10000) · monthSum(months) · (1 − τ)`, the shape `phase.ts`
+ * sums for `K`; 0 when the option is off or there is no month. It is a factor: it cannot see the sign of
+ * `P`, so it carries no sign guard (risk 8). */
+export function parkTerm(months: number, deposit: DepositOption, tax: Tax): number;
+```
+
+Bodies: the interest multiplies `Math.max(0, monthlyMicroEur)`; the tax is
+`tax.on ? interestMicroEur * (tax.rateMillionths / RATE_UNIT) : 0`; the term multiplies
+`(1 - tax.rateMillionths / RATE_UNIT)`, which is 1 outside the tax case because `rateMillionths` is 0 there.
+
+### Types for the field and the option
+
+```ts
+// fields.ts
+export type FieldId = 'phaseStart' | 'phaseEnd' | 'amount' | 'flatRate' | 'depositRate';
+/** Form order; also the order in which the first invalid field is named. `depositRate` is last: its block
+ * renders after the tax block, so the form order and the Tab order agree (Q5). If UX puts the block before
+ * the tax block, this order changes with it and 033 AC3's control list moves. */
+export const FIELD_IDS: readonly FieldId[] = [
+  'phaseStart',
+  'phaseEnd',
+  'amount',
+  'flatRate',
+  'depositRate',
+];
+
+// fieldSpec('depositRate') → { min: 0, max: 10000, decimals: 2, date: false }
+// The bound belongs to what the value means: a percent, 0 to 100 % (story 030). The field cannot hold a
+// negative value (a deposit rate, and the account cannot go below zero), so `TextField` keeps
+// `inputMode="decimal"` and CLAUDE.md's negative-range rule does not apply.
+// fields.ts's comment ("no field of the form has a percent bound of its own any more") is already stale
+// for the flat field of 045 and would be stale for two fields after this story: the flat field and the
+// deposit field are the exceptions that keep a percent's bound.
+
+// parseInputs.ts
+export interface ParsedInputs {
+  readonly phaseStart: string;
+  readonly phaseEnd: string;
+  readonly amountCents: number;
+  readonly flatRateHundredths: number;
+  /** whole hundredths of a percent, 2,50 % is 250 */
+  readonly depositRateHundredths: number;
+}
+// `parseInputs`'s required-field check gains the field; "the four fields" becomes five in its comment.
+
+// PlanCalculator.tsx — the switch is a boolean, like the direction and the two tax checkboxes: a control
+// that cannot hold a value outside its own options names no error, so it needs no type of its own.
+const [parkOn, setParkOn] = useState(false);
+const DEFAULT_INPUTS: RawInputs = {
+  phaseStart: '01.2028',
+  phaseEnd: '03.2034',
+  amount: '',
+  flatRate: '2,24',
+  depositRate: '2,50', // Q1, the EZB deposit rate of 2026-11-15; the switch is off, so it moves nothing
+};
+```
+
+### Which existing functions change
+
+- `phase.ts` — `phaseFactor` (it stays ADR 0012's `F`), `flatCashCents` and `displayYearCents` are unchanged.
+  New internal `parkedFactor(funds, phase, tax, flat, deposit, asOf)` is the `K` loop over `phaseYears` and
+  `fundingFund` on the same `ρ′` as `F` — the same set of funds `flatCashCents` uses (the decision of
+  2026-11-15): a fund outside the phase is never bought, so its money is never parked.
+  `payoutFromDepotCents`, `depotFromPayoutCents` and `buildPlan` gain `deposit` after `flat` and use the net
+  factor on the positive branch only (the closed form above); for a negative monthly target `K` is not
+  applied, so that branch is exactly today's model. `yearRows` gains `deposit` and `tax` and fills the new
+  row fields:
+
+  ```ts
+  export type ParkReason = 'option-off' | 'no-rate' | 'no-funding-fund' | 'no-money-to-park';
+  export type ParkTaxReason = 'outside-tax-case' | ParkReason;
+
+  readonly parkInterestMicroEur: number | null;
+  readonly parkTaxMicroEur: number | null;
+  readonly parkReason: ParkReason | null;
+  readonly parkTaxReason: ParkTaxReason | null;
+  ```
+
+  A figure is non-null exactly when its reason is null (the `flatMicroEur`/`flatReason` pattern of 045), and
+  each column reads its own reason, because the interest column can show a figure while the tax column shows
+  a dash. `Plan` gains nothing: the sum the year section states is the sum of the shown figures, so it is a
+  display value, not a field. `displayYearCents` is unchanged (the amount column still shows `P·m`).
+
+- `phase.ts` also exports the display pair `YearTable` reads: `displayParkCents(plan)` → per row
+  `{ interestCents: number | null; taxCents: number | null }` (one rounding, `roundEuroCents`) and
+  `parkSumsCents(shown)` → `{ interestCents: number; taxCents: number | null } | null`, the sum of the SHOWN
+  cents, `null` when no row has an interest figure (the rule story 045 recorded for its sum line).
+  `taxCents` is `null` when no row shows a tax figure, so nothing is invented for an empty tax column.
+- `purchase.ts` — `purchaseRows` gains `deposit` after `flat`. `yearAmountMicroEur` becomes the money that
+  must be there at the start of the phase year (AC5):
+  `monthlyCents * months * 10000 - parkNetMicroEur(monthlyCents * 10000, deposit, months, tax)`, and
+  `shares` follows it. No new field on `PurchaseRow`: the year row already carries the two figures the
+  identity reads, and the net comes from the same `deposit.ts` call, so the fund table and the year table
+  show one number by construction. `displayFundParts` and `flatPartsSum` are unchanged; `purchase.ts`'s local
+  `roundEuroCents` moves to `format.ts` with no change of body.
+- `format.ts` — exports `roundEuroCents(microEur)` (the one money rounding, moved from `purchase.ts`), read
+  by `displayFundParts` and `displayParkCents`, so both paths round with one expression. No behaviour
+  change: 032's and 045's hand values are the control.
+- `fieldCopy.ts` — `FIELD_COPY.depositRate` (label, range, hint, `formatWord`, `unit`), `DEPOSIT_COPY`
+  (legend, switch label, optional hint), `COPY.parkColumn`, `COPY.parkTaxColumn`,
+  `COPY.parkSumLine(interest, tax)`, `COPY.parkFacts` (the facts AC4 names), `parkReasonText` and
+  `parkTaxReasonText`; `firstInvalidField` is unchanged (it reads `FIELD_IDS`).
+- `PhaseForm.tsx` — props gain `parkOn` and `onPark`; the option's own `fieldset` is the last block of the
+  form, with the legend and `CheckboxOption` + `TextField`; the field map that renders the other fields
+  excludes `depositRate` too (as it excludes `flatRate`). `TextField.tsx` and `CheckboxOption.tsx` are
+  unchanged.
+- `YearTable.tsx` — the two columns, the dash with its reason per column, the sum paragraph and the facts
+  paragraph; reads `displayParkCents` and `parkSumsCents`.
+- `PlanCalculator.tsx` — the `parkOn` state, the `depositRate` default, the derived `DepositOption` in the
+  same `useMemo`, `handlePark` (sets `edited`, like `handleTax`), and the option passed to `buildPlan` and
+  `purchaseRows`.
+
+Every existing call site of the changed functions passes `DEPOSIT_OFF` in its tests: that is the control
+case, and it is the only new argument those tests need.
+
+### Data flow
+
+`raw.depositRate` + the switch → `parseInputs` (whole hundredths, one error per field, form order for the
+first invalid field) → `DepositOption` → `parkTerm` per phase year → `K` → `F − K` → the depot and the
+monthly payout → `parkInterestMicroEur` / `parkTaxMicroEur` per phase year → the year table's columns and the
+sum line; the same figures feed `purchaseRows` (the money that must be at the start of the year → `shares` →
+the purchase part) → the fund table. Nothing is stored: the field text and the switch are state, everything
+else is derived in the same `useMemo` (C3). Money stays unrounded micro-euro until `formatEuro`; the single
+rounding is at display (ADR 0012).
+
+The interest figures are the model's own assumption, not a value from the data file, so they must not be
+described by the projection label (ADR 0012, 024 AC5): UX gives them their own wording, and the fund
+section's label keeps describing only the fund figures.
+
+### Display rule (the money rule)
+
+The parts that add up to the depot are the fund table's parts, unchanged from story 045: the purchase part
+plus the flat part, the last part with a figure derived from the shown depot. The parking effect is already
+inside the purchase part (the money invested is the money needed at the start of the year, and the interest
+reduced it), so the parts do not gain a group and story 032's and story 045's hand values stay. AC5's
+"minus the net interest parts" is the order of the arithmetic, not a third part group: the purchase part is
+`shares × payout per share` with `shares` computed from `P·m − net interest`, so the money rule holds by
+construction, without a correction term.
+
+The identity `P·m − (interest − tax) = shares × payout per share` is asserted on the unrounded values at
+logic level: its three terms are three separate roundings at display, so a one-cent difference between shown
+figures is not a defect and no test asserts the identity in rounded cents. For the pinned oracle
+(`m = 12`, `P = 100 €`, `2,50 %`, tax on) the shown figures happen to close exactly: `1200,00 − (16,25 −
+4,29) = 1188,04 €`, which is also the displayed money at the start.
+
+The interest and tax columns are single roundings, so the year section's sum line is the sum of the shown
+figures exactly (the rule story 045 recorded for its sum line); nothing is invented for an empty sum, so no
+sum line is shown when no phase year has a figure. Where a part is derived from the total, the tester picks a
+case in which its own rounding would differ and reports the distance to the .5 cent boundary.
+
+### Reasons a row shows a dash
+
+A column shows a figure exactly when its reason is null. The interest column reads its reason first match
+wins: `option-off` (the switch is off) → `no-funding-fund` (no funding fund for that year, so nothing is
+bought and nothing waits; the string is story 024's `kein Fonds für dieses Jahr`, `COPY.missingYear`) →
+`no-money-to-park` (the money for the year is not positive, so the account would go below zero and no negative
+interest is invented) → `no-rate` (the rate is 0; AC1 makes this the same state as off). The tax column reads
+`outside-tax-case` first (story 045's string `Steuer nicht angehakt`), then the interest column's reason:
+there is no tax without interest. So the interest column can show a figure while the tax column shows a dash.
+
+`m = 0` (a phase year with no phase month) is a guard in `deposit.ts` (interest 0, term 0), not a row state:
+`phaseYears` lists only years the phase covers, so no row can carry zero months (risk 3). The two strings that
+are not reused (`no-money-to-park`, `no-rate`) are UX's; `option-off`, `no-funding-fund` and
+`outside-tax-case` reuse copy the app already has.
+
+### Hand oracle, recomputed by the architect (2026-11-15)
+
+`P = 100 €`, rate `2,50 %`, tax `26,375 %` (no church tax):
+
+- full phase year (`m = 12`, `m(m+1)/24 = 6,5`, the average balance `650 €` at `2,50 %`): interest
+  `16,25 €`, tax `4,2859375 €` (`16,25 × 0,26375`), net `11,9640625 €`, money needed at the start
+  `1188,0359375 €` → shown `16,25 €`, `4,29 €`, `11,96 €`, `1.188,04 €`. The story's pre-design hand example
+  states `4,2909375 €`, `11,9590625 €` and `1188,0409375 €`: its tax is `0,005 €` too high, and because the
+  three displayed figures are the same either way no acceptance criterion moves. The oracles below and in the
+  test set are the recomputed ones.
+- three-month phase year (`m = 3`, `m(m+1)/24 = 12/24 = 0,5`): interest `1,25 €`, tax `0,3296875 €`, net
+  `0,9203125 €`, money needed `299,0796875 €`.
+- church tax case (Bayern, `25 %` + `1,375 %` + `2 %` = `28,375 %`): tax `4,6109375 €` → `4,61 €`, net
+  `11,6390625 €` → `11,64 €`, money needed `1188,3609375 €` → `1.188,36 €`.
+- `m = 1` case: `100 × 0,025 × 2/24 = 0,2083333 €` (not a whole cent), tax `0,0549479 €`, net
+  `0,1533854 €`. This is the case that shows why the interest cannot be stored as whole cents.
+- clean round trip, one phase year with `ρ′ = 1` (`m = 12`), `P = 100 €`, `cash = 0`, rate `2,50 %`:
+  `F = 12/1 = 12`; `k_y = 0,025 × 6,5 × (1 − 0,26375) = 0,119640625`, so `K = 0,119640625` and
+  `F − K = 11,880359375`; `D = 100 × 11,880359375 = 1188,0359375 €` and
+  `P = 1188,0359375 / 11,880359375 = 100 €`. Tax off: `k_y = 0,1625`, so `F − K = 11,8375` and
+  `D = 1183,75 €`. These are the round-trip oracles: both directions on unrounded values, one inverse pair.
+- phase restriction on the committed fixture (`data/fund-list.fixture.json`, asOf `2026-12-31`), phase
+  `1.1.2033 – 31.12.2034` in the payout direction, tax off, `P = 100 €`: the phase years are 2033 (fund 2032)
+  and 2034 (fund 2033), each a full phase month year, so the sum over the phase years is `2 × 16,25 = 32,50 €`;
+  the sum over the whole fund list (the wrong reading, nine funds 2027–2035) is `146,25 €`, the difference
+  `113,75 €`, fund 2034 alone `16,25 €` (its row shows a dash: its phase year 2035 is outside the phase).
+  **The values recorded in the Decision log (`3,3803 €`, `11,3229 €`, `7,94 €`, `2,4075 €`) cannot be derived
+  from the closed form on this fixture**: the phase sum and the whole-list sum are the same per-year interest
+  at one constant monthly target, multiplied by 2 and by 9 (nine fund years against two phase years, each a
+  full year), so their ratio must be `9/2 = 4,5`; the recorded pair gives `11,3229/3,3803 ≈ 3,35`, and
+  `3,3803 × 4,5 = 15,2114`, not `11,3229`. The difference `11,3229 − 3,3803 = 7,9426 ≈ 7,94 €` is
+  arithmetically consistent, but the two sums it comes from are not. They come from the withdrawn run
+  against code that does not exist. The tester recomputes the pair with its own arithmetic before reporting
+  it; the assertion that matters is the difference between the phase-years sum and the whole-list sum, which
+  the design keeps. Correction of that argument, 2026-11-15, recomputed on the committed fixture: the four
+  values are story 045's flat cash, whose base is the fund's value at the start of each year capped by that
+  year's increase, so the `9/2` ratio does not apply to them — it is a property of the parking term, whose
+  base is the constant monthly target. With story 045's rules they hold exactly: the phase years 2033 and 2034
+  are funded by the funds of the year before, so the phase sum is fund 2032 `1.473.543,697439 µ€`
+  (`1,4735 €`) plus fund 2033 `1.906.719,343214 µ€` (`1,9067 €`) = `3,3803 €`; the whole list of nine funds,
+  each with its own YTM, is `11,3229 €`, the difference `7,9426 €` (`7,94 €`), fund 2034 alone `2,4075 €`. All
+  four are confirmed by the arithmetic, so the tester may assert them as hand values; the withdrawn run stays
+  withdrawn as a record of a run, and the assertion that matters stays the difference between the two sums.
+  The tax numbers of the model section (`4,2859375 €`, net `11,9640625 €`, needed `1188,0359375 €`) were
+  corrected in the story file by the orchestrator; the displayed cents do not move.
+
+### Risks and how to mitigate them
+
+1. **Option off must be bit-identical.** `K` is 0 and the net interest is 0, so the closed form adds 0
+   exactly (story 015's rule). Mitigation: the tester keeps the control case — the app's figures with the
+   option off are the existing hand values of 024, 032 and 045, and the option defaults off so no existing
+   e2e test has to type anything.
+2. **Rate 0.** Same as off: `parkTerm` is 0, no figure is invented, no sum line is shown (the display rule
+   story 045 recorded). AC1 pairs this with a positive assertion (turn the option on at `2,50 %` and the
+   figure moves), and the negative is triggered by text that differs from what is shown (typing `0` in a
+   field that shows `2,50`).
+3. **A phase year with no phase month cannot be produced through the UI.** `phaseYears` lists only years the
+   phase covers, and every listed year has at least one phase month, so `m = 0` is reachable only in the pure
+   logic and never becomes a row. It is asserted in `deposit.test.ts` (`m = 0 → interest 0, term 0`), and the
+   e2e asserts the dash through the states the UI can produce (option off, rate 0, a depot smaller than
+   `cash`). The tester must not read `m = 0` as a UI oracle.
+4. **The shared expression.** `monthSum` is one expression that the year table's figure (AC2/AC4) and the
+   term `K` (the depot, AC5) both read; the tax rate on the interest is one expression that the tax column
+   (AC3) and the net part (AC3/AC5) both read; `F − K` is shared by the round trip and the parts. A mutation
+   of any of these moves more than one assertion. The design names the couplings for the tester up front;
+   each rule that can be isolated gets its own mutation, and the shared ones are recorded as one rule with
+   two assertions (story 045's pattern).
+5. **Display rounding.** Only one part per breakdown is derived (the fund table's last part with a figure);
+   the interest and tax columns are plain single roundings. The tester picks a case where the derived part
+   would round differently on its own and reports the distance to the .5 cent boundary for each hand value.
+6. **The round trip.** The interest is not a whole cent, so the round trip can only be asserted on the
+   unrounded values at logic level (story 024 AC3's pattern), never by re-entering a displayed figure: a
+   cent-rounded interest fed back through `F − K` amplifies the rounding by `1/(F − K)`. Both directions are
+   asserted with the option on, and the negative branch is asserted separately (the parking term is not
+   applied there, so the round trip closes through `F` alone).
+7. **Units.** `parkInterestMicroEur` takes the monthly money `P`, not the year amount `P·m`: the story's
+   formula is `P × rate × m(m+1)/24`, and a year amount would need `(m+1)/24` and would hide an `m` — the
+   factor-`m` error the first draft of this design had (it passed the year amount and was wrong by `m`).
+   Mitigation: the signature names `monthlyMicroEur`, every oracle is written from `P` (AC2's `16,25 €` is
+   `100 × 0,025 × 6,5`), and `purchase.ts` passes `monthlyCents * 10000`, not the year amount.
+8. **Sign-safe shape.** Write the interest as `max(0, money) × rate × monthSum(m)`, not as `rate × …`
+   with a possibly negative money: the two differ exactly on the negative branch, which is AC2's "never
+   negative" case (CLAUDE.md, story 024 round 2). The sign decision cannot live in `deposit.ts`, because the
+   term `k_y` is a factor and cannot see `P`; it lives where the closed form is evaluated (`phase.ts`).
+9. **The branch of the negative case.** With tax on, `P = (D − cash) / (F − K)` can be negative when the
+   depot is smaller than `cash`; the app then shows the figure as the model returns it (story 045), and the
+   interest columns show the dash with `no-money-to-park`. No clamp is added in the logic.
+10. **The dependency on story 045.** `cash`, the flat field and the flat hand values are not on this branch;
+    the developer starts from story 045's merged code (see "Dependency order"). Until then AC5's tests cannot
+    run, and the flat rate must stay what it is: its payments are a cash line that is not parked (hak's Q3).
+
+### Minimal test set
+
+One test per behaviour at the cheapest level that shows it; where an AC has a logic rule and a display rule,
+each is tested once at its own level (checklist T2), and no behaviour is tested twice. Every expected number
+is written by hand and no test reads its oracle from the module it checks.
+
+- **AC1** — `parseInputs.test.ts` (existing, gains the field): `2,50` → 250, `2,505` is a format error,
+  `100,00` → 10000 accepted, `100,01` → `range`, `-0,01` → `range`, one error per field, the first invalid
+  field named in form order. `fieldCopy.test.ts`: the hand copy strings of UX §2, the bound `0` to `10000`,
+  the key list gains `depositRate` last. e2e `046 AC1`: the option's own block with its legend, the switch
+  and the field, prefilled `2,50`, `inputMode="decimal"`, never disabled; option off → no interest figure
+  anywhere and the app's figures are today's hand values (control), and the paired positive assertion at the
+  same phase with the option on shows the hand interest; option on with the rate typed `0` → the same as off.
+- **AC2** — `deposit.test.ts` (new), asserted through its exported callers, not through the internal month
+  sum: `16,25 €` (m = 12), `1,25 €` (m = 3), the `m = 1` case (`0,2083333 €`, which shows the unit is not
+  whole cents), `m = 0` → 0 (no phase month), negative money → 0 (never negative), option off → 0. No e2e
+  test repeats these values.
+- **AC3** — `deposit.test.ts`: the corrected tax values (`4,2859375 €`, net `11,9640625 €`, money needed
+  `1.188,0359375 €`), the church tax case through `taxFromState` (Bayern, `28,375 %` → `4,6109375 €`), the
+  tax-off case (the gross interest is what reduces the money needed), and the assertion that the fund's own
+  value is not reduced by the interest (story 045's rule, unchanged: `payoutPerShareMicroEur` is called with
+  the same `flatBaseFactor`, so this is asserted at the row level, not inside the fund's factor).
+  `phase.test.ts` gains the round trip with the option on, both directions, on unrounded values, plus the
+  negative-branch case; the option-off round trip is the existing test.
+- **AC4** — e2e only: the two new columns read by header text, the hand figures recomputed by the tester
+  from the fixture with its own arithmetic (phase `1.1.2033 – 31.12.2034` read in the payout direction,
+  `P = 100 €`, `2,50 %`: the phase-year rows 2033 and 2034 each show `16,25 €`, and the tax column shows
+  `– Steuer nicht angehakt` outside the tax case; tax on → `16,25 €` and `4,29 €`), the sum over the phase
+  years stated once as a paragraph and equal to the sum of the shown figures, and the dash with each reason
+  (option off, and `no-money-to-park` for a depot smaller than `cash`).
+- **AC5** — `phase.test.ts`/`purchase.test.ts`: the identity `P·m − (interest − tax) = shares × payout per
+share` on the unrounded values, and `shares` follows the net money (the same phase with the option on and
+  off). e2e `046 AC5`: for the pinned oracle the fund row behind the 2033 payout shows the money at the start
+  (`1188,04 €`, the year row's `1200,00 €` minus `16,25 €` plus `4,29 €`), and the fund table's shown parts
+  still add up to the shown depot with the last part derived from the total (pick values where its own
+  rounding would differ, report the distance to the .5 cent boundary); the phase restriction with the
+  tester's recomputed values (`32,50 €` against `146,25 €`, difference `113,75 €`, fund 2034 alone shows the
+  dash because its phase year is outside the phase); with the option off, the parts and the shares are
+  exactly story 032's and story 045's.
+- **Mutation checks** (rule P32; each run reports the mutated file byte-identical to its pre-run backup taken
+  outside the repository, and exactly the named assertions turn red):
+  - the option guard (`on` ignored, interest computed while off) → many assertions: AC1's control and every
+    option-off hand value of 024, 032 and 045, so it is recorded once as the off-path rule with those
+    assertions;
+  - `monthSum` `m(m+1)/24` → `m(m+1)/12` → **four ACs** (AC2's figure, AC3's tax which follows the
+    interest, AC4's columns and sum line, AC5's money at the start and the shares through `K`), recorded as
+    one shared rule with those assertions (risk 4);
+  - the tax not deducted (`parkNetMicroEur` returns the gross interest) → **two** assertions (AC3's net
+    interest and AC5's money at the start through `K`);
+  - `max(0, monthlyMicroEur)` removed → **two** assertions (AC2's negative case and AC5's negative-branch
+    money at the start, which would otherwise subtract a negative interest);
+  - the `no-rate` reason removed (a rate of 0 shows a figure instead of the dash) → only AC1's zero-rate
+    pairing;
+  - the phase sum read over the whole fund list instead of `phaseYears`/`fundingFund` → only AC5's phase
+    restriction;
+  - the sign of the term flipped (`F + K` for `F − K`) → only the round trip;
+  - the sum line computed over the unrounded figures and rounded once instead of summing the shown cents →
+    only AC4's sum-line assertion;
+  - `fieldSpec`'s `max` set to null → only AC1's range assertion.
+
+  `effectiveRateMillionths` is shared with story 031's hand values, so the tester mutates the interest's own
+  expression, not the tax module, and records the coupling.
+
+Which checks the story's runs cover (rule B, story 034): for a change in `apps/laz/**` the app's vitest
+tests, the platform checks the app uses, `test:e2e -w @swfactory/laz` (the app's specs plus the platform's
+sign-in specs), `test:pages` after `build:pages`, `check:structure`, `check:dist`, plus lint, typecheck and
+format. The minesweeper checks do not run. Whole-tree checks stay whole tree. e2e runs on port 5174 through
+Playwright's own `webServer`; port 5173 is hak's dev server and is never used by a run.
+
+### e2e specs the developer updates
+
+`e2e/laz.spec.ts` 033 AC3 (the control list gains the switch and the field; the Tab assertion stops at the KSt
+checkbox and stays as long as UX places the block after the tax block), `fieldCopy.test.ts`'s key list and its
+comment about percent bounds (the flat field and the deposit field are the exceptions that keep the bound of a
+percent), and the tax cases of 031 and 032, which need no change because the option defaults off. 036 AC1's
+exact `columnheader` list is the fund table's and does not move unless UX adds a column there; the year table
+is read by header text through `cellByHeader`, so two new columns do not move it. No spec walks
+`parentElement` or `locator('..')` from the new markup except `rowByHeader` (`xpath=parent::tr`) and `valueOf`
+(`following-sibling::dd`), and adding columns to a row or a fieldset to the form does not move them. A new
+paragraph in the year section is read as paragraph text inside the year section only (page-wide `getByText`
+regexes are scoped to their region, story 045's rule). The new helpers are `depositSwitch`, `depositInput` and
+`yearRegion`, so AC1, AC4 and AC5 do not repeat the selectors.
+
+### Implementation plan
+
+1. `deposit.ts` (option, month sum, interest, tax, term) with its unit tests at the hand values, including
+   `m = 0` and the negative branch.
+2. `fields.ts` + `parseInputs.ts` (`FieldId`, `FIELD_IDS`, `fieldSpec`, `ParsedInputs`) and the copy keys;
+   the parse branches and the copy test.
+3. `phase.ts`: the phase sum `K`, the closed form on `F − K` with the positive branch, the year row's
+   figures and its reason; the round trip test with the option on; the existing tests keep the option-off
+   case.
+4. `purchase.ts`: the money that must be at the start of the year, `shares` from it, `parkNetMicroEur` on the
+   row; `displayFundParts` and `flatPartsSum` unchanged.
+5. `PlanCalculator.tsx` (the switch state, the default input, the derived `DepositOption`),
+   `PhaseForm.tsx` (the option's own fieldset), `YearTable.tsx` (the two columns, the sum line, the dash with
+   its reason).
+6. The e2e tests for AC1, AC4, AC5, the spec updates listed above, and the mutation runs.
+
+### Alignment with UX
+
+UX must supply the block's legend, the switch label, the field's label, range and hint (the hint states once
+that the rate is an assumption constant over the term), the two column headers, the sum line, the sentence that
+the payout falls on the last day of each month, the two new reason strings (`no-money-to-park`, `no-rate`), and
+the state the year section shows for an empty sum. The design assumes the block is the last control of the
+form, after the tax block, so `FIELD_IDS` order and the Tab order agree; the interest figures must not carry
+the projection label as their accessible description (they are not a data-file projection), so UX must give
+them their own wording or state that they have none. If UX wants the switch to read `role="switch"` rather
+than a checkbox, that is a change to `CheckboxOption.tsx` (out of this story's file list) and it decides the
+copy of the control's name.
 
 ## Implementation notes
 
