@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   COPY,
+  DEPOSIT_COPY,
   amountCopy,
   errorMessage,
   FIELD_COPY,
   firstInvalidField,
   overrideCopy,
+  parkReasonText,
+  parkTaxReasonText,
   projectionLabel,
   TAX_COPY,
 } from './fieldCopy.ts';
@@ -68,9 +71,9 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     expect(fieldSpec('amount').max).toBeNull();
     expect(OVERRIDE_SPECS.nav.max).toBeNull();
     // Story 031 removed the percent bound of a typed rate, so no field of the form quotes a range that is
-    // not the rule of its own unit; the fund-row YTM cell keeps the bound a percent means. Story 045 adds
-    // the flat field, which is the one field of the form that keeps the bound of a percent (0 to 100 %), so
-    // the copies above are the money fields without it.
+    // not the rule of its own unit; the fund-row YTM cell keeps the bound a percent means. The exceptions are
+    // the percent fields of the form, which keep it: the flat field of story 045 and the deposit field of
+    // story 046 (0 to 100 %), so the copies above are the money fields without it.
     expect(fieldSpec('phaseStart').max).toBeNull();
     expect(OVERRIDE_SPECS.ytm.max).toBe(10000);
   });
@@ -124,7 +127,8 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
       'Letzter Monat der Auszahlungsphase: muss nach dem Beginn liegen (März 2034). Erlaubt: ein Monat ab dem Beginn.',
     );
     // Without a range in the spec the copy cannot quote one: the phase fields have no bounds, and story 031
-    // removed the field for a typed rate, so no field of the form has a percent bound.
+    // removed the field for a typed rate. The fields that keep a percent are the exceptions: the flat field of
+    // story 045 and the deposit field of story 046 both quote the bound a percent means (0 to 100 %).
     for (const field of ['phaseStart', 'phaseEnd'] as const) {
       expect(fieldSpec(field).min).toBeNull();
       expect(fieldSpec(field).max).toBeNull();
@@ -146,9 +150,16 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     );
     expect(TAX_COPY.bundeslandLabel).toBe('Bundesland für die Kirchensteuer');
     // The copy has no entry for a typed rate: the accessibility tree shows no such control (AC1). Story 045
-    // adds the flat field as the control of the tax block, so the key list gains `flatRate`, last, in the
-    // form order of `FIELD_IDS` (the hand strings of UX §2 are asserted in the story's own test).
-    expect(Object.keys(FIELD_COPY)).toEqual(['phaseStart', 'phaseEnd', 'amount', 'flatRate']);
+    // adds the flat field as the control of the tax block and story 046 the deposit field as the control of
+    // its own block, so the key list gains `flatRate` and then `depositRate`, last, in the form order of
+    // `FIELD_IDS` (the hand strings of UX §2 are asserted in the story's own test).
+    expect(Object.keys(FIELD_COPY)).toEqual([
+      'phaseStart',
+      'phaseEnd',
+      'amount',
+      'flatRate',
+      'depositRate',
+    ]);
     expect(Object.keys(FIELD_COPY)).not.toContain('taxRate');
   });
 
@@ -184,8 +195,89 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     expect(firstInvalidField({ amount: { kind: 'empty' }, flatRate: { kind: 'empty' } })).toBe(
       'amount',
     );
-    expect(firstInvalidField({ flatRate: { kind: 'range' }, phaseStart: { kind: 'format' } })).toBe(
-      'phaseStart',
+  });
+  it('046 AC1: the copy of the deposit field and its own block, and the form order that names it last', () => {
+    // Hand strings from UX §2 of the story, written here rather than read from the module (P16). The bound
+    // itself (0 to 10000 hundredths) is asserted in `parseInputs.test.ts`, where the range error is the
+    // assertion the mutation of the bound can move; here only the copy is asserted (P32).
+    expect(FIELD_COPY.depositRate.label).toBe('Zinssatz in Prozent');
+    expect(FIELD_COPY.depositRate.range).toBe('0,00 bis 100,00 %');
+    expect(FIELD_COPY.depositRate.hint).toBe(
+      'Prozentsatz, höchstens 2 Nachkommastellen. Er gilt für das Geld, das zu Beginn eines Monats noch ' +
+        'für die späteren Monate desselben Jahres braucht; er bleibt über die Laufzeit gleich und zählt nur, ' +
+        'wenn die Option an ist.',
     );
+    expect(FIELD_COPY.depositRate.formatWord).toBe('keine gültige Zahl');
+    expect(FIELD_COPY.depositRate.unit).toBe('Hundertstel Prozent');
+    // The errors the pattern gives, in the words UX §2 names (the four of the story).
+    expect(errorMessage(FIELD_COPY.depositRate, { kind: 'format' })).toBe(
+      'Zinssatz in Prozent: keine gültige Zahl. Erlaubt: 0,00 bis 100,00 %.',
+    );
+    expect(errorMessage(FIELD_COPY.depositRate, { kind: 'range' })).toBe(
+      'Zinssatz in Prozent: Wert außerhalb des erlaubten Bereichs. Erlaubt: 0,00 bis 100,00 %.',
+    );
+    expect(errorMessage(FIELD_COPY.depositRate, { kind: 'exact' })).toBe(
+      'Zinssatz in Prozent: Wert ist keine ganze Anzahl Hundertstel Prozent. Erlaubt: 0,00 bis 100,00 %.',
+    );
+    expect(errorMessage(FIELD_COPY.depositRate, { kind: 'empty' })).toBe(
+      'Zinssatz in Prozent: Wert fehlt. Erlaubt: 0,00 bis 100,00 %.',
+    );
+    // AC1: the block is its own fieldset (Q5), so the legend names the group and the control label names
+    // what the control does - two different strings, and the legend is not a substring of the label.
+    expect(DEPOSIT_COPY.legend).toBe('Geld auf dem Tagesgeldkonto parken');
+    expect(DEPOSIT_COPY.controlLabel).toBe('Zinsen auf das Geld, das noch nicht gebraucht wird');
+    expect(DEPOSIT_COPY.controlHint).toBe(
+      'Die Auszahlung fällt am letzten Tag jedes Phase-Monats, das Geld wartet bis dahin, und das Depot, ' +
+        'das die App sucht, wird um die Zinsen kleiner, die das wartende Geld bringt.',
+    );
+    // The two phrases AC4 says the copy states once. Each lives in one string of this block: the control hint
+    // names the day the payout falls, the field's hint names the rate as an assumption constant over the term.
+    // No other copy of the form repeats either, and neither the legend nor the control label does.
+    expect(DEPOSIT_COPY.controlHint).toContain('letzten Tag jedes Phase-Monats');
+    expect(FIELD_COPY.depositRate.hint).toContain('über die Laufzeit gleich');
+    for (const [key, copy] of Object.entries(FIELD_COPY)) {
+      if (key === 'depositRate') continue;
+      const text = `${copy.label} ${copy.hint ?? ''} ${copy.range}`;
+      expect(text, `copy ${key}`).not.toContain('Zinssatz');
+      expect(text, `copy ${key}`).not.toContain('letzten Tag jedes Phase-Monats');
+      expect(text, `copy ${key}`).not.toContain('über die Laufzeit gleich');
+    }
+    for (const phrase of ['letzten Tag jedes Phase-Monats', 'über die Laufzeit gleich']) {
+      expect(DEPOSIT_COPY.legend, `legend and ${phrase}`).not.toContain(phrase);
+      expect(DEPOSIT_COPY.controlLabel, `label and ${phrase}`).not.toContain(phrase);
+    }
+    // AC4: the two column headers and the sum line, read as the full string. The sum line is paragraph
+    // text, and the tax sentence is part of it only when a row has a tax figure (the developer's deviation 4).
+    expect(COPY.parkColumn).toBe('Zinsen über das Phase-Jahr in Euro');
+    expect(COPY.parkTaxColumn).toBe('Steuer auf die Zinsen in Euro');
+    expect(COPY.parkSumLine('32,50\u00a0€')).toBe(
+      'Summe der Zinsen über die Phase-Jahre: 32,50\u00a0€.',
+    );
+    expect(COPY.parkSumLine('32,50\u00a0€', '8,58\u00a0€')).toBe(
+      'Summe der Zinsen über die Phase-Jahre: 32,50\u00a0€. Steuer auf die Zinsen: 8,58\u00a0€.',
+    );
+    expect(COPY.parkFacts).toBe(
+      'Die Zinsen werden einfach gerechnet, auf dem Geld, das bis zur Auszahlung wartet; innerhalb eines ' +
+        'Jahres werden die Zinsen nicht verzinst. Die Steuer auf die Zinsen wird am Zufluss gerechnet, und ' +
+        'das Jahr des Zuflusses ist das Phase-Jahr.',
+    );
+    // The reason texts, the first-match-wins map of UX §2, each written once.
+    expect(parkReasonText('option-off')).toBe('Geld wird nicht geparkt (Option aus)');
+    expect(parkReasonText('no-funding-fund')).toBe('kein Fonds für dieses Jahr');
+    expect(parkReasonText('no-money-to-park')).toBe('kein Geld zum Parken (Wert nicht positiv)');
+    expect(parkReasonText('no-rate')).toBe('kein Zinssatz');
+    expect(parkTaxReasonText('outside-tax-case')).toBe('Steuer nicht angehakt');
+    // There is no tax without interest, so the tax column reads the tax case first and then the same map:
+    // a row that shows a figure in the interest column and a dash here names the tax case alone.
+    expect(parkTaxReasonText('no-rate')).toBe('kein Zinssatz');
+    // AC1, the form order: `depositRate` is last in `FIELD_IDS`, so a rate error is named only when the
+    // fields before it are valid. Hand order: phaseStart, phaseEnd, amount, flatRate, depositRate.
+    expect(firstInvalidField({ depositRate: { kind: 'empty' } })).toBe('depositRate');
+    expect(firstInvalidField({ depositRate: { kind: 'empty' }, amount: { kind: 'empty' } })).toBe(
+      'amount',
+    );
+    expect(
+      firstInvalidField({ depositRate: { kind: 'range' }, flatRate: { kind: 'format' } }),
+    ).toBe('flatRate');
   });
 });

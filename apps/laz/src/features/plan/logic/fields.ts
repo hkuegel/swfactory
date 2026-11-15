@@ -1,5 +1,5 @@
-/** The fields of the form, in the order of the form (UX design §1). Story 031 removed the typed rate: the rates come from the checkboxes. Story 045 adds the flat rate as the last control of the tax block, which is what makes this order agree with the Tab order. */
-export type FieldId = 'phaseStart' | 'phaseEnd' | 'amount' | 'flatRate';
+/** The fields of the form, in the order of the form (UX design §1). Story 031 removed the typed rate: the rates come from the checkboxes. Story 045 adds the flat rate as the last control of the tax block and story 046 the deposit rate as the last control of its own block, which is what makes this order agree with the Tab order. */
+export type FieldId = 'phaseStart' | 'phaseEnd' | 'amount' | 'flatRate' | 'depositRate';
 
 /** Which way the app calculates; decides the label and the range of the amount field. */
 export type Direction = 'depot' | 'payout';
@@ -27,8 +27,16 @@ export interface FieldSpec {
 
 /** Form order; also the order in which the first invalid field is named. `flatRate` is last: the tax block
  * renders after the amount field, so its only parsed field is last in the form order whatever UX puts
- * first inside the block. */
-export const FIELD_IDS: readonly FieldId[] = ['phaseStart', 'phaseEnd', 'amount', 'flatRate'];
+ * first inside the block. Story 046: `depositRate` comes after it, because the parking block renders after
+ * the tax block and its field is the last control of that block (UX §1), so the form order and the Tab
+ * order stay one order. */
+export const FIELD_IDS: readonly FieldId[] = [
+  'phaseStart',
+  'phaseEnd',
+  'amount',
+  'flatRate',
+  'depositRate',
+];
 
 /** A whole calendar month as `year * 12 + month`, which is how the phase ranges compare. */
 export function monthKey(year: number, month: number): number {
@@ -55,10 +63,11 @@ export function monthKeyOf(name: string): number {
  * The rules the copy quotes. Money fields have no maximum, only the decimals of their unit and the
  * exact-integer bound of that unit (story 030); a phase month has no range (story 033): the 1.1.2027 –
  * 31.12.2034 bound 024 had was not a business rule, because a phase year the fund list cannot fund is
- * already reported as a missing year (024 AC2). Story 031 removed the typed rate field, so no field of
- * the form has a percent bound of its own any more — the flat rate of story 045 is the exception, the only
- * field with a percent bound, 0 to 100 % — and the fund-row YTM cell keeps -100 % to 100 %. The amount
- * field exists once, with the rule of the chosen direction.
+ * already reported as a missing year (024 AC2). Story 031 removed the typed rate field, so a percent bound
+ * belongs only to the two percent fields later stories added: the flat rate of story 045 and the deposit
+ * rate of story 046, both 0 to 100 %, because that is the bound a percent means (story 030) — and the
+ * fund-row YTM cell keeps -100 % to 100 %. The amount field exists once, with the rule of the chosen
+ * direction.
  */
 export function fieldSpec(field: FieldId): FieldSpec {
   if (field === 'amount') {
@@ -68,6 +77,12 @@ export function fieldSpec(field: FieldId): FieldSpec {
   // unit is whole hundredths of a percent (2,24 % is 224). It cannot hold a negative value, so
   // `TextField` keeps `inputMode="decimal"`: the negative-range rule does not apply to this field.
   if (field === 'flatRate') {
+    return { min: 0, max: 10000, decimals: 2, date: false };
+  }
+  // Story 046 AC1: the deposit rate keeps the same bound of a percent, in the same unit (2,50 % is 250),
+  // and it cannot hold a negative value either: a deposit account cannot go below zero, so a negative rate
+  // is out of the model (the story's out-of-scope list) and `inputMode="decimal"` stays.
+  if (field === 'depositRate') {
     return { min: 0, max: 10000, decimals: 2, date: false };
   }
   return { min: null, max: null, decimals: 0, date: true };

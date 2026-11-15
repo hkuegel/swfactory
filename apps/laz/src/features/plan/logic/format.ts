@@ -12,6 +12,15 @@ export function formatEuro(cents: number): string {
 }
 
 /**
+ * The single rounding of a micro-euro money figure (ADR 0012), read by the fund table's money rule
+ * (`displayFundParts`) and by the year table's parked columns (`displayParkCents`), so both paths round with
+ * one expression. Moved here from `purchase.ts` by story 046; the body is unchanged.
+ */
+export function roundEuroCents(microEur: number): number {
+  return Math.round(microEur / 10000);
+}
+
+/**
  * A micro-euro value from the data file or the projection as `46,80 €`: the single rounding of this
  * story's unit, and the only place a micro-euro value is rounded (ADR 0012).
  */

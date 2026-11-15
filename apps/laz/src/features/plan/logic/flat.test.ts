@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+// Story 046: `purchaseRows` gained `deposit` after `flat`, so this call site passes the control case.
+import { DEPOSIT_OFF } from './deposit.ts';
 import { flatBaseFactor, flatTaxMicroEur } from './flat.ts';
 import type { Fund } from './fund.ts';
 import { formatEuroMicroEur } from './format.ts';
@@ -80,6 +82,7 @@ describe('flat (story 045, AC2: the base of a calendar year)', () => {
       100000,
       TAX,
       FLAT,
+      DEPOSIT_OFF,
       asOfInside,
     );
     expect(rows.map((row) => `${String(row.fundYear)} ${row.flatReason ?? 'figure'}`)).toEqual([

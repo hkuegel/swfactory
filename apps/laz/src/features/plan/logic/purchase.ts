@@ -10,9 +10,16 @@
  * Story 045 adds the flat part of the same row: the Vorabpauschale of the years the fund is held, read
  * through `flat.ts` for the same funds `phase.ts` used for `cash`, so the figures in the table and the
  * depot are the same numbers.
+ *
+ * Story 046 AC5: the year amount is the money that must be there at the START of the phase year, which is
+ * `P · m_y` minus the net interest the parked money earns, so `shares` follows it. The same `deposit.ts`
+ * expression the year table shows is used here, so the two tables cannot show two different numbers for the
+ * same year. With `DEPOSIT_OFF` this is exactly the row story 032 and story 045 have.
  */
 
 import { monthKeyOf, monthParts } from './fields.ts';
+import { DEPOSIT_OFF, parkNetMicroEur, type DepositOption } from './deposit.ts';
+import { roundEuroCents } from './format.ts';
 import { FUND_LIST_AS_OF, type Fund } from './fund.ts';
 import { flatBaseFactor, flatTaxMicroEur, flatYears, type FlatRate } from './flat.ts';
 import { monthsInYear, phaseYears, type Phase } from './phase.ts';
@@ -35,7 +42,8 @@ export interface PurchaseRow {
   readonly fundYear: number;
   /** The phase year this fund finances (`fund year + 1`), or null when it falls outside the phase. */
   readonly phaseYear: number | null;
-  /** Unrounded micro-euro of that phase year; 0 for a fund outside the phase. */
+  /** Unrounded micro-euro of that phase year: the money that must be there at the start of it, `P · m` minus
+   * the net interest (story 046 AC5); 0 for a fund outside the phase. */
   readonly yearAmountMicroEur: number;
   /** Unrounded shares, or null when no number is shown (AC3). */
   readonly shares: number | null;
@@ -105,6 +113,7 @@ export function purchaseRows(
   monthlyCents: number,
   tax: Tax,
   flat: FlatRate,
+  deposit: DepositOption = DEPOSIT_OFF,
   asOf: string = FUND_LIST_AS_OF,
 ): PurchaseRow[] {
   const startYear = monthParts(monthKeyOf(phase.startMonth)).year;
@@ -127,7 +136,14 @@ export function purchaseRows(
     };
     if (phaseYear === null) return withFlatFigure(row, fund, flat, tax, asOf);
 
-    const yearAmountMicroEur = monthlyCents * monthsInYear(phase, phaseYear) * 10000;
+    const months = monthsInYear(phase, phaseYear);
+    // AC5: the money that must be at the start of the phase year is the monthly target times the phase
+    // months, minus the net interest the parked money earns. `parkNetMicroEur` takes the MONTHLY money, not
+    // the year amount (risk 7), and it is 0 while the option is off or the rate is 0, so the year amount is
+    // the one story 032 and story 045 have. The identity `P·m − (interest − tax) = shares × payout per share`
+    // holds here by construction, so no correction term is added and the money rule stays.
+    const yearAmountMicroEur =
+      monthlyCents * months * 10000 - parkNetMicroEur(monthlyCents * 10000, deposit, months, tax);
     // A payout per share of 0 cannot be divided by: no number is invented (AC3). The model reaches it
     // through a typed YTM of −100 %, where the factor is 0.
     const payoutPerShare = payoutPerShareMicroEur(
@@ -159,11 +175,6 @@ export function purchaseRows(
       asOf,
     );
   });
-}
-
-/** Round once, in the unit of the display (ADR 0012): the single rounding of the money rule. */
-function roundEuroCents(microEur: number): number {
-  return Math.round(microEur / 10000);
 }
 
 /**

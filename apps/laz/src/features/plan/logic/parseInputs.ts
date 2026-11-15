@@ -23,6 +23,8 @@ export interface ParsedInputs {
   readonly amountCents: number;
   /** Story 045: whole hundredths of a percent, 2,24 % is 224 (the unit of a percent field, story 033). */
   readonly flatRateHundredths: number;
+  /** Story 046 AC1: whole hundredths of a percent, 2,50 % is 250, the rate of the deposit account. */
+  readonly depositRateHundredths: number;
 }
 
 export type FieldError =
@@ -166,10 +168,11 @@ export function parseField(spec: FieldSpec, raw: string): FieldResult {
 }
 
 /**
- * The four fields of the form. Story 031 removed the typed rate, so nothing here reads a rate; the
- * phase fields have no range (story 033), the amount field has no maximum (story 030), and the flat rate
- * keeps the bound of a percent, 0 to 100 % (story 045). A phase field that is not complete yet names no
- * error, so it appears in neither the values nor the errors.
+ * The five fields of the form. Story 031 removed the typed rate, so nothing here reads a tax rate; the
+ * phase fields have no range (story 033), the amount field has no maximum (story 030), and the two percent
+ * fields keep the bound a percent means, 0 to 100 % (story 045 for the flat rate, story 046 for the deposit
+ * rate). A phase field that is not complete yet names no error, so it appears in neither the values nor the
+ * errors.
  */
 export function parseInputs(raw: RawInputs): ParseResult {
   const errors: Partial<Record<FieldId, FieldError>> = {};
@@ -184,6 +187,7 @@ export function parseInputs(raw: RawInputs): ParseResult {
   const phaseEnd = values.phaseEnd;
   const amount = values.amount;
   const flatRate = values.flatRate;
+  const depositRate = values.depositRate;
 
   if (phaseStart !== undefined && phaseEnd !== undefined && phaseEnd < phaseStart) {
     errors.phaseEnd = { kind: 'endBeforeStart', start: monthName(phaseStart) };
@@ -191,13 +195,14 @@ export function parseInputs(raw: RawInputs): ParseResult {
 
   // One error per invalid field: nothing is calculated while a field is invalid (UX design §3).
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  // The four fields of the form are required, so a value is missing only for an entry that names no
+  // The five fields of the form are required, so a value is missing only for an entry that names no
   // error yet (a typing state, story 033 AC2).
   if (
     phaseStart === undefined ||
     phaseEnd === undefined ||
     amount === undefined ||
-    flatRate === undefined
+    flatRate === undefined ||
+    depositRate === undefined
   ) {
     return { ok: false, errors };
   }
@@ -209,6 +214,7 @@ export function parseInputs(raw: RawInputs): ParseResult {
       phaseEnd: monthName(phaseEnd),
       amountCents: amount,
       flatRateHundredths: flatRate,
+      depositRateHundredths: depositRate,
     },
   };
 }

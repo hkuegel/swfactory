@@ -12,12 +12,14 @@ import {
 
 /** The example phase, so only the field under test can fail (T5: the parsing branches). Story 031 removed
  * the rate field, so `BASE` has no rate; story 045 adds the flat field, whose prefilled text is here so
- * that only the field under test can fail. */
+ * that only the field under test can fail. Story 046 adds the deposit field with the prefilled text of AC1
+ * (`2,50`), for the same reason. */
 const BASE: RawInputs = {
   phaseStart: '1.1.2028',
   phaseEnd: '31.3.2034',
   amount: '10000,00',
   flatRate: '2,24',
+  depositRate: '2,50',
 };
 
 function errorsOf(changes: Partial<RawInputs>) {
@@ -129,6 +131,37 @@ describe('parseInputs', () => {
     const okFlat = parseInputs(BASE);
     if (!okFlat.ok) throw new Error('the prefilled flat text must parse');
     expect(okFlat.inputs.flatRateHundredths).toBe(224);
+
+    // Story 046, AC1: the deposit field keeps the bound a percent means (0 to 100 %), in hundredths of a
+    // percent. Hand values in the field's own format: the text a user types is `2,50`, its digit string is
+    // `250` (P21: the format and the parsed value are two assertions), so the digit rule can fail while the
+    // value is right. Each rule gets a case the other rules cannot bind: `2,50` passes all three, `2,505` is
+    // the decimals rule alone, `100,01` is the range alone (it is a whole hundredth), `-0,01` is the sign
+    // alone (two decimals, inside the range), `0,00` is the lower bound and passes. The bound itself is
+    // asserted here, not in `fieldCopy.test.ts`, so the mutation of `fieldSpec('depositRate').max` can only
+    // move the range line (P32).
+    expect(unitDigits('2,50', 2)).toBe('250');
+    expect(parseField(fieldSpec('depositRate'), '2,50')).toEqual({ ok: true, value: 250 });
+    expect(parseField(fieldSpec('depositRate'), '0,00')).toEqual({ ok: true, value: 0 });
+    expect(parseField(fieldSpec('depositRate'), '100,00')).toEqual({ ok: true, value: 10000 });
+    expect(parseField(fieldSpec('depositRate'), '2,505')).toEqual({
+      ok: false,
+      error: { kind: 'format' },
+    });
+    expect(parseField(fieldSpec('depositRate'), '100,01')).toEqual({
+      ok: false,
+      error: { kind: 'range' },
+    });
+    expect(parseField(fieldSpec('depositRate'), '-0,01')).toEqual({
+      ok: false,
+      error: { kind: 'range' },
+    });
+    // The field is required: one error per field, and the empty branch is its own. Hand value of the
+    // prefilled text of AC1 (Q1, the EZB rate): 250.
+    expect(errorOf('depositRate', '')).toEqual({ kind: 'empty' });
+    const okDeposit = parseInputs(BASE);
+    if (!okDeposit.ok) throw new Error('the prefilled deposit text must parse');
+    expect(okDeposit.inputs.depositRateHundredths).toBe(250);
 
     // The NAV cell in micro-euro (story 025): the same rule in its own unit, 6 decimals.
     for (const [text, microEur] of [

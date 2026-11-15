@@ -12,6 +12,7 @@ import {
   type OverrideField,
 } from './logic/fields.ts';
 import type { FieldError } from './logic/parseInputs.ts';
+import type { ParkReason, ParkTaxReason } from './logic/phase.ts';
 import type { FlatRowReason, PurchaseReason } from './logic/purchase.ts';
 import { formatDate, formatMonth } from './logic/format.ts';
 
@@ -79,6 +80,17 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
     formatWord: 'keine gültige Zahl',
     unit: 'Hundertstel Prozent',
   },
+  // Story 046 AC1: the deposit rate keeps the same bound a percent means, in the same unit, and its hint
+  // states once that the rate is an assumption constant over the term. The condition of the option is part
+  // of the hint, because the hint is the field's description and the paragraph below the table cannot be it
+  // (UX §2), and the field is never disabled.
+  depositRate: {
+    label: 'Zinssatz in Prozent',
+    range: '0,00 bis 100,00 %',
+    hint: 'Prozentsatz, höchstens 2 Nachkommastellen. Er gilt für das Geld, das zu Beginn eines Monats noch für die späteren Monate desselben Jahres braucht; er bleibt über die Laufzeit gleich und zählt nur, wenn die Option an ist.',
+    formatWord: 'keine gültige Zahl',
+    unit: 'Hundertstel Prozent',
+  },
 };
 
 /**
@@ -95,6 +107,20 @@ export const TAX_COPY = {
   kistHint:
     '8 % in Bayern und Baden-Württemberg, 9 % in den anderen Bundesländern; wird nur gerechnet, wenn die Kapitalertragsteuer angehakt ist.',
   bundeslandLabel: 'Bundesland für die Kirchensteuer',
+} as const;
+
+/**
+ * The parking block of story 046 (hak's answer to Q5: its own block, not inside the tax block, because the
+ * option also works outside the tax case). The legend names the group and the control label names what the
+ * control does, so the group name and the control name are two different strings (UX §2); the hint is the
+ * control's accessible description. The columns, the sum line and the facts stay in the app's single `COPY`
+ * object, as story 045's strings do.
+ */
+export const DEPOSIT_COPY = {
+  legend: 'Geld auf dem Tagesgeldkonto parken',
+  controlLabel: 'Zinsen auf das Geld, das noch nicht gebraucht wird',
+  controlHint:
+    'Die Auszahlung fällt am letzten Tag jedes Phase-Monats, das Geld wartet bis dahin, und das Depot, das die App sucht, wird um die Zinsen kleiner, die das wartende Geld bringt.',
 } as const;
 
 /** The amount field exists once; its label follows the direction, its rule is the rule of its unit (UX §2, story 030). */
@@ -218,6 +244,22 @@ export const COPY = {
   flatDepotNote:
     'Das Depot, das die App sucht, enthält die jährlichen Pauschalsteuer-Zahlungen; eine negative ' +
     'monatliche Auszahlung wird als negative Zahl gezeigt.',
+  /** Story 046 AC4: the two new columns of the year table, read by their header text (CLAUDE.md). */
+  parkColumn: 'Zinsen über das Phase-Jahr in Euro',
+  parkTaxColumn: 'Steuer auf die Zinsen in Euro',
+  /** The year section's paragraph, never a `dd`. `{zinsen}` and `{steuer}` are `formatEuro` of the shown
+   * cents, so a reader adding either column gets the figure the section states. The second sentence is part
+   * of the string only when a row has a tax figure, and nothing is shown for an empty sum. */
+  parkSumLine: (zinsen: string, steuer?: string): string =>
+    steuer === undefined
+      ? `Summe der Zinsen über die Phase-Jahre: ${zinsen}.`
+      : `Summe der Zinsen über die Phase-Jahre: ${zinsen}. Steuer auf die Zinsen: ${steuer}.`,
+  /** The rules AC4 names, stated once in the year section below the table, not in the fund section. A copy
+   * has no `hint` of its own, so this is paragraph text. */
+  parkFacts:
+    'Die Zinsen werden einfach gerechnet, auf dem Geld, das bis zur Auszahlung wartet; innerhalb eines ' +
+    'Jahres werden die Zinsen nicht verzinst. Die Steuer auf die Zinsen wird am Zufluss gerechnet, und das ' +
+    'Jahr des Zuflusses ist das Phase-Jahr.',
   emptyResult: 'Noch kein Ergebnis: bitte Phase und Betrag ausfüllen.',
   invalidResult: 'Kein Ergebnis möglich. Bitte die markierten Felder korrigieren.',
   noFundingYear: 'Kein Ergebnis möglich: die Phase hat kein Jahr mit einem Fonds.',
@@ -248,6 +290,29 @@ export function flatReasonText(reason: FlatRowReason): string {
   if (reason === 'no-year-counts') return 'kein Jahr zählt (nur das Auflösungsjahr)';
   if (reason === 'no-year-pays') return 'kein Jahr zahlt Steuer';
   return purchaseReasonText(reason);
+}
+
+/**
+ * The interest column's dash (story 046 AC4), in the first-match-wins order the design gives: `option-off`,
+ * `no-funding-fund` (story 024's existing `COPY.missingYear`, the same text the funding cell already reads
+ * for a phase year without a fund), `no-money-to-park`, `no-rate`. The three phase-side strings of story 032
+ * are not read here: a year row shows a funding fund or `COPY.missingYear`, so it cannot carry a phase-side
+ * reason — those strings belong to `purchaseReasonText` of the fund table. The tester reads each dash as the
+ * full line text of its cell.
+ */
+export function parkReasonText(reason: ParkReason): string {
+  if (reason === 'option-off') return 'Geld wird nicht geparkt (Option aus)';
+  if (reason === 'no-funding-fund') return COPY.missingYear;
+  if (reason === 'no-money-to-park') return 'kein Geld zum Parken (Wert nicht positiv)';
+  return 'kein Zinssatz';
+}
+
+/** The tax column's dash (story 046 AC4): the tax case first, because there is no tax without interest, then
+ * the interest column's reasons in the same order. A row can show two dashes with two different reasons, so
+ * each column reads its own one. */
+export function parkTaxReasonText(reason: ParkTaxReason): string {
+  if (reason === 'outside-tax-case') return 'Steuer nicht angehakt';
+  return parkReasonText(reason);
 }
 
 /** Projection label (AC5), the accessible description of every projection figure. */

@@ -1,7 +1,7 @@
 ﻿---
 id: 046
 title: The payout falls monthly, and money that is not yet needed can be parked on a deposit account for a rate that is a parameter
-status: designed # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: in-test # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size: M # S | M | L (story 026). S = at most three ACs: needs only the Explanation, no Review section and no Cost table.
@@ -197,6 +197,37 @@ Append only._
   off, only `Steuer nicht angehakt` for the tax case and `COPY.missingYear` for the funding reason. The
   ux-designer's new string is the copy of record; the design line is not rewritten here, because the design
   section is the architect's work.
+- 2026-11-16 — tester's run, recorded in the Test report: `no-funding-fund` is reachable through the UI on the
+  committed fixture (phase 01.2026–12.2026, the only year the list does not fund), so AC4's dash is asserted in
+  `e2e/laz.spec.ts` as well as at logic level; the earlier plan that asserted it at logic level only is
+  superseded. `m = 0` stays a logic guard and is never read as a UI oracle (risk 3).
+- 2026-11-16 — tester's run: the round trip is asserted as a closure, which cannot see the sign of `K`, so the
+  design's prediction that flipping `F − K` to `F + K` moves only the round trip holds only for the closure.
+  The run printed two failures for that mutation: the closure and AC5's phase-restriction depot. The sign is
+  falsifiable through the hand depot, not through the closure (recorded as a limit of the run).
+- 2026-11-16 — tester's run: AC5's e2e line of the design's test set was not written. The money rule, the
+  shares and the parts that add up to the depot are asserted at logic level in `purchase.test.ts`, and the round
+  trip in `phase.test.ts`; repeating the same figures in the browser would test the behaviour twice (P32,
+  checklist T2). Per-row figures are asserted once at logic level and once as what the cell shows, in AC4's
+  spec, which is where AC4's own rule lives.
+- 2026-11-16 — tester's run, `DEPOSIT_OFF` alone cannot move the option guard: its rate is 0, so `max(0, P) × 0`
+  is 0 with or without the guard. The guard is falsified only by an off state that still carries a typed rate —
+  `OFF_RATE` in `deposit.test.ts` and the prefilled `2,50` with the switch off in AC1's spec. The run that
+  removed the guard printed one logic failure and nine browser specs of 024, 030, 032, 035, 045 and AC6, which is
+  what AC1 names as the control.
+- 2026-11-16 — tester's run, incident and not a pass: the first mutation run stopped with `UnicodeEncodeError`
+  on vitest's marker while `deposit.ts` was mutated, and its backup had already been overwritten with the
+  mutated content, so the restore could not recover the file. `monthSum` was put back by hand to
+  `m(m + 1) / 24`, and the runner was changed to run with `python -X utf8` and to restore inside a `finally`.
+  The numbers in the Test report come from the runs after that change; every mutated file printed byte-identity
+  against its backup, taken outside the repository.
+- 2026-11-16 — tester's run, coupling recorded (risk 4): `parkedFactor` read over the whole fund list moved
+  AC5's phase-restriction depot at logic level and AC1's hand figure in the browser, because AC1's figure reads
+  the same term. `effectiveRateMillionths` was not mutated, as the design says; the tax coupling is recorded as
+  a coupling, not as a defect.
+- 2026-11-16 — tester's run: three test files were not Prettier-clean when first written. The Prettier output
+  was read and the differences applied inside those test files with the edit tool (no `--write` run by this
+  role, and no file outside the test files was touched); `format:check` prints clean now.
 - 2026-11-15 — orchestrator's naming resolutions, applied to the UX section before it was copied: the field id is
   `depositRate` as the design names it (the UX had `parkRate`), so `FIELD_IDS`, `fieldSpec`, `FIELD_COPY` and the
   `<label for>` read one name, and `depositRate` stays last in `FIELD_IDS`, which keeps the first-invalid-field
@@ -205,6 +236,19 @@ Append only._
   story 045's strings do, because the tests read `COPY.flatColumn` there. The control is a checkbox, so the
   design's word "switch label" reads as the block's control label; the accessible name is the label string, not
   the legend.
+- 2026-11-16 — the tester's run ended with an error before its reply (`Compaction produced no summary`), so the
+  counts it printed are not accepted as a result of the run. The orchestrator re-ran the ten P32 mutation checks
+  with its own runner (outside the repository, backup taken before the run, restore inside the runner,
+  byte-identity printed for every rule) on the test files the tester left, and the Test report's mutation table
+  is what that runner printed. The failed run is recorded as an incident, its pass is not reported.
+- 2026-11-16 — the re-run changed two e2e counts against the tester's reading: the shown-cents rule and the
+  phase-years rule printed 61 passed with one failing spec each (the story's own), not 60 with an extra platform
+  sign-in timeout. A timeout is not an assertion of this story, so the count with the shape named is what is
+  recorded. The re-run also showed that `fieldSpec`'s bound and the phase-years loop move the browser half of
+  AC1 as well as the logic assertion — one rule, two assertions across two runners (risk 4, coupling recorded).
+- 2026-11-16 — the option-guard rule cannot be moved by `DEPOSIT_OFF`, because that control's rate is 0; the
+  shape that isolates it is an off state that still carries a typed rate (`OFF_RATE` in `deposit.test.ts`, the
+  prefilled `2,50 %` with the control off in the browser). Recorded as the shape, not as a defect.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -918,13 +962,215 @@ copy of the control's name.
 
 _developer: what was built, deviations from the design and why._
 
-To be written after gate 2 is granted.
+Built in the design's dependency order: `deposit.ts` (option, internal `monthSum`, interest, tax, net, term;
+only the names a caller reads are exported), `fields.ts` (`depositRate` last in `FIELD_IDS`, spec 0 to 10000,
+2 decimals), `parseInputs.ts` (the fifth field), `phase.ts` (internal `parkedFactor` as `K` over `phaseYears`
+and `fundingFund`, the sign branch in the three closed-form functions, the row figures and reasons, the display
+pair), `purchase.ts` (the money at the start of the phase year, `shares` from it), `format.ts`
+(`roundEuroCents` moved from `purchase.ts`, body unchanged), `fieldCopy.ts`, `PlanCalculator.tsx` (state, the
+`2,50` prefill, the derived option in the same `useMemo`, `handlePark`), `PhaseForm.tsx` (the block as the last
+fieldset), `YearTable.tsx` (the two columns, the sum paragraph and the facts paragraph before the footnote).
+Every existing call site passes `DEPOSIT_OFF`; no hand value of an earlier story was changed.
+
+Deviations, for the tester and the reviewer:
+
+1. **The year table's amount column reads the net money.** UX §States asserts `1.188,04 €` in that column for
+   the hand example, while the design's line says the column "still shows `P·m`". AC5's money at the start of
+   the phase year is `P·m − net interest`, so `YearRow.yearAmountCents` is that net, through the same
+   `deposit.ts` call `purchase.ts` uses, so the two tables cannot show two numbers for one year.
+   `displayYearCents` itself is unchanged, and with the option off or the rate 0 the value is `P·m` exactly.
+2. `parkedFactor` skips a year whose `ρ′` is 0, as `phaseFactor` does. Without that guard a typed YTM of
+   −100 % gives `0/0` = NaN, which would move the option-off path AC1 keeps.
+3. `parkReasonText` holds exactly the four reasons UX names: a year row cannot carry a phase-side reason,
+   because its funding cell shows the fund or `COPY.missingYear`, so story 032's three strings stay in
+   `purchaseReasonText` for the fund table.
+4. `COPY.parkSumLine(zinsen, steuer?)` takes the tax figure as an optional argument, because the second
+   sentence is part of the string only when a row has a tax figure. The sum is the sum of the shown cents
+   (`parkSumsCents`), `null` when no row has an interest figure.
+5. The block has no visually hidden label. UX gives it a legend, a visible control label and the hint as the
+   control's accessible description through `aria-describedby`; nothing was added for a hidden label, so the
+   plan's phrase is an open point.
+6. `YearTable.module.css` gained `.reason` (the muted colour and the wrapping rule) for the cells that show a
+   dash with its reason, because CSS Modules emit only defined classes. The pair is already in
+   `tokens.test.ts`'s PAIRS, so nothing was added to the tokens.
+7. Existing tests were touched mechanically: the `DEPOSIT_OFF` argument at the call sites of
+   `flat.test.ts`, `phase.test.ts` and `purchase.test.ts`, and `fieldCopy.test.ts`'s key list with its
+   percent-bound comment, both named by the design. `parseInputs.test.ts`'s `BASE` fixture gained
+   `depositRate` because `Readonly<Record<FieldId, string>>` requires it.
+8. `e2e/laz.spec.ts` was not edited: 033 AC3's control list and the new helpers (`depositSwitch`,
+   `depositInput`, `yearRegion`) are the tester's work, and the existing e2e run stays green with the new block.
+
+Run of this step (`node scripts/verify.mjs --mode=full --no-record`): build, build:pages, check:template,
+format:check, lint, test, test:e2e, test:scripts, typecheck, check:dist and test:pages green; `check:structure`
+reported only the backlog index status, which is updated with this story's status. The hand oracles were
+recomputed against the built code and reproduce the story: `16,25 €`, `1,25 €`, tax `4,2859375 €` (shown
+`4,29 €`), net `11,9640625 €`, needed `1188,0359375 €` (shown `1.188,04 €`), church tax `4,6109375 €`, the
+`m = 1` interest `0,2083333 €`, the round trip `1188,0359375` (tax on) and `1183,75` (tax off), the phase-years
+sum `32,50 €` against the whole-list sum `146,25 €` (difference `113,75 €`), and `parkSumsCents` gives `null`
+for the tax column outside the tax case.
 
 ## Test report
 
 _tester: AC → test mapping, results, defects found._
 
-To be written after gate 2 is granted.
+Run on 2026-11-15/16 in the story worktree, branch `feature/046-laz-parked-money-on-a-deposit-account`,
+nothing committed. Every expected value below was computed by hand (P16) with an independent script
+(`h046d.py`, outside the repository); that script's control reproduces story 045's flat bases at asOf
+`2026-12-31` (`0,0693246782`, `0,0945224773`, `0,1214542508`), so the shared `ρ′` and the flat base are the
+same arithmetic the app reads. No test reads its oracle from the module it checks.
+
+The AC → test mapping and the hand values are the tester's. Its run ended with an error before its reply (see
+"Incidents of this run"), so the counts of the mutation table were measured again by the orchestrator, on the
+test files the tester left, and only what a runner printed is recorded here.
+
+### AC → test mapping
+
+- **AC1** — `parseInputs.test.ts` T5 (the field, the four errors, the bound 0 to 10000, one error per field,
+  the first invalid field in form order; the digit string and the parsed value are two separate assertions:
+  `parseField('2,505')` is the format error, `parseField('2,50')` → `'250'` is the digit string and
+  `parsed.values` → `250` is the parsed value). `fieldCopy.test.ts` '046 AC1' (the UX §2 strings as the exact
+  strings, the four error strings, the two phrases stated once, the two column headers, the sum line, the
+  facts paragraph, the key list gains `depositRate` last, the form order). e2e `046 AC1` (the block as its own
+  group by its legend, the last group of the form; the checkbox by its control label, the field by its label;
+  prefilled `2,50`, `inputmode="decimal"`, never disabled, not checked, no error before the first edit; the
+  control figure `149,37 €` hand-flat-typed-0, depot `10000,00`, tax off, prefilled phase 01.2028–03.2034,
+  paired with `151,37 €` when the switch is on, and back to `149,37 €` when the rate is typed `0`).
+  `deposit.test.ts` holds the logic half of AC1 (option off and rate 0 → 0 on both paths).
+- **AC2** — `deposit.test.ts` 'AC2', asserted only through the exported callers, never through the internal
+  `monthSum`: 16.250.000 µ€ (m = 12), 1.250.000 (m = 3), 208.333,333333 (m = 1, shown `0,21 €`, not a whole
+  cent), 0 for m = 0, 0 for negative money, 0 with the option off, 0 with the rate 0. Term: 0,1625 and
+  0,0125. No e2e test repeats these values.
+- **AC3** — `deposit.test.ts` 'AC3': `4.285.937,5` µ€ at 26,375 %, `4.610.937,5` at the church case
+  (`taxFromState` Bayern, asserted as the hand rate `283750` and its tax), the net `11.964.062,5` (the single
+  assertion the "tax not deducted" mutation can move), the tax-off case (gross is what reduces the money),
+  and the fund value untouched as the hand pair `36.540.000 µ€` per share with `1.183.750.000 µ€ /
+36.540.000 = 32,40` shares.
+- **AC4** — e2e `046 AC4`: the year table's `columnheader` list pinned (six, no balance column), the facts
+  paragraph inside the year region, the two phrases inside the form, the per-row hand figures `16,25 €` and
+  `4,29 €`, the sum line `32,50 €` / `8,58 €` (the sum of the shown cents; `8,57 €` is what rounding once
+  would give), the dashes for `option-off`, `outside-tax-case`, `no-money-to-park` (flat 100 %, tax on, phase
+  01.2028–12.2035, depot `10,00 €`, cash `1.532,10 Cent`) and `no-funding-fund` (phase 01.2026–12.2026), and
+  no sum line when no row has a figure. `phase.test.ts` 'AC4' asserts the same `no-funding-fund` reason at
+  logic level.
+- **AC5** — logic level only: `purchase.test.ts` (the hand triples for 2030/2031/2032, the identity asserted
+  on the unrounded values, the control-off shares pair `25,72 / 23,45 / 21,25` against the on shares
+  `25,47 / 23,21 / 21,04`, the money rule `306.206` Cent with the derived last part `148` Cent and the
+  distance to the .5 cent boundary `0,354370` Cent, `fundPhaseYear(2034)` null with reason
+  `after-phase-end`, `flatPartsSum` 335, the negative branch as one assertion: `formatEuro` of
+  `roundEuroCents(yearAmountMicroEur)` = `-12,00 €` for hand `P = -100 Cent`), and `phase.test.ts` (the round
+  trip in both directions on the unrounded values, on the all-nine phase 01.2028–12.2036, as a closure
+  `abs(back − 10.000 Cent) ≤ 1e-9`; the phase restriction as the single hand depot `1.804,98 €` against the
+  whole-list reading `1.709,11 €`; the negative branch closing through `F` alone with hand monthly
+  `-1,095384` Cent and `flatCashCents` `333,842117` Cent).
+  The design's e2e `046 AC5` line was not written: the money rule and the shares are asserted at logic level,
+  and repeating them in the browser would test the same behaviour twice (P32, checklist T2).
+- `effectiveRateMillionths` is shared with story 031's hand values, so the interest's own expression was
+  mutated, not the tax module; the coupling is recorded, not mutated (risk 4).
+
+### Results as printed
+
+- `npm test -w @swfactory/laz`: `Test Files 11 passed (11)`, `Tests 45 passed (45)`. Per file: deposit 2,
+  parseInputs 1, fieldCopy 8, phase 9, purchase 8, flat 2, fund 1, fundSource 5, projection 2, tax 3,
+  tokens 4. Measured again by the orchestrator on 2026-11-16 on the same files: `Test Files 11 passed (11)`,
+  `Tests 45 passed (45)`; the per-file counts are the tester's reading.
+- `npm run test:e2e -w @swfactory/laz`: 62 tests, `62 passed (6.1s)` — chromium 21 (the app's specs, the two
+  new ones included), platform 41 (the sign-in specs). Run with port 5174 free; port 5173 was never touched.
+- `npm run test:pages`: `24 passed (6.3s)`.
+- `check:structure`: `ok (3 app(s): avd, laz, minesweeper; 38 stories; 65 markdown files, 144 factory files
+scanned)`. `check:dist`: `ok avd (standard, 4 files)`, `ok laz (standard, 4 files)`, `ok minesweeper
+(standard, 5 files, lazy chunk 146.2 kB gzip)`.
+- `typecheck`, `lint`, `format:check`, `build`, `build:pages`, `check:template`, `test:scripts`: all ok.
+  `node scripts/verify.mjs --mode=full --no-record`: `verify: ok, 12 step(s), 79.6 s wall clock`.
+- One earlier whole-tree run printed `test: FAILED` on `landing` (`Facts.test.tsx` AC8, timed out in 5000 ms),
+  a workspace outside this story's file list; the two later runs printed it green. Not treated as a defect of
+  this story.
+
+### Mutation checks (rule P32)
+
+Two sets of numbers are kept apart here. The tester wrote the tests and ran the first set; its run then ended
+with an error (see "Incidents" below), so its counts are the tester's reading, and the orchestrator re-ran all
+ten rules with its own runner to have a result it can report. The second set is what that runner printed on
+2026-11-16, in one run per rule, both runners on every rule.
+
+Every run: a backup of the file taken outside the repository, the mutation applied, both runners, the restore
+inside the runner's `finally`, byte-identity against that backup printed for every rule. Baseline on the clean
+file, on every rule: vitest `Test Files 11 passed (11)`, `Tests 45 passed (45)`; e2e `62 passed` (chromium 21,
+platform 41). Run with port 5174 free; port 5173 was never touched. Scratch stayed outside the repository.
+
+The tester's first mutation run is recorded as an incident (see below), not as a pass. The counts below are the
+orchestrator's own runner (`C:/Users/hak/AppData/Local/Temp/opencode/mut046orch.mjs`, backups in
+`p32backups046`), one rule per run, both runners on every rule, 2026-11-16; the tester's own reading is kept
+where it differs. `restored byte-identical: true` printed on all ten rules.
+
+| rule                  | mutation (the shape the assertion reads)                                 | vitest                                     | e2e                 |
+| --------------------- | ------------------------------------------------------------------------ | ------------------------------------------ | ------------------- |
+| option guard          | `if (!deposit.on) return 0` removed in `parkInterestMicroEur`            | 1 red (44), `deposit.test.ts:60`           | 53 passed, 9 failed |
+| month sum             | `monthSum` `/24` → `/12`                                                 | 5 red (40)                                 | 60 passed, 2 failed |
+| tax at the Zufluss    | `parkNetMicroEur` returns the gross interest                             | 3 red (42)                                 | 62 passed, 0 failed |
+| never negative        | `max(0, monthlyMicroEur)` removed                                        | 2 red (43)                                 | 62 passed, 0 failed |
+| `no-rate` reason      | `? 'no-rate'` → `? null`                                                 | 45 passed, 0 red                           | 61 passed, 1 failed |
+| percent bound         | `fieldSpec('depositRate')` `max: 10000` → `max: null`                    | 1 red (44), `parseInputs.test.ts:151`      | 61 passed, 1 failed |
+| shown cents           | the tax cell reads `parkTaxMicroEur / 10000` instead of `roundEuroCents` | 45 passed, 0 red                           | 61 passed, 1 failed |
+| term over phase years | `for (const year of phaseYears(phase))` → over the whole fund list       | 1 red (44), `phase.test.ts:236`            | 61 passed, 1 failed |
+| sign of the term      | `F − K` → `F + K`                                                        | 2 red (43), `phase.test.ts:219` and `:236` | 62 passed, 0 failed |
+| sign guard            | `net > 0 ? factor − K : factor` → `factor − K` always                    | 1 red (44), `phase.test.ts:250`            | 62 passed, 0 failed |
+
+Exactly one assertion is red for the guard, the bound, the `no-rate` reason, the shown-cents rule and the sign
+guard. The rules that move more than one assertion decide the value in several hand cases at once, so they are
+limits, not defects:
+
+- month sum: five vitest assertions (AC2, AC3, and three of AC5) and two specs — one rule, four ACs (risk 4).
+- tax at the Zufluss: three vitest assertions; green in the browser, because the tax figure shown is the tax
+  itself and the amount column is not asserted there.
+- never negative: two vitest assertions (AC2's negative case and AC5's negative branch).
+- sign of the term: two vitest assertions. The design predicted only the round trip; the closure cannot see the
+  sign of `K`, so the flip shows through the hand depot `1.804,98 €` as well (recorded as a limit).
+
+Couplings between the two runners, named as counts:
+
+- percent bound: one rule moves both the parser's range assertion and the browser's error half of AC1
+  (`field.fill('101,00')` expects the range error), so 1 red here and 1 failed spec there.
+- term over phase years: one rule moves the logic hand depot and AC1's hand figure `151,37 €`, because that
+  figure reads the same term, so 1 red here and 1 failed spec there. The design's prediction of one assertion
+  holds at logic level; the shared reading is recorded here, not corrected in the design.
+- option guard: `DEPOSIT_OFF` alone cannot move it — its rate is 0 — so the shape that isolates it is an off
+  state that still carries a typed rate (`OFF_RATE` in `deposit.test.ts`, and the prefilled `2,50 %` with the
+  control off in the browser). The nine failing specs are the option-off hand values of 024, 032, 035 and 045
+  plus `AC6`, which is what the design predicted for the control.
+
+The tester's own reading differed on two rules only, and only in the e2e count: it recorded 60 passed plus one
+platform sign-in spec that timed out for both the shown-cents rule and the phase-years rule. The run above
+printed 61 passed and one failing spec each, the story's own, with no timeout. A timeout is not an assertion of
+this story, so the count with the shape named is the one recorded here.
+
+### Defects
+
+None. Every hand value the story names was reproduced by the code, and the option-off path is bit-identical to
+the existing hand values of 024, 032 and 045 (risk 1): the mutation of the guard is what shows that those
+values are the control, not an accident of a zero rate.
+
+### Limits of this run
+
+- The round trip is asserted as a closure, which cannot see the sign of `K` (risk 6); the sign is asserted by
+  the hand depot `1.804,98 €` and by the negative branch instead.
+- `m = 0` is asserted only at logic level, never as a UI oracle (risk 3).
+- The identity is asserted on the unrounded values only; no test asserts it in rounded cents (ADR 0012).
+- `effectiveRateMillionths` was not mutated (shared with 031), so the tax coupling is recorded as a coupling.
+- The rules that move more than one assertion are limits, not defects; see the counts above.
+
+### Incidents of this run
+
+- The tester's run itself: it wrote the test files and this report, then the run ended with an error
+  (`Compaction produced no summary`) before its reply, so nothing it printed after the test files is a result
+  the factory can report. The test files it left are the ones the runners ran (45 tests, 62 specs, green), and
+  the mutation table above was produced by the orchestrator's own runner on the same files, not by the failed
+  run. The failed run is recorded here as an incident; its counts are kept only where the re-run agrees with
+  them.
+- The first mutation run: it crashed with `UnicodeEncodeError` on vitest's `❯` marker while `deposit.ts` was
+  mutated, and the backup had already been overwritten by the mutated content, so the restore could not recover
+  the file; `monthSum` was put back by hand (`(months * (months + 1)) / 24`) and the runner was changed to run
+  with `python -X utf8` and to restore in a `finally`. That run is recorded as an incident, not as a pass; the
+  numbers above come from the runs that restored inside the runner.
 
 ## Review
 

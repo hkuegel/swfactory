@@ -13,6 +13,7 @@ import {
   type RawInputs,
 } from './logic/fields.ts';
 import { FUND_LIST, FUND_LIST_AS_OF, effectiveFund, type FundOverride } from './logic/fund.ts';
+import { DEPOSIT_OFF, type DepositOption } from './logic/deposit.ts';
 import { formatEuro } from './logic/format.ts';
 import { FLAT_OFF, flatBaseFactor, type FlatRate } from './logic/flat.ts';
 import { parseField, parseInputs, type FieldError, type FieldErrors } from './logic/parseInputs.ts';
@@ -25,12 +26,13 @@ import styles from './PlanCalculator.module.css';
 /** The live region speaks only after typing has paused this long (UX §4). */
 const LIVE_REGION_DELAY_MS = 700;
 
-/** The first render: hak's example phase (story 033, AC3), nothing typed in the other fields, direction 1, both tax checkboxes off (UX §3). Story 045: the flat field is prefilled with `2,24`, the rate of the prefill AC1 names. */
+/** The first render: hak's example phase (story 033, AC3), nothing typed in the other fields, direction 1, both tax checkboxes off (UX §3). Story 045: the flat field is prefilled with `2,24`, the rate of the prefill AC1 names. Story 046: the deposit field is prefilled with `2,50` (hak's answer to Q1, the EZB deposit rate), the option off, so the first render moves nothing. */
 const DEFAULT_INPUTS: RawInputs = {
   phaseStart: '01.2028',
   phaseEnd: '03.2034',
   amount: '',
   flatRate: '2,24',
+  depositRate: '2,50',
 };
 
 /** The tax start state story 031 defines: no checkbox checked, Bayern as the default Bundesland (hak, 2026-11-13). */
@@ -58,6 +60,8 @@ interface Derived {
   readonly noFundingYear: boolean;
   /** The tax the calculation uses, from the two checkboxes and the Bundesland. */
   readonly tax: Tax;
+  /** Story 046 AC1: the parking option, the switch plus the parsed rate in whole hundredths. */
+  readonly deposit: DepositOption;
   /** Story 032: one purchase row per fund, in the order of the fund table, or null while no result is possible. */
   readonly purchases: readonly PurchaseRow[] | null;
   /** The depot that is shown, in cents, so the last purchase part comes from the total (032 AC2). */
@@ -73,6 +77,8 @@ export function PlanCalculator() {
   const [raw, setRaw] = useState<RawInputs>(DEFAULT_INPUTS);
   const [direction, setDirection] = useState<Direction>('depot');
   const [taxState, setTaxState] = useState<TaxState>(DEFAULT_TAX);
+  // Story 046 AC1: the parking option is off at the first render, so no existing hand value moves.
+  const [parkOn, setParkOn] = useState(false);
   // The first render is not announced and shows no error (UX §3).
   const [edited, setEdited] = useState(false);
   // The override state lives here, so FundTable stays presentational.
@@ -87,6 +93,11 @@ export function PlanCalculator() {
     // Story 045: the flat rate is the parsed value of its field. While a field is invalid nothing is
     // calculated, so the fallback shape is never read — outside the tax case `flat.ts` produces no tax.
     const flat: FlatRate = parsed.ok ? { hundredths: parsed.inputs.flatRateHundredths } : FLAT_OFF;
+    // Story 046: the option is the switch and the parsed rate. While a field is invalid nothing is
+    // calculated, so the fallback shape is never read; off means no interest anywhere (AC1).
+    const deposit: DepositOption = parsed.ok
+      ? { on: parkOn, hundredths: parsed.inputs.depositRateHundredths }
+      : DEPOSIT_OFF;
 
     const projections = new Map<number, number>();
     const overrideErrors = new Map<number, Partial<Record<OverrideField, FieldError>>>();
@@ -121,7 +132,7 @@ export function PlanCalculator() {
       : null;
     const plan =
       parsed.ok && phase !== null
-        ? buildPlan(funds, phase, tax, flat, parsed.inputs.amountCents, direction)
+        ? buildPlan(funds, phase, tax, flat, deposit, parsed.inputs.amountCents, direction)
         : null;
 
     for (const fund of funds) {
@@ -141,7 +152,7 @@ export function PlanCalculator() {
     const purchases =
       plan === null || phase === null
         ? null
-        : purchaseRows(funds, phase, plan.monthlyCents, tax, flat);
+        : purchaseRows(funds, phase, plan.monthlyCents, tax, flat, deposit);
 
     return {
       errors,
@@ -152,10 +163,11 @@ export function PlanCalculator() {
       markers,
       noFundingYear: plan !== null && plan.fundedYears.length === 0,
       tax,
+      deposit,
       purchases,
       totalCents: plan === null ? null : plan.depotCents,
     };
-  }, [raw, direction, taxState, overrides]);
+  }, [raw, direction, taxState, parkOn, overrides]);
 
   const firstInvalid = firstInvalidField(derived.errors);
   const invalid = firstInvalid !== undefined;
@@ -187,6 +199,13 @@ export function PlanCalculator() {
     setEdited(true);
   }
 
+  // Story 046: the switch announces through the control itself, so no live region is mounted for it; it
+  // never moves focus, and no control becomes disabled (UX §4).
+  function handlePark(checked: boolean) {
+    setParkOn(checked);
+    setEdited(true);
+  }
+
   // A small updater: the parsed value and the marker are derived, never stored (C3).
   const handleOverride = useCallback((field: OverrideField, year: number, value: string) => {
     setOverrides((previous) => {
@@ -207,9 +226,11 @@ export function PlanCalculator() {
         raw={raw}
         errors={edited ? derived.errors : {}}
         tax={taxState}
+        parkOn={parkOn}
         onDirection={handleDirection}
         onField={handleField}
         onTax={handleTax}
+        onPark={handlePark}
       />
       <ResultSummary
         plan={derived.plan}

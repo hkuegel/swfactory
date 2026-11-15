@@ -23,6 +23,16 @@ export const amountInput = (page: Page): Locator =>
 export const flatInput = (page: Page): Locator =>
   page.getByLabel('Vorabpauschale', { exact: true });
 
+/** Story 046 AC1: the parking block's control and its field, read by the names UX §2 gives them. The
+ * legend names the group and the label names what the control does, so they are two different strings. */
+export const depositSwitch = (page: Page): Locator =>
+  page.getByRole('checkbox', {
+    name: 'Zinsen auf das Geld, das noch nicht gebraucht wird',
+    exact: true,
+  });
+export const depositInput = (page: Page): Locator =>
+  page.getByLabel('Zinssatz in Prozent', { exact: true });
+
 /** A fund-row override input by its visually hidden label (UX §2), never by cell position. */
 export const fundInput = (page: Page, field: 'nav' | 'ytm', year: number): Locator =>
   page.getByLabel(
@@ -35,10 +45,18 @@ export const fundInput = (page: Page, field: 'nav' | 'ytm', year: number): Locat
 export const result = (page: Page): Locator =>
   page.getByRole('region', { name: 'Ergebnis', exact: true });
 
+/**
+ * Story 046: the year section itself, so the two paragraphs AC4 names are read inside their own region and
+ * never through a page-wide text query (story 045's rule). The scroller inside it has its own name
+ * (`Jahresübersicht, horizontal scrollbar`), so this helper and the table helper never select the same
+ * element.
+ */
+export const yearRegion = (page: Page): Locator =>
+  page.getByRole('region', { name: 'Jahresübersicht', exact: true });
+
 /** The visually hidden polite live region inside "Ergebnis" (UX §4). */
 export const liveRegion = (page: Page): Locator => result(page).locator('p[aria-live]');
-export const yearTable = (page: Page): Locator =>
-  page.getByRole('region', { name: 'Jahresübersicht', exact: true }).getByRole('table');
+export const yearTable = (page: Page): Locator => yearRegion(page).getByRole('table');
 export const fundTable = (page: Page): Locator =>
   page.getByRole('region', { name: 'Fondsstaffel', exact: true }).getByRole('table');
 
