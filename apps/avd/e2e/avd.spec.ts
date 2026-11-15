@@ -121,60 +121,64 @@ test('AC4: the reference example gives the four exact figures, their sum, and is
   expect(await read()).toEqual(first);
 });
 
-test('AC5: edits update figures, table and chart at once; table and chart text match the result', async ({
-  page,
-}) => {
-  await ageInput(page).fill('57');
-  await expect(tableRows(page)).toHaveCount(8);
-  await expect(figure(page, 'Endwert')).toHaveText(euro('22.256,44'));
-  await expect(chart(page)).toHaveAccessibleName(
-    /bis zum Auszahlungsbeginn mit 65, Endwert 22\.256,44\s€\./,
-  );
-  const lastRow = tableRows(page).last();
-  await expect(await balanceCell(page, lastRow)).toHaveText(euro('22.256,44'));
-  await expect(page.getByRole('columnheader')).toHaveText([
-    'Jahr',
-    'Alter',
-    'Eigene Beiträge',
-    'Zulagen gutgeschrieben',
-    'Erträge',
-    'Kontostand am Jahresende',
-    'Steuererstattung',
-  ]);
-  // The parts of the last row sum to its balance (table text equals the figures of AC4).
-  const cells = await lastRow.locator('td').allInnerTexts();
-  const [own, zul, ret, bal] = cells.slice(1).map((text) => cents(text));
-  expect((own ?? 0) + (zul ?? 0) + (ret ?? 0)).toBe(bal);
+test(
+  'AC5: edits update figures, table and chart at once; table and chart text match the result',
+  {
+    tag: '@timing',
+  },
+  async ({ page }) => {
+    await ageInput(page).fill('57');
+    await expect(tableRows(page)).toHaveCount(8);
+    await expect(figure(page, 'Endwert')).toHaveText(euro('22.256,44'));
+    await expect(chart(page)).toHaveAccessibleName(
+      /bis zum Auszahlungsbeginn mit 65, Endwert 22\.256,44\s€\./,
+    );
+    const lastRow = tableRows(page).last();
+    await expect(await balanceCell(page, lastRow)).toHaveText(euro('22.256,44'));
+    await expect(page.getByRole('columnheader')).toHaveText([
+      'Jahr',
+      'Alter',
+      'Eigene Beiträge',
+      'Zulagen gutgeschrieben',
+      'Erträge',
+      'Kontostand am Jahresende',
+      'Steuererstattung',
+    ]);
+    // The parts of the last row sum to its balance (table text equals the figures of AC4).
+    const cells = await lastRow.locator('td').allInnerTexts();
+    const [own, zul, ret, bal] = cells.slice(1).map((text) => cents(text));
+    expect((own ?? 0) + (zul ?? 0) + (ret ?? 0)).toBe(bal);
 
-  // The chart really draws all three series (token-coloured pixels, not only a changed picture).
-  const drawn = await chartSeriesPixels(page);
-  expect(drawn.contributions).toBeGreaterThan(50);
-  expect(drawn.zulagen).toBeGreaterThan(50);
-  expect(drawn.returns).toBeGreaterThan(50);
+    // The chart really draws all three series (token-coloured pixels, not only a changed picture).
+    const drawn = await chartSeriesPixels(page);
+    expect(drawn.contributions).toBeGreaterThan(50);
+    expect(drawn.zulagen).toBeGreaterThan(50);
+    expect(drawn.returns).toBeGreaterThan(50);
 
-  // Row 1: Zulagen come one year later.
-  await expect(tableRows(page).first().locator('td').nth(2)).toHaveText(euro('0,00'));
+    // Row 1: Zulagen come one year later.
+    await expect(tableRows(page).first().locator('td').nth(2)).toHaveText(euro('0,00'));
 
-  const before = await chart(page).screenshot({ animations: 'disabled' });
-  await monthlyInput(page).fill('300');
-  await expect(figure(page, 'Eigene Beiträge')).toHaveText(euro('28.800,00'));
-  const during = await chart(page).screenshot({ animations: 'disabled' });
-  expect(during.equals(before)).toBe(false);
-  await monthlyInput(page).fill('150');
-  await expect(figure(page, 'Endwert')).toHaveText(euro('22.256,44'));
-  const after = await chart(page).screenshot({ animations: 'disabled' });
-  expect(after.equals(before)).toBe(true);
+    const before = await chart(page).screenshot({ animations: 'disabled' });
+    await monthlyInput(page).fill('300');
+    await expect(figure(page, 'Eigene Beiträge')).toHaveText(euro('28.800,00'));
+    const during = await chart(page).screenshot({ animations: 'disabled' });
+    expect(during.equals(before)).toBe(false);
+    await monthlyInput(page).fill('150');
+    await expect(figure(page, 'Endwert')).toHaveText(euro('22.256,44'));
+    const after = await chart(page).screenshot({ animations: 'disabled' });
+    expect(after.equals(before)).toBe(true);
 
-  // Payout start 70: 13 rows, the last balance is the new end value, the chart label follows.
-  await payoutInput(page).fill('70');
-  await expect(tableRows(page)).toHaveCount(13);
-  const end = (await figure(page, 'Endwert').innerText()).match(/\d[\d.]*,\d{2}\s€/)?.[0] ?? '';
-  expect(end).not.toBe('');
-  await expect(await balanceCell(page, tableRows(page).last())).toHaveText(end);
-  await expect(chart(page)).toHaveAccessibleName(
-    new RegExp(`mit 70, Endwert ${end.replace(/\./g, '\\.')}`),
-  );
-});
+    // Payout start 70: 13 rows, the last balance is the new end value, the chart label follows.
+    await payoutInput(page).fill('70');
+    await expect(tableRows(page)).toHaveCount(13);
+    const end = (await figure(page, 'Endwert').innerText()).match(/\d[\d.]*,\d{2}\s€/)?.[0] ?? '';
+    expect(end).not.toBe('');
+    await expect(await balanceCell(page, tableRows(page).last())).toHaveText(end);
+    await expect(chart(page)).toHaveAccessibleName(
+      new RegExp(`mit 70, Endwert ${end.replace(/\./g, '\\.')}`),
+    );
+  },
+);
 
 test('AC6: invalid input names field and range, marks it invalid and replaces result, table and chart', async ({
   page,

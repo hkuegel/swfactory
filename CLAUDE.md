@@ -97,15 +97,22 @@ The backlog must be enough to rebuild the app without any chat history:
 - **Retro** — after each story the orchestrator analyses what went wrong and proposes
   concrete edits to agents, this file or the templates. Only hak-approved proposals
   are applied; agents never rewrite their own role files.
+- **A proposal names what it changes (P36, hak 2026-11-14):** a proposal line names the file or story it changes,
+  or it is marked as a record only; an observation that cannot end in a rule or a story is not written as a
+  proposal (story 041, enforced by `check:structure` from story 041 on).
 - **Proposal numbers (P27, hak 2026-11-14):** numbered once across the backlog and never reused, so an
   approved rule can be named unambiguously. A proposal pending approval is named by its number, and the
   number is not given to another rule while it is open.
 
 ## Conventions
 
-- **Decide, don't ask:** when there is one clearly correct answer, the orchestrator decides it
-  and records it in the Decision log. It asks only for genuinely open questions or for a
-  decision that is costly to reverse (story 026).
+- **Decide, don't ask (P35, hak 2026-11-14):** when there is one clearly correct answer, the orchestrator decides it
+  and records it in the Decision log. It asks only for a question that is genuinely hak's — the meaning of a word he
+  used, the data a source carries, the merge, what a page must look like to him, or a decision that is costly to
+  reverse — and it names the kind in the Open questions line (story 040, enforced by `check:structure`). A
+  reversible preference is not a question: it is written as a default with its reason, one line in the Decision log,
+  which hak reads at gate 2. A question the story already answers is not asked. Every decision line names its owner
+  at its end: `(hak)` for an answer, `reason:` for a default.
 - **Progress in the chat:** the orchestrator writes the progress in the chat while the pipeline
   runs — one short line per step (what ran, what it answered, what it decided), not a wall of
   text, so hak can follow without opening the story (story 026, R7).
@@ -245,6 +252,20 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
 - **Which checks run:** `npm run verify` runs the checks a change can affect; durations are reported,
   never asserted. A run that publishes to `main` is always a full run, and the gate 2 full run is the
   oracle for what the mapping could have missed (story 026, R4).
+- **One run per record (P32, hak 2026-11-14):** the report text is complete before the run that covers it, so a
+  story costs one run for its results and one covering run for the record as committed; a run never confirms a
+  sentence it prints itself. A run on content a whole-tree record already covered runs nothing, and any green run
+  that ran the checks the mapping named for its change set writes the record for that change set (story 037).
+- **A green step reports its closing block (P37, hak 2026-11-14):** for a green step the runner prints the lines
+  that name a scope and the lines that carry counts, for a failing step the whole output, and a green step with no
+  count line the whole output (story 042). The test counts the tester reports are read from these lines.
+- **Frame-timing and pixel tests carry the tag `@timing` (P34, hak 2026-11-14):** a pull-request run filters them
+  out; the run that publishes, a run started from the UI and the nightly run run them, so a visual regression is
+  caught where a publish happens. A filtered run is not a coverage claim: the run reports how many tests the filter
+  removed, and `check:structure` refuses a test that compares pixels or frames without the tag (story 039).
+- **One story in flight at a time (P38, hak 2026-11-14):** at most one story across all backlogs has a status in
+  `designed | in-progress | in-test | in-review`; `blocked` is not in flight (story 043, enforced by
+  `check:structure`). A look at the app in the browser is not a story in flight.
 - **No live request, no repository read** in a test, and the mode is named in every call; a script that
   a test imports runs its scan only when it is executed directly (story 026).
 - **Cost table carries data:** a row is measured or says `not measured` with the reason; a table that

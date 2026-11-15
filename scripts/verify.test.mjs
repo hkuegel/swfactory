@@ -3,6 +3,7 @@ import { plan, STEPS } from './affected-checks.mjs';
 import { acceptsRecord } from './write-fund-list.mjs';
 import {
   recordForRun,
+  reportOfStep,
   scopeText,
   changedSince,
   commandForStep,
@@ -259,13 +260,42 @@ describe('story 029: the command runs a step in the affected workspaces, or in t
     ]);
   });
 
-  it('story 025, the CI round: a full run plans every step when nothing changed', () => {
-    // Hand expectation: the run that publishes to main is full even for an empty change list, so the
-    // writer's commit can never be verified by a plan that skips the structure gate.
-    const answer = plan([], { head: 'abc', files: {} }, 'full', ['x', 'y'], ALL);
+  it('story 025, the CI round: a full run plans every step when nothing is recorded for the tree', () => {
+    // Hand expectation: the run that publishes to main is full when there is no record to compare against, so the
+    // writer's commit can never be verified by a plan that skips the structure gate. A fresh CI machine has no
+    // record, so this is the round CI runs.
+    const answer = plan([], null, 'full', ['x', 'y'], ALL);
     expect(answer.changed).toEqual([]);
     expect(answer.steps).toEqual([...STEPS].sort());
     expect(answer.steps.includes('check:structure')).toBe(true);
+  });
+
+  it('story 037 AC2: a whole-tree record plus unchanged content answers an empty plan, whatever mode is named', () => {
+    // Hand expectation: the record says a run read the whole tree for this content, so a check has no input that
+    // changed since it ran (story 026 AC2), and the plan is empty for `full` and for `affected`. A record written
+    // by an affected run claims only its own change set, so it does not answer a full run.
+    const wholeTree = { head: 'abc', files: {}, mode: 'full' };
+    for (const mode of ['full', 'affected']) {
+      const answer = plan([], wholeTree, mode, ['x', 'y'], ALL);
+      expect(answer.steps, `mode ${mode}`).toEqual([]);
+    }
+    const affectedRecord = { head: 'abc', files: {}, mode: 'affected' };
+    expect(plan([], affectedRecord, 'full', ['x', 'y'], ALL).steps).toEqual([...STEPS].sort());
+    // Hand expectation: a publishing run always names the whole-tree checks (story 034 AC1), so an unchanged
+    // content set does not make the publishing plan empty: the seven checks that read or write the tree in one
+    // pass stay, and the four a workspace can run alone are not named because the change set reaches none.
+    expect(plan([], wholeTree, 'publish', ['x', 'y'], ALL).steps).toEqual(
+      [
+        'build',
+        'build:pages',
+        'check:dist',
+        'format:check',
+        'check:structure',
+        'check:template',
+        'test:pages',
+        'test:scripts',
+      ].sort(),
+    );
   });
 
   it('AC4: the record names the mode, the workspaces the run ran, and the steps that were scoped', () => {
@@ -288,23 +318,66 @@ describe('story 029: the command runs a step in the affected workspaces, or in t
       scopedSteps: ['lint', 'test', 'test:e2e', 'typecheck'],
     });
     // Hand expectation: a full run covers the whole tree, so nothing was scoped and all workspaces are named.
-    expect(recordForRun(plan([], record, 'full', ['x', 'y'], ALL), current, SCRIPTS)).toEqual({
+    // The change set is a factory script, which the mapping cannot scope (story 026 AC1), so the plan is full.
+    // The empty change set is not a full run any more: with a whole-tree record it answers an empty plan
+    // (story 037 AC2), and a run that ran nothing claims nothing, so it answers null.
+    expect(
+      recordForRun(plan(['scripts/verify.mjs'], record, 'full', ['x', 'y'], ALL), current, SCRIPTS),
+    ).toEqual({
       mode: 'full',
       head: 'def',
       files: current.files,
       workspaces: ALL,
       scopedSteps: [],
     });
-    // Hand expectation (story 026 AC2, unchanged): an affected run never writes the record.
+    expect(recordForRun(plan([], record, 'full', ['x', 'y'], ALL), current, SCRIPTS)).toBeNull();
+    // Hand expectation (story 037 AC1, P32): the gate is the coverage of the change a run saw, so an affected
+    // run that ran the checks the mapping named writes the record for that change set. The markdown round ran
+    // its two checks; the hand data says `docs/` is in no workspace, so nothing was scoped.
     expect(
       recordForRun(
         plan(['docs/backlog/README.md'], record, 'affected', ['x', 'y'], ALL),
         current,
         SCRIPTS,
       ),
+    ).toEqual({
+      mode: 'affected',
+      head: 'def',
+      files: current.files,
+      workspaces: ALL,
+      scopedSteps: [],
+    });
+    // Hand expectation: a run that ran nothing claims nothing, so it still answers null.
+    expect(
+      recordForRun(plan([], record, 'affected', ['x', 'y'], ALL), current, SCRIPTS),
     ).toBeNull();
   });
 
+  it('story 037 AC1: a green affected run writes the record for the change the mapping answered for it', () => {
+    // Hand expectation: the run ran the seven steps the mapping named, all of them in the app workspace the
+    // change lies in, so its record claims the coverage of that change set. The answer comes from the module,
+    // the record is written here by hand (P16).
+    const current = { head: 'def', files: { 'apps/x/src/features/plan/logic/fund.ts': 'h1' } };
+    const answer = plan(
+      ['apps/x/src/features/plan/logic/fund.ts'],
+      record,
+      'affected',
+      ['x', 'y'],
+      ALL,
+    );
+    expect(recordForRun(answer, current, SCRIPTS)).toEqual({
+      mode: 'affected',
+      head: 'def',
+      files: current.files,
+      workspaces: ['apps/x'],
+      scopedSteps: ['build', 'check:dist', 'format:check', 'lint', 'test', 'test:e2e', 'typecheck'],
+    });
+    // Hand expectation: the record still names its mode and its scope, so a scoped run is read as a scope.
+    expect(answer.mode).toBe('affected');
+    expect(answer.steps.length, 'hand data: the mapping answers seven steps for app source').toBe(
+      7,
+    );
+  });
   it('AC4: the report names the scope of each step from the same answer the command is built from', () => {
     const publish = plan(
       ['apps/x/src/features/plan/logic/fund.ts'],
@@ -336,5 +409,79 @@ describe('story 029: the command runs a step in the affected workspaces, or in t
     for (const step of publish.steps) {
       expect(commandForStep(step, publish, ALL, SCRIPTS), `step ${step}`).toEqual(['run', step]);
     }
+  });
+});
+
+describe('story 042 (P37, hak 2026-11-14): the print for one step', () => {
+  // Hand fixtures: the output a step prints, and the expectation written here by hand, not read back through
+  // the rule the function uses (P16). No repository read (P17); the code is named in every call.
+  const green = [
+    '> apps/x',
+    'Running 3 tests using 1 worker',
+    '  ✓  1 [chromium] › plan.spec.ts:4:1 › the board shows the saved plan (1.2 s)',
+    '  2 passed (2.9 s)',
+    '  1 flaky (2.0 s)',
+    '> packages/platform',
+    'Running 1 test using 1 worker',
+    '  ✓  1 [chromium] › tokens.spec.ts:2:1 › the tokens hold their contrast (0.8 s)',
+    '  1 passed (1.1 s)',
+  ].join('\n');
+
+  it('AC1: a green step reports the scope lines and the closing block, in the order they appear', () => {
+    // Hand expectation: the two workspace headers, the two run lines, the three lines that carry counts. The
+    // two lines that only name a test are not in a report, so the fixture has nine lines and the answer seven.
+    expect(reportOfStep(0, green)).toBe(
+      [
+        '> apps/x',
+        'Running 3 tests using 1 worker',
+        '  2 passed (2.9 s)',
+        '  1 flaky (2.0 s)',
+        '> packages/platform',
+        'Running 1 test using 1 worker',
+        '  1 passed (1.1 s)',
+      ].join('\n'),
+    );
+    expect(green.split('\n').length).toBe(9);
+  });
+
+  it('AC2: a failing step reports its whole output', () => {
+    const failing = [
+      '> apps/x',
+      'Running 2 tests using 1 worker',
+      '  ✘  1 [chromium] › plan.spec.ts:4:1 › the board shows the saved plan (1.2 s)',
+      '  1 failed (1.2 s)',
+      'Error: expected the total to be 12 but got 13',
+    ].join('\n');
+    expect(reportOfStep(1, failing)).toBe(failing);
+    // Hand expectation: the same text read as a green step answers a shorter report, so the code is what this
+    // test measures; a rule that printed the report for a failing step would fail here.
+    expect(reportOfStep(0, failing)).toBe(
+      ['> apps/x', 'Running 2 tests using 1 worker', '  1 failed (1.2 s)'].join('\n'),
+    );
+  });
+
+  it('AC2: a green step whose output has no count line reports its whole output', () => {
+    // Hand expectation: nothing here carries a count, so the shortening cannot be applied and no line is
+    // hidden. The line names a file, not a test, and it stays.
+    const greenNoCounts = ['> apps/x', 'All matched files use prettier code style!'].join('\n');
+    expect(reportOfStep(0, greenNoCounts)).toBe(greenNoCounts);
+  });
+
+  it('AC2: a line that only names a test is not a count line, even when its title says "failed"', () => {
+    // Hand expectation: three lines, the workspace header, the run line and the count line. A test title
+    // with the word "failed", and a console warning that says it, carry no count, so they are not part of
+    // the report. This is what the run on 2026-11-15 measured: a test titled "rapid repeated failed
+    // attempts" and a line "Sign-in failed: unknown" were printed by a green step.
+    const greenWithWords = [
+      '> apps/x',
+      'Running 2 tests using 1 worker',
+      '  ✓  1 [platform] › auth.spec.ts:294:3 › rapid repeated failed attempts never stack messages (1.3 s)',
+      '[WebServer] 00:43:05 [vite] (client) [console.warn] Sign-in failed: unknown',
+      '  2 passed (2.9 s)',
+    ].join('\n');
+    expect(reportOfStep(0, greenWithWords)).toBe(
+      ['> apps/x', 'Running 2 tests using 1 worker', '  2 passed (2.9 s)'].join('\n'),
+    );
+    expect(greenWithWords.split('\n').length).toBe(5);
   });
 });

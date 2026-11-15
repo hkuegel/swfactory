@@ -369,88 +369,100 @@ function record(page: Page, pause: boolean) {
 }
 
 test.describe('with motion', () => {
-  test('AC2: one entry animation of at most 2 s, one iteration, and every transition is finite', async ({
-    page,
-  }) => {
-    await record(page, false);
-    await page.goto('');
-    await expect(page.getByRole('tablist')).toBeVisible();
-    await settled(page);
+  test(
+    'AC2: one entry animation of at most 2 s, one iteration, and every transition is finite',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await record(page, false);
+      await page.goto('');
+      await expect(page.getByRole('tablist')).toBeVisible();
+      await settled(page);
 
-    const rec = await page.evaluate(() => window.__rec);
-    expect(rec.starts).toHaveLength(1); // one, and hydration did not restart it
-    const [entry] = rec.starts;
-    expect(entry?.iterations).toBe(1);
-    expect((entry?.duration ?? Infinity) + (entry?.delay ?? 0)).toBeLessThanOrEqual(2000);
+      const rec = await page.evaluate(() => window.__rec);
+      expect(rec.starts).toHaveLength(1); // one, and hydration did not restart it
+      const [entry] = rec.starts;
+      expect(entry?.iterations).toBe(1);
+      expect((entry?.duration ?? Infinity) + (entry?.delay ?? 0)).toBeLessThanOrEqual(2000);
 
-    // The highlight of a step (a transition) and a hover are finite as well; the click really starts one.
-    const running = await page.evaluate(async () => {
-      document.querySelectorAll<HTMLElement>('[role="tab"]')[2]?.click();
-      await new Promise((resolve) => requestAnimationFrame(resolve)); // React renders, the transition starts
-      return document.getAnimations().map((animation) => {
-        const timing = animation.effect?.getComputedTiming();
-        return { iterations: timing?.iterations, total: Number(timing?.endTime) };
+      // The highlight of a step (a transition) and a hover are finite as well; the click really starts one.
+      const running = await page.evaluate(async () => {
+        document.querySelectorAll<HTMLElement>('[role="tab"]')[2]?.click();
+        await new Promise((resolve) => requestAnimationFrame(resolve)); // React renders, the transition starts
+        return document.getAnimations().map((animation) => {
+          const timing = animation.effect?.getComputedTiming();
+          return { iterations: timing?.iterations, total: Number(timing?.endTime) };
+        });
       });
-    });
-    expect(running.length).toBeGreaterThan(0);
-    for (const animation of running) {
-      expect(animation.iterations).toBe(1);
-      expect(animation.total).toBeLessThanOrEqual(2000);
-    }
-  });
+      expect(running.length).toBeGreaterThan(0);
+      for (const animation of running) {
+        expect(animation.iterations).toBe(1);
+        expect(animation.total).toBeLessThanOrEqual(2000);
+      }
+    },
+  );
 
-  test('AC2/AC6: the entry animation is visible and nothing loops afterwards', async ({ page }) => {
-    // Part 1: held at its first frame, the viewport differs from the finished one (text may stay in:
-    // same run, same fonts). Measured: first vs finished frame 27,226 pixels at tolerance 8; identical idle frames 0, also at tolerance 0.
-    await record(page, true);
-    await page.goto('');
-    await page.waitForFunction(() => window.__rec.starts.length === 1);
-    const first = await page.screenshot();
-    await page.evaluate(() => document.getAnimations().forEach((animation) => animation.finish()));
-    await settled(page);
-    const last = await page.screenshot();
-    expect(await differingPixels(page, first, last)).toBeGreaterThan(1000);
+  test(
+    'AC2/AC6: the entry animation is visible and nothing loops afterwards',
+    { tag: '@timing' },
+    async ({ page }) => {
+      // Part 1: held at its first frame, the viewport differs from the finished one (text may stay in:
+      // same run, same fonts). Measured: first vs finished frame 27,226 pixels at tolerance 8; identical idle frames 0, also at tolerance 0.
+      await record(page, true);
+      await page.goto('');
+      await page.waitForFunction(() => window.__rec.starts.length === 1);
+      const first = await page.screenshot();
+      await page.evaluate(() =>
+        document.getAnimations().forEach((animation) => animation.finish()),
+      );
+      await settled(page);
+      const last = await page.screenshot();
+      expect(await differingPixels(page, first, last)).toBeGreaterThan(1000);
 
-    // Part 2: once it ended, frames 500 ms apart are the same and no iteration ever fired.
-    await page.waitForTimeout(500);
-    const later = await page.screenshot();
-    expect(await differingPixels(page, last, later)).toBe(0);
-    const rec = await page.evaluate(() => ({
-      ...window.__rec,
-      running: document.getAnimations().length,
-    }));
-    expect(rec.iterations).toBe(0);
-    expect(rec.ends).toBe(1);
-    expect(rec.running).toBe(0);
-  });
+      // Part 2: once it ended, frames 500 ms apart are the same and no iteration ever fired.
+      await page.waitForTimeout(500);
+      const later = await page.screenshot();
+      expect(await differingPixels(page, last, later)).toBe(0);
+      const rec = await page.evaluate(() => ({
+        ...window.__rec,
+        running: document.getAnimations().length,
+      }));
+      expect(rec.iterations).toBe(0);
+      expect(rec.ends).toBe(1);
+      expect(rec.running).toBe(0);
+    },
+  );
 });
 
 test.describe('with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('AC2/AC6: no animation, no control to operate, every step as text', async ({ page }) => {
-    await record(page, false);
-    await page.goto('');
-    await page.waitForTimeout(300); // an interactive form or an animation would have appeared by now
-    const rec = await page.evaluate(() => ({
-      ...window.__rec,
-      running: document.getAnimations().length,
-    }));
-    expect(rec.starts).toEqual([]);
-    expect(rec.running).toBe(0);
+  test(
+    'AC2/AC6: no animation, no control to operate, every step as text',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await record(page, false);
+      await page.goto('');
+      await page.waitForTimeout(300); // an interactive form or an animation would have appeared by now
+      const rec = await page.evaluate(() => ({
+        ...window.__rec,
+        running: document.getAnimations().length,
+      }));
+      expect(rec.starts).toEqual([]);
+      expect(rec.running).toBe(0);
 
-    await expect(page.getByRole('tab')).toHaveCount(0);
-    await expect(main(page).getByRole('button')).toHaveCount(0);
-    const items = page.getByRole('list', { name: 'Pipeline steps' }).getByRole('listitem');
-    await expect(items).toHaveCount(STEPS.length);
-    for (const [index, step] of STEPS.entries()) {
-      await expectStepAsText(items.nth(index), step);
-    }
-    // Hovering a step and following a link start nothing either.
-    await items.nth(3).hover();
-    await page.getByRole('link', { name: 'See the apps' }).click();
-    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-  });
+      await expect(page.getByRole('tab')).toHaveCount(0);
+      await expect(main(page).getByRole('button')).toHaveCount(0);
+      const items = page.getByRole('list', { name: 'Pipeline steps' }).getByRole('listitem');
+      await expect(items).toHaveCount(STEPS.length);
+      for (const [index, step] of STEPS.entries()) {
+        await expectStepAsText(items.nth(index), step);
+      }
+      // Hovering a step and following a link start nothing either.
+      await items.nth(3).hover();
+      await page.getByRole('link', { name: 'See the apps' }).click();
+      expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+    },
+  );
 });
 
 // ---- E5: layout -------------------------------------------------------------------------------------

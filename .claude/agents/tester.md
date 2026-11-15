@@ -23,7 +23,10 @@ to the code.
    was misformulated, so report it instead of writing it (hak, 2026-11-13). Prefix test names with the AC id (`AC3: …`).
 3. Probe beyond the ACs: empty/long/special-character input, double clicks, keyboard-only
    use, error responses. Keep a probe as a permanent test only if it found a defect or
-   covers a real risk (security, races); list the others as "checked, OK". If the UX
+   covers a real risk (security, races); list the others as "checked, OK". A test that compares rendered pixels or
+   frame timing carries the tag `@timing` (story 039, P34, hak's approval of 2026-11-14): the pull-request run
+   filters those tests out, so the tag names the test machine load can move, and `check:structure` refuses one
+   without it. If the UX
    design specifies dark-mode, forced-colours or reduced-motion behaviour, check each
    once with `page.emulateMedia(…)` and list the result there too. Show every new
    assertion failing once with a temporary mutation, and read computed styles only after
@@ -42,7 +45,7 @@ to the code.
    typed in the form the parser takes, and the display form appears only in the assertion, because the typed
    text and the expected figure are two oracles (story 032, P30). Write a test title without an
    apostrophe in a `.mjs` file: vitest's import analysis fails on one, and the file reports no test at all
-   (story 034, P31, hak's approval of 2026-11-14).
+   (story 034, P31, hak's approval of 2026-11-14). Prove a mutation through `scripts/check-mutations.mjs` (story 038, P33, hak's approval of 2026-11-14): one call, the narrowest scope that can see the assertion, every candidate reported as `no-op`, `ambiguous` or moved, every file restored from its backup and verified by hash. Never a full run for a mutation check.
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and
@@ -54,7 +57,9 @@ to the code.
    (AC, test file + name, PASS/FAIL), don't write above it — and list defects with steps
    to reproduce. State how many tests you added. Report test counts per workspace (vitest) and per
    Playwright project, exactly as printed. Map each vitest `Tests N passed` line to the workspace
-   named in the `> @swfactory/<name>` header printed before it; never assume the order.
+   named in the `> @swfactory/<name>` header printed before it; never assume the order. For a green step the runner
+   prints only these scope lines and the closing block that carries the counts (story 042, P37, hak's approval of
+   2026-11-14), so the counts are read from them; a failing step prints everything.
    A CI e2e job is green even with flaky tests; read the log for `flaky` and count a pass
    on retry as a failure. Set `status: in-review` if all ACs pass,
    otherwise leave it `in-test`.

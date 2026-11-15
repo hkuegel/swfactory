@@ -5,6 +5,9 @@
 // workspace checks in the workspaces the change can reach (story 034, hak's rule B). Without a recorded run
 // every check runs (AC2): a check is skipped only when its inputs are unchanged since a recorded run, never
 // because a pattern calls it unimportant. Durations are reported, never asserted (story 026, Out of scope).
+// Story 037 (P32): a green run writes the record for the change the mapping answered for it, so content that a
+// whole-tree record already covers runs nothing, and an affected run can claim its own coverage. Story 042
+// (P37): a green step prints its scope lines and its closing block, a failing step prints everything.
 //
 // Options:
 //   --mode=affected|full|publish   the named mode (default: affected when a run is recorded, else full)
@@ -145,12 +148,18 @@ export function changedSince(record, current) {
 
 /**
  * Story 034: the record content for a run that can be read as a coverage claim. It names the mode of the run,
- * the workspaces it ran, and the steps that ran in those workspaces. A run that did not cover the whole tree
- * cannot write a record, so `affected` answers null; `full` and `publish` write, and only a green run reaches
- * this write (the caller's gate). `scopedSteps` is what the runner observed, given as data.
+ * the workspaces it ran, and the steps that ran in those workspaces. `scopedSteps` is what the runner
+ * observed, given as data, and only a green run reaches this write (the caller's gate).
+ *
+ * Story 037 (P32, hak 2026-11-14): the gate is the coverage of the change a run saw, not the whole tree, so a
+ * green `affected` run writes the record for the change set the mapping answered for it. Only the gate is
+ * widened: the record still names its mode, its workspaces and its scoped steps (story 034 AC4), and a run
+ * that ran nothing claims nothing, so it answers null.
  */
 export function recordForRun(answer, current, scriptsByWorkspace) {
-  if (answer.mode !== 'full' && answer.mode !== 'publish') return null;
+  if (answer.mode !== 'full' && answer.mode !== 'publish' && answer.mode !== 'affected')
+    return null;
+  if (answer.steps.length === 0) return null;
   return {
     mode: answer.mode,
     head: current.head,
@@ -252,6 +261,26 @@ function runStep(step, args) {
   });
 }
 
+// A count line carries a count: the number and the word. A test title or a console warning can say
+// "failed" without carrying a count, and those lines are not what the tester quotes (story 042).
+const isCountLine = (line) => /\d+\s+(passed|failed|flaky)/.test(line);
+
+/**
+ * Story 042 (P37, hak 2026-11-14): the text the runner prints for one step. A green step prints the lines that
+ * name a scope - a workspace header beginning with `>` and a Playwright run line beginning with `Running` -
+ * and the closing block that carries the counts, which is exactly what the tester's report quotes; a line that
+ * only names a test is not part of a report. A failing step prints everything, and so does a green step whose
+ * output has no count line, so the shortening cannot hide anything.
+ */
+export function reportOfStep(code, out) {
+  if (code !== 0) return out;
+  const lines = out.split('\n');
+  if (!lines.some(isCountLine)) return out;
+  return lines
+    .filter((line) => line.startsWith('>') || line.startsWith('Running') || isCountLine(line))
+    .join('\n');
+}
+
 const shown = (seconds) => `${seconds.toFixed(1)} s`;
 
 function levelsByIdent(answer) {
@@ -303,9 +332,9 @@ async function main() {
   const { levels, byLevel } = levelsByIdent(answer);
 
   if (answer.steps.length === 0) {
-    // Cannot happen with the mapping (an ungrouped path is a full run), but an empty plan must not
-    // print a chain of -Infinity levels.
-    console.log('verify: nothing changed since the recorded full run, nothing to run');
+    // Story 037 (P32): the mapping answers an empty plan when a whole-tree record already covers the content,
+    // and an empty plan must not print a chain of -Infinity levels. The message names the record.
+    console.log('verify: the recorded run already covers this content, nothing to run');
     return 0;
   }
 
@@ -328,7 +357,7 @@ async function main() {
   }
   if (flag('plan-only')) return 0;
   if (answer.mode === 'affected' && answer.changed.length === 0) {
-    console.log('verify: nothing changed since the recorded full run, nothing to run');
+    console.log('verify: the recorded run already covers this content, nothing to run');
     return 0;
   }
 
@@ -347,7 +376,9 @@ async function main() {
       console.log(
         `  level ${level} ${r.step}: ${r.code === 0 ? 'ok' : `FAILED (${r.code})`} ${shown(r.seconds)}${scopeText(answer, r.step, scriptsByWorkspace)}`,
       );
-      if (r.code !== 0 && r.out !== '') console.log(r.out);
+      // Story 042 (P37): the print for a step is what reportOfStep answers, so a green step shows its scope
+      // lines and its closing block instead of the list of test names.
+      if (r.out !== '') console.log(reportOfStep(r.code, r.out));
     }
   }
 
@@ -357,9 +388,9 @@ async function main() {
     return 1;
   }
 
-  // Only a successful run that covers the whole tree records (AC2), and only when the caller allows a
-  // write. A publishing run records as well, because the next run compares against it, and its record names
-  // the workspaces it ran (story 034).
+  // A green run records the change set it covered (story 037 AC1), and only when the caller allows a write. A
+  // run that ran nothing claims nothing, and its record names the mode it ran in and the workspaces and steps it
+  // scoped (story 034 AC4), so a scoped run is never read as a whole-tree run.
   const recordToWrite = recordForRun(answer, current, scriptsByWorkspace);
   if (recordToWrite !== null && !flag('no-record')) {
     mkdirSync(join(ROOT, '.tmp'), { recursive: true });

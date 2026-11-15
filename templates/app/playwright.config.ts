@@ -5,4 +5,6 @@ export default createAppPlaywrightConfig({
   // title as the page's h1 and the signed-in content to be visible right after sign-in.
   title: '__TITLE__',
   signedInContent: { role: 'region', name: '__TITLE__ content' },
+  // Story 039: the tag a pull-request run leaves out; unset on a publishing run (CI names it).
+  skipTag: process.env.E2E_SKIP_TAG,
 });

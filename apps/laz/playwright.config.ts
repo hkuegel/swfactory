@@ -6,4 +6,6 @@ export default createAppPlaywrightConfig({
   title: 'Lebensarbeitszeitkonto',
   // The form's accessible name is its visible h2 "Eingaben" (story 024, UX §1).
   signedInContent: { role: 'form', name: 'Eingaben' },
+  // Story 039: the tag a pull-request run leaves out; unset on a publishing run (CI names it).
+  skipTag: process.env.E2E_SKIP_TAG,
 });

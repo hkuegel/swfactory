@@ -151,123 +151,125 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
 });
 
-test('AC2: one font, one control radius, one primary and one secondary style, one colour per message kind', async ({
-  page,
-}) => {
-  const fonts = new Set<string>();
-  const radii = new Set<string>();
+test(
+  'AC2: one font, one control radius, one primary and one secondary style, one colour per message kind',
+  { tag: '@timing' },
+  async ({ page }) => {
+    const fonts = new Set<string>();
+    const radii = new Set<string>();
 
-  /** Everything that carries text, plus all buttons and inputs: collect font and radius. */
-  const collect = async () => {
-    const found = await page.evaluate(() => {
-      const hasText = (el: Element) =>
-        Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim());
-      const fontOf = Array.from(document.body.querySelectorAll('*'))
-        .filter((el) => hasText(el) || el.matches('button, input'))
-        .map((el) => getComputedStyle(el).fontFamily);
-      const radiusOf = Array.from(document.querySelectorAll('button, input')).map(
-        (el) => getComputedStyle(el).borderTopLeftRadius,
-      );
-      return { fontOf, radiusOf };
+    /** Everything that carries text, plus all buttons and inputs: collect font and radius. */
+    const collect = async () => {
+      const found = await page.evaluate(() => {
+        const hasText = (el: Element) =>
+          Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim());
+        const fontOf = Array.from(document.body.querySelectorAll('*'))
+          .filter((el) => hasText(el) || el.matches('button, input'))
+          .map((el) => getComputedStyle(el).fontFamily);
+        const radiusOf = Array.from(document.querySelectorAll('button, input')).map(
+          (el) => getComputedStyle(el).borderTopLeftRadius,
+        );
+        return { fontOf, radiusOf };
+      });
+      expect(found.fontOf.length).toBeGreaterThan(0);
+      found.fontOf.forEach((f) => fonts.add(f));
+      found.radiusOf.forEach((r) => radii.add(r));
+    };
+
+    const style = (selector: ReturnType<Page['locator']>) =>
+      selector.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return {
+          bg: s.backgroundColor,
+          colour: s.color,
+          borderColour: s.borderTopColor,
+          borderWidth: s.borderTopWidth,
+          radius: s.borderTopLeftRadius,
+        };
+      });
+    const message = (selector: ReturnType<Page['locator']>) =>
+      selector.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { bg: s.backgroundColor, bar: s.borderLeftColor, radius: s.borderTopLeftRadius };
+      });
+    const token = (name: string) =>
+      page.evaluate((n) => {
+        const probe = document.createElement('div');
+        probe.style.backgroundColor = `var(${n})`;
+        document.body.append(probe);
+        const colour = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return colour;
+      }, name);
+
+    // Login view with a failed sign-in showing: Google button, guest button, login error.
+    await collect();
+    await page.getByRole('button', { name: 'Sign in with Google' }).click();
+    await page.evaluate(() => (window as TestWindow).__fakeGoogle?.settleSignIn('error'));
+    const loginError = message(page.getByRole('alert'));
+    await expect(page.getByRole('alert')).toBeVisible();
+    await collect();
+    const guest = await style(page.getByRole('button', { name: 'Sign in as guest' }));
+
+    await signInAsGuest(page);
+
+    // Signed in, setup error shown, then a started game.
+    await rowsInput(page).fill('31');
+    await colsInput(page).fill('99');
+    await startButton(page).click();
+    const setupErrors = page.getByText(/must be a whole number from/);
+    await expect(setupErrors).toHaveCount(2);
+    const setupError = await message(setupErrors.first());
+    await collect();
+
+    // The Start click leaves the mouse on the button: read the resting styles, not a running
+    // hover transition (bug 019: mid-transition colour on the slow CI runner).
+    await page.mouse.move(0, 0);
+    await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
+    const start = await style(startButton(page));
+    const presets = page.getByRole('group', { name: 'Difficulty' }).getByRole('button');
+    await expect(presets).toHaveCount(3);
+    const presetStyles = [];
+    for (let i = 0; i < 3; i++) presetStyles.push(await style(presets.nth(i)));
+    const signOut = await style(signOutButton(page));
+
+    await loseWithAllStates(page);
+    const lost = await message(page.getByText('You lost. You revealed a mine.'));
+    await collect();
+
+    // A won game: one click opens everything but the single mine.
+    await startFixed5x5(page, [[1, 1]]);
+    await cell(page, 5, 5).click();
+    await expect(page.getByText('You won! Every safe cell is revealed.')).toBeVisible();
+    const won = await message(page.getByText('You won! Every safe cell is revealed.'));
+    await collect();
+
+    // One font family and one control radius over every screen (the Google button included).
+    expect([...fonts]).toHaveLength(1);
+    expect([...radii]).toHaveLength(1);
+    expect([...radii][0]).not.toBe('0px');
+
+    // Primary: the accent fill. Secondary: the same outlined style for presets and Sign out
+    // (and the dev guest button, whose dashed border is its own marker).
+    expect(start.bg).toBe(await token('--color-accent'));
+    expect(start.colour).toBe(await token('--color-on-accent'));
+    for (const p of presetStyles) expect(p).toEqual(signOut);
+    expect(signOut.bg).not.toBe(start.bg);
+    expect(signOut.borderWidth).not.toBe('0px');
+    expect(signOut.colour).toBe(await token('--color-accent'));
+    expect({ bg: guest.bg, radius: guest.radius }).toEqual({
+      bg: signOut.bg,
+      radius: signOut.radius,
     });
-    expect(found.fontOf.length).toBeGreaterThan(0);
-    found.fontOf.forEach((f) => fonts.add(f));
-    found.radiusOf.forEach((r) => radii.add(r));
-  };
 
-  const style = (selector: ReturnType<Page['locator']>) =>
-    selector.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return {
-        bg: s.backgroundColor,
-        colour: s.color,
-        borderColour: s.borderTopColor,
-        borderWidth: s.borderTopWidth,
-        radius: s.borderTopLeftRadius,
-      };
-    });
-  const message = (selector: ReturnType<Page['locator']>) =>
-    selector.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return { bg: s.backgroundColor, bar: s.borderLeftColor, radius: s.borderTopLeftRadius };
-    });
-  const token = (name: string) =>
-    page.evaluate((n) => {
-      const probe = document.createElement('div');
-      probe.style.backgroundColor = `var(${n})`;
-      document.body.append(probe);
-      const colour = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return colour;
-    }, name);
-
-  // Login view with a failed sign-in showing: Google button, guest button, login error.
-  await collect();
-  await page.getByRole('button', { name: 'Sign in with Google' }).click();
-  await page.evaluate(() => (window as TestWindow).__fakeGoogle?.settleSignIn('error'));
-  const loginError = message(page.getByRole('alert'));
-  await expect(page.getByRole('alert')).toBeVisible();
-  await collect();
-  const guest = await style(page.getByRole('button', { name: 'Sign in as guest' }));
-
-  await signInAsGuest(page);
-
-  // Signed in, setup error shown, then a started game.
-  await rowsInput(page).fill('31');
-  await colsInput(page).fill('99');
-  await startButton(page).click();
-  const setupErrors = page.getByText(/must be a whole number from/);
-  await expect(setupErrors).toHaveCount(2);
-  const setupError = await message(setupErrors.first());
-  await collect();
-
-  // The Start click leaves the mouse on the button: read the resting styles, not a running
-  // hover transition (bug 019: mid-transition colour on the slow CI runner).
-  await page.mouse.move(0, 0);
-  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
-  const start = await style(startButton(page));
-  const presets = page.getByRole('group', { name: 'Difficulty' }).getByRole('button');
-  await expect(presets).toHaveCount(3);
-  const presetStyles = [];
-  for (let i = 0; i < 3; i++) presetStyles.push(await style(presets.nth(i)));
-  const signOut = await style(signOutButton(page));
-
-  await loseWithAllStates(page);
-  const lost = await message(page.getByText('You lost. You revealed a mine.'));
-  await collect();
-
-  // A won game: one click opens everything but the single mine.
-  await startFixed5x5(page, [[1, 1]]);
-  await cell(page, 5, 5).click();
-  await expect(page.getByText('You won! Every safe cell is revealed.')).toBeVisible();
-  const won = await message(page.getByText('You won! Every safe cell is revealed.'));
-  await collect();
-
-  // One font family and one control radius over every screen (the Google button included).
-  expect([...fonts]).toHaveLength(1);
-  expect([...radii]).toHaveLength(1);
-  expect([...radii][0]).not.toBe('0px');
-
-  // Primary: the accent fill. Secondary: the same outlined style for presets and Sign out
-  // (and the dev guest button, whose dashed border is its own marker).
-  expect(start.bg).toBe(await token('--color-accent'));
-  expect(start.colour).toBe(await token('--color-on-accent'));
-  for (const p of presetStyles) expect(p).toEqual(signOut);
-  expect(signOut.bg).not.toBe(start.bg);
-  expect(signOut.borderWidth).not.toBe('0px');
-  expect(signOut.colour).toBe(await token('--color-accent'));
-  expect({ bg: guest.bg, radius: guest.radius }).toEqual({
-    bg: signOut.bg,
-    radius: signOut.radius,
-  });
-
-  // The same colours for the same message kind wherever it appears; won differs from error.
-  expect(await loginError).toEqual(setupError);
-  expect(lost).toEqual(setupError);
-  expect(won.bg).toBe(await token('--color-success-bg'));
-  expect(won.bar).toBe(await token('--color-success'));
-  expect(won.bg).not.toBe(lost.bg);
-});
+    // The same colours for the same message kind wherever it appears; won differs from error.
+    expect(await loginError).toEqual(setupError);
+    expect(lost).toEqual(setupError);
+    expect(won.bg).toBe(await token('--color-success-bg'));
+    expect(won.bar).toBe(await token('--color-success'));
+    expect(won.bg).not.toBe(lost.bg);
+  },
+);
 
 test('AC3: forced colours keep all seven cell states distinguishable', async ({ page }) => {
   await signInAsGuest(page);
@@ -478,33 +480,35 @@ test.describe('motion', () => {
     await page.mouse.up();
   };
 
-  test('AC6: reduced motion has no transition or animation, normal motion at most 200 ms and nothing loops', async ({
-    page,
-  }) => {
-    await signInAsGuest(page);
+  test(
+    'AC6: reduced motion has no transition or animation, normal motion at most 200 ms and nothing loops',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await signInAsGuest(page);
 
-    // Normal motion: there are transitions, none longer than 200 ms, and they all end.
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await interact(page);
-    const normal = await transitions(page);
-    expect(normal.nonZero).toBeGreaterThan(0);
-    expect(normal.max).toBeLessThanOrEqual(0.2);
-    await expect.poll(async () => (await transitions(page)).animations).toBe(0);
+      // Normal motion: there are transitions, none longer than 200 ms, and they all end.
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await interact(page);
+      const normal = await transitions(page);
+      expect(normal.nonZero).toBeGreaterThan(0);
+      expect(normal.max).toBeLessThanOrEqual(0.2);
+      await expect.poll(async () => (await transitions(page)).animations).toBe(0);
 
-    // Reduced motion: every duration is 0 and nothing is running.
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await interact(page);
-    const reduced = await transitions(page);
-    expect(reduced.nonZero).toBe(0);
-    expect(reduced.max).toBe(0);
-    expect(reduced.animations).toBe(0);
+      // Reduced motion: every duration is 0 and nothing is running.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await interact(page);
+      const reduced = await transitions(page);
+      expect(reduced.nonZero).toBe(0);
+      expect(reduced.max).toBe(0);
+      expect(reduced.animations).toBe(0);
 
-    // The sign-in spinner is the one allowed loop: it rotates in normal motion, is static when reduced.
-    await signOutButton(page).click();
-    await page.getByRole('button', { name: 'Sign in with Google' }).click();
-    await expect(page.getByText('Signing in with Google…')).toBeVisible();
-    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(1);
-  });
+      // The sign-in spinner is the one allowed loop: it rotates in normal motion, is static when reduced.
+      await signOutButton(page).click();
+      await page.getByRole('button', { name: 'Sign in with Google' }).click();
+      await expect(page.getByText('Signing in with Google…')).toBeVisible();
+      expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(1);
+    },
+  );
 });

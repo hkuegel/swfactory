@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Story 039, P34 (hak, 2026-11-14): the nightly run reads the whole tree, so the tests a pull-request
+  # run leaves out are still checked. A scheduled run does not deploy - the deploy job is conditioned on
+  # push and workflow_dispatch - so the nightly run is a check run only.
+  schedule:
+    - cron: '0 3 * * *'
 
 permissions:
   contents: read
@@ -81,10 +86,20 @@ jobs:
         # `fixture` names the fund data it reads, which is the source the app test that proves the fixture
         # copy depends on; here it is named by the run instead of falling back to a default. The live part
         # is not a test run: it runs as its own step after the publish, in the deploy job below.
+        # Story 039, P34 (hak, 2026-11-14): the flag is named for a pull-request run only, so the tests
+        # that compare rendered pixels or frame timing stay in the publishing run, the run started from the
+        # UI and the nightly run. A run that is not filtered names nothing, which filters nothing. A
+        # filtered run is not a coverage claim: the step prints how many tests the filter removed, counting
+        # the tests that carry the tag.
         env:
           VITE_TEST_MODE: local
           LAZ_FUND: fixture
-        run: node scripts/verify.mjs --mode=${{ steps.plan.outputs.mode }} --base=${{ steps.plan.outputs.base }} --no-record
+          E2E_SKIP_TAG: ${{ github.event_name == 'pull_request' && '@timing' || '' }}
+        run: |
+          if [ -n "$E2E_SKIP_TAG" ]; then
+            echo "filter: $E2E_SKIP_TAG removed $(grep -rh --include='*.spec.ts' "tag: '$E2E_SKIP_TAG'" apps landing | wc -l) tests"
+          fi
+          node scripts/verify.mjs --mode=${{ steps.plan.outputs.mode }} --base=${{ steps.plan.outputs.base }} --no-record
       - name: report
         uses: actions/upload-artifact@v7
         if: failure()

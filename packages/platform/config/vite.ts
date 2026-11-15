@@ -18,7 +18,9 @@ export function createAppViteConfig(overrides: ViteUserConfig = {}): ViteUserCon
     test: {
       environment: 'jsdom',
       setupFiles: ['@swfactory/platform/test/setup'],
-      include: ['src/**/*.test.{ts,tsx}'],
+      // Tests live next to the code, so the tests of the config builders in `config/` are read too
+      // (story 039).
+      include: ['src/**/*.test.{ts,tsx}', 'config/**/*.test.ts'],
       css: { modules: { classNameStrategy: 'non-scoped' } },
     },
   });

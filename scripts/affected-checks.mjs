@@ -2,7 +2,9 @@
 // Story 026: which checks can see a change. Two named modes, `--mode=affected` (the mapping) and
 // `--mode=full`; a run is full when nothing was recorded. Story 034 adds the third name, `publish`, for a
 // run that publishes: the checks that read the whole tree in one pass stay whole tree, the checks a
-// workspace can run alone run in the workspaces the change can reach (hak's rule B, 2026-11-14).
+// workspace can run alone run in the workspaces the change can reach (hak's rule B, 2026-11-14). Story 037
+// (P32): a record written by a run that read the whole tree covers content that has not changed since, so an
+// empty change set answers an empty plan.
 //
 // The mapping never names an app (factory files and the platform are app-agnostic): an app comes
 // from the changed path `apps/<name>/...`, or from the whole `apps/` directory when the platform
@@ -182,6 +184,19 @@ export function workspacesOf(changedPaths, allWorkspaces) {
   return found.size === 0 ? [...allWorkspaces].sort() : [...found].sort();
 }
 
+/** The answer when the mapping cannot scope the change: every check, in every workspace (AC2). */
+function fullPlan(paths, allApps, allWorkspaces) {
+  return {
+    mode: 'full',
+    // The caller's answer for "nothing recorded" is null, which is still a full run: the change set is
+    // empty because there is nothing to compare against, not because nothing changed.
+    changed: [...paths],
+    steps: [...STEPS].sort(),
+    apps: [...allApps].sort(),
+    workspaces: [...allWorkspaces].sort(),
+  };
+}
+
 /** AC1: the checks that can see the change. */
 export function affectedPlan(changedPaths, allApps, allWorkspaces = []) {
   const groups = new Set(changedPaths.flatMap(groupsOf));
@@ -235,22 +250,15 @@ export function affectedPlan(changedPaths, allApps, allWorkspaces = []) {
 
 /**
  * AC2: with no recorded full run every check runs. A check is skipped only when its inputs did not
- * change since a recorded full run, never because a pattern calls it unimportant.
+ * change since a recorded full run, never because a pattern calls it unimportant. Story 037 (P32) adds the
+ * other side of the same rule: content that a whole-tree record already covers answers an empty plan.
  */
 export function plan(changedPaths, record, mode, allApps, allWorkspaces = []) {
   const paths = changedPaths ?? [];
   // A data-file change is a full run before the record is read, so a recorded run can never make it skip a
   // workspace (story 025, hak's rule of 2026-11-14).
-  if (mode === 'full' || record === undefined || record === null || paths.some(isDataFile)) {
-    return {
-      mode: 'full',
-      // The caller's answer for "nothing recorded" is null, which is still a full run: the change set is
-      // empty because there is nothing to compare against, not because nothing changed.
-      changed: [...paths],
-      steps: [...STEPS].sort(),
-      apps: [...allApps].sort(),
-      workspaces: [...allWorkspaces].sort(),
-    };
+  if (record === undefined || record === null || paths.some(isDataFile)) {
+    return fullPlan(paths, allApps, allWorkspaces);
   }
   const answer = affectedPlan(paths, allApps, allWorkspaces);
   // Story 034, hak's rule B: the run that publishes writes the whole site, so the checks that read or write
@@ -262,6 +270,17 @@ export function plan(changedPaths, record, mode, allApps, allWorkspaces = []) {
       mode: 'publish',
       steps: [...new Set([...WHOLE_TREE_STEPS, ...answer.steps])].sort(),
     };
+  }
+  // Story 037 (P32, hak 2026-11-14): a record names the mode of the run that wrote it, so content that a
+  // whole-tree record already covers answers the empty plan, whatever mode is named for it. A record written
+  // by an affected run claims only the change that run saw, so it cannot stand for a run that reads the whole
+  // tree, and a full run that still has a change set stays the oracle for what the mapping could have missed
+  // (story 026 AC2 and AC4 unchanged). A record with no mode field is read as a whole-tree record.
+  if (paths.length === 0 && (record.mode ?? 'full') === 'affected') {
+    return fullPlan(paths, allApps, allWorkspaces);
+  }
+  if (mode === 'full' && paths.length > 0) {
+    return fullPlan(paths, allApps, allWorkspaces);
   }
   return answer;
 }

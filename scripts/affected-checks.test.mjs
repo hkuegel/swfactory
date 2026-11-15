@@ -414,6 +414,57 @@ describe('story 034 (hak, 2026-11-14): a publishing run scopes only what a works
   });
 });
 
+describe('story 037 (P32, hak 2026-11-14): a record covers the content it read', () => {
+  // Hand data: the two kinds of record, one written by a run that read the whole tree, one by an affected run.
+  const wholeTreeRecord = { head: 'abc', files: {}, mode: 'full' };
+  const affectedRecord = { head: 'abc', files: {}, mode: 'affected' };
+
+  it('AC2: an empty change set with a whole-tree record answers an empty plan', () => {
+    const answer = plan([], wholeTreeRecord, 'affected', ['x', 'y'], ALL);
+    // Hand expectation: the record says the whole tree was read at this content, so nothing can have changed,
+    // and the run runs nothing.
+    expect(answer.mode, 'fixture mode: hand record, no repository, mode named in the call').toBe(
+      'affected',
+    );
+    expect(answer.changed).toEqual([]);
+    expect(answer.steps).toEqual([]);
+  });
+
+  it('AC2: a record with no mode field is read as a whole-tree record', () => {
+    // Hand expectation: the same answer as the record that names `full`, because the older records write no mode.
+    expect(plan([], { head: 'abc', files: {} }, 'affected', ['x', 'y'], ALL).steps).toEqual([]);
+  });
+
+  it('AC2: the same empty change set with an affected record keeps the full plan, so the oracle still runs', () => {
+    const answer = plan([], affectedRecord, 'affected', ['x', 'y'], ALL);
+    // Hand expectation, written out in alphabetical order: the mapping cannot answer twelve steps for an empty
+    // change set, so the full plan here is the rule, not the mapping's answer (story 026 AC2, AC4).
+    expect(answer.mode).toBe('full');
+    expect(answer.steps).toEqual(HAND_FULL);
+    expect(answer.steps.length).toBe(12);
+  });
+
+  it('AC2: planted violation - a publishing run with an empty change set still names the eight whole-tree steps', () => {
+    // Hand expectation (story 034 AC1, unchanged): the publish is the whole site, so the record gate cannot
+    // reach a publishing plan, whatever mode the record was written in.
+    const wholeTree = [
+      'build',
+      'build:pages',
+      'check:dist',
+      'check:structure',
+      'check:template',
+      'format:check',
+      'test:pages',
+      'test:scripts',
+    ];
+    expect(plan([], affectedRecord, 'publish', ['x', 'y'], ALL).steps).toEqual(wholeTree);
+    expect(plan([], wholeTreeRecord, 'publish', ['x', 'y'], ALL).steps).toEqual(wholeTree);
+    // Hand expectation: the empty plan and the eight steps are two different answers, so a gate that widened
+    // too far would show up here.
+    expect(wholeTree.length).toBe(8);
+  });
+});
+
 describe('AC5: levels - a step is never in the level of a step it needs', () => {
   it('AC5: check:dist runs after build, the chain is at most three levels', () => {
     const level = levelsOf([...STEPS]);

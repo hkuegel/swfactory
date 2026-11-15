@@ -6,4 +6,6 @@ export default createAppPlaywrightConfig({
   title: 'Altersvorsorgedepot',
   // The input form, named by its heading "Eingaben" (no other text on the page contains it).
   signedInContent: { role: 'form', name: 'Eingaben' },
+  // Story 039: the tag a pull-request run leaves out; unset on a publishing run (CI names it).
+  skipTag: process.env.E2E_SKIP_TAG,
 });

@@ -212,99 +212,104 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await choose3d(page);
     });
 
-    test(`AC1: the scene is lit with thick raised tiles, sunk revealed tiles, 3D flags and soft shadows, and digits keep their contrast at every sway (${colorScheme})`, async ({
-      page,
-    }) => {
-      await startFixed(page, 9, 9, ROW4);
-      await cell(page, 2, 2).click({ button: 'right' }); // flag on a hidden tile
-      await cell(page, 9, 5).click(); // opens rows 5 to 9
-      await page.mouse.move(0, 0);
-      await hold(page, true);
-      await advance(page, 2000); // every animation has ended
-      const hiddenAbove = index(9, 4, 5); // hidden, its near neighbour (5,5) is revealed
-      const number = index(9, 5, 6); // shows 1; hidden far neighbour (4,6)
-      const flagged = index(9, 2, 2);
+    test(
+      `AC1: the scene is lit with thick raised tiles, sunk revealed tiles, 3D flags and soft shadows, and digits keep their contrast at every sway (${colorScheme})`,
+      { tag: '@timing' },
+      async ({ page }) => {
+        await startFixed(page, 9, 9, ROW4);
+        await cell(page, 2, 2).click({ button: 'right' }); // flag on a hidden tile
+        await cell(page, 9, 5).click(); // opens rows 5 to 9
+        await page.mouse.move(0, 0);
+        await hold(page, true);
+        await advance(page, 2000); // every animation has ended
+        const hiddenAbove = index(9, 4, 5); // hidden, its near neighbour (5,5) is revealed
+        const number = index(9, 5, 6); // shows 1; hidden far neighbour (4,6)
+        const flagged = index(9, 2, 2);
 
-      // Thickness: the front face of a raised tile is at least 15 % darker than its top.
-      const [top, front] = await spots(page, [
-        [hiddenAbove, 0, 0, 0],
-        [hiddenAbove, 0, -0.5, -0.18],
-      ]);
-      expect(luminance(front as Rgb)).toBeLessThanOrEqual(luminance(top as Rgb) * 0.85);
+        // Thickness: the front face of a raised tile is at least 15 % darker than its top.
+        const [top, front] = await spots(page, [
+          [hiddenAbove, 0, 0, 0],
+          [hiddenAbove, 0, -0.5, -0.18],
+        ]);
+        expect(luminance(front as Rgb)).toBeLessThanOrEqual(luminance(top as Rgb) * 0.85);
 
-      // Soft shadow: the floor right below a raised far neighbour is at least 10 % darker than
-      // the lit floor farther away (sampled beside the digit, which sits in the middle).
-      const [shadowed, lit] = await spots(page, [
-        [number, 0.35, 0.42, 0],
-        [number, 0.35, -0.2, 0],
-      ]);
-      expect(luminance(shadowed as Rgb)).toBeLessThanOrEqual(luminance(lit as Rgb) * 0.9);
+        // Soft shadow: the floor right below a raised far neighbour is at least 10 % darker than
+        // the lit floor farther away (sampled beside the digit, which sits in the middle).
+        const [shadowed, lit] = await spots(page, [
+          [number, 0.35, 0.42, 0],
+          [number, 0.35, -0.2, 0],
+        ]);
+        expect(luminance(shadowed as Rgb)).toBeLessThanOrEqual(luminance(lit as Rgb) * 0.9);
 
-      // Depth: raised and sunk tiles are different surfaces: the revealed top is not the
-      // hidden top colour, and the wall between them (front face) is neither of them.
-      expect(contrast(top as Rgb, lit as Rgb)).toBeGreaterThan(1.02);
-      expect(contrast(front as Rgb, top as Rgb)).toBeGreaterThan(1.3);
+        // Depth: raised and sunk tiles are different surfaces: the revealed top is not the
+        // hidden top colour, and the wall between them (front face) is neither of them.
+        expect(contrast(top as Rgb, lit as Rgb)).toBeGreaterThan(1.02);
+        expect(contrast(front as Rgb, top as Rgb)).toBeGreaterThan(1.3);
 
-      // The flag is a 3D object standing on its tile: glyph pixels above the tile's top
-      // centre, in the flag colour (red pixels exist and reach above the tile centre; the contrast
-      // against the rendered tile is the separate cloth test below).
-      const flagArea = await cellPixels(page, flagged, {
-        fx0: -0.6,
-        fx1: 0.6,
-        fy0: -0.9,
-        fy1: 0.7,
-        step: 1,
-      });
-      const cloth = flagArea.rgb
-        .map((rgb, i) => ({ rgb, p: flagArea.points[i] ?? { x: 0, y: 0 } }))
-        .filter(({ rgb }) => isRed(rgb));
-      expect(cloth.length, 'cloth pixels').toBeGreaterThan(10);
-      expect(
-        cloth.filter(({ p }) => p.y < flagArea.cy - 2).length,
-        'cloth pixels rise above the tile plane',
-      ).toBeGreaterThan(5);
-
-      // Digit contrast at the sway extremes (+2 and -2 degrees), none above 35 degrees.
-      await hold(page, false); // the sway restarts at phase 0
-      for (const [ms, sign] of [
-        [SWAY_PERIOD_MS / 4, 1],
-        [SWAY_PERIOD_MS / 2, -1],
-      ] as const) {
-        await advance(page, ms);
-        const angles = await cameraAngles(page);
-        expect(angles.sway * sign, 'the sway reaches its extreme').toBeGreaterThan(1.5);
-        expect(Math.abs(angles.sway)).toBeLessThanOrEqual(3);
-        expect(angles.tilt).toBeLessThanOrEqual(35);
-        const floor = (await spots(page, [[number, 0.35, -0.2, 0]]))[0] as Rgb;
-        const digit = strongest((await cellPixels(page, number)).rgb, floor);
-        expect(contrast(digit, floor), `digit at sway ${sign * 2} degrees`).toBeGreaterThanOrEqual(
-          4.5,
-        );
-      }
-    });
-
-    test(`AC1: the flag cloth keeps 3:1 against the rendered hidden tile it stands on, at every sway (${colorScheme})`, async ({
-      page,
-    }) => {
-      await startFixed(page, 9, 9, ROW4);
-      await cell(page, 2, 2).click({ button: 'right' });
-      await page.mouse.move(0, 0);
-      await hold(page, true);
-      await advance(page, 2000);
-      const flagged = index(9, 2, 2);
-      await hold(page, false); // the sway restarts at phase 0
-      for (const ms of [0, SWAY_PERIOD_MS / 4, SWAY_PERIOD_MS / 2]) {
-        await advance(page, ms);
-        // The tile's own lit top beside the flag: the reflection differs across the board.
-        const tileTop = (await spots(page, [[flagged, -0.3, 0.3, 0]]))[0] as Rgb;
-        const cloth = (await cellPixels(page, flagged)).rgb.filter(isRed);
+        // The flag is a 3D object standing on its tile: glyph pixels above the tile's top
+        // centre, in the flag colour (red pixels exist and reach above the tile centre; the contrast
+        // against the rendered tile is the separate cloth test below).
+        const flagArea = await cellPixels(page, flagged, {
+          fx0: -0.6,
+          fx1: 0.6,
+          fy0: -0.9,
+          fy1: 0.7,
+          step: 1,
+        });
+        const cloth = flagArea.rgb
+          .map((rgb, i) => ({ rgb, p: flagArea.points[i] ?? { x: 0, y: 0 } }))
+          .filter(({ rgb }) => isRed(rgb));
         expect(cloth.length, 'cloth pixels').toBeGreaterThan(10);
         expect(
-          contrast(strongest(cloth, tileTop), tileTop),
-          `cloth against the tile top ${tileTop.join(',')} (007/AC3: flag glyphs 3:1)`,
-        ).toBeGreaterThanOrEqual(3);
-      }
-    });
+          cloth.filter(({ p }) => p.y < flagArea.cy - 2).length,
+          'cloth pixels rise above the tile plane',
+        ).toBeGreaterThan(5);
+
+        // Digit contrast at the sway extremes (+2 and -2 degrees), none above 35 degrees.
+        await hold(page, false); // the sway restarts at phase 0
+        for (const [ms, sign] of [
+          [SWAY_PERIOD_MS / 4, 1],
+          [SWAY_PERIOD_MS / 2, -1],
+        ] as const) {
+          await advance(page, ms);
+          const angles = await cameraAngles(page);
+          expect(angles.sway * sign, 'the sway reaches its extreme').toBeGreaterThan(1.5);
+          expect(Math.abs(angles.sway)).toBeLessThanOrEqual(3);
+          expect(angles.tilt).toBeLessThanOrEqual(35);
+          const floor = (await spots(page, [[number, 0.35, -0.2, 0]]))[0] as Rgb;
+          const digit = strongest((await cellPixels(page, number)).rgb, floor);
+          expect(
+            contrast(digit, floor),
+            `digit at sway ${sign * 2} degrees`,
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      },
+    );
+
+    test(
+      `AC1: the flag cloth keeps 3:1 against the rendered hidden tile it stands on, at every sway (${colorScheme})`,
+      { tag: '@timing' },
+      async ({ page }) => {
+        await startFixed(page, 9, 9, ROW4);
+        await cell(page, 2, 2).click({ button: 'right' });
+        await page.mouse.move(0, 0);
+        await hold(page, true);
+        await advance(page, 2000);
+        const flagged = index(9, 2, 2);
+        await hold(page, false); // the sway restarts at phase 0
+        for (const ms of [0, SWAY_PERIOD_MS / 4, SWAY_PERIOD_MS / 2]) {
+          await advance(page, ms);
+          // The tile's own lit top beside the flag: the reflection differs across the board.
+          const tileTop = (await spots(page, [[flagged, -0.3, 0.3, 0]]))[0] as Rgb;
+          const cloth = (await cellPixels(page, flagged)).rgb.filter(isRed);
+          expect(cloth.length, 'cloth pixels').toBeGreaterThan(10);
+          expect(
+            contrast(strongest(cloth, tileTop), tileTop),
+            `cloth against the tile top ${tileTop.join(',')} (007/AC3: flag glyphs 3:1)`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      },
+    );
 
     test(`AC1: mines are 3D objects that keep their contrast on the lost board (${colorScheme})`, async ({
       page,
@@ -350,46 +355,48 @@ test.describe('camera', () => {
     await advance(page, 2000);
   });
 
-  test('AC1: the camera tilts at most 35 degrees and sways by at most 3 degrees with a period of at least 10 s; two frames 3 s apart differ', async ({
-    page,
-  }) => {
-    await hold(page, true);
-    await hold(page, false); // the sway restarts at phase 0 at this moment
-    // Few samples are enough: the peak (+), after 5 s (still on the same side, so the period is
-    // above 10 s) and the opposite peak (-). The limits themselves are unit-tested too.
-    let t = 0;
-    for (const [at, expectation] of [
-      [SWAY_PERIOD_MS / 4, 'peak'],
-      [5000, 'same side'],
-      [(3 * SWAY_PERIOD_MS) / 4, 'opposite peak'],
-    ] as const) {
-      await advance(page, at - t);
-      t = at;
-      const a = await cameraAngles(page);
-      expect(a.tilt, `tilt at ${at} ms`).toBeLessThanOrEqual(35);
-      expect(Math.abs(a.sway), `sway at ${at} ms`).toBeLessThanOrEqual(3);
-      if (expectation === 'peak') expect(a.sway).toBeGreaterThan(1.5);
-      if (expectation === 'same side') expect(a.sway, 'half period above 5 s').toBeGreaterThan(0);
-      if (expectation === 'opposite peak') expect(a.sway).toBeLessThan(-1.5);
-    }
+  test(
+    'AC1: the camera tilts at most 35 degrees and sways by at most 3 degrees with a period of at least 10 s; two frames 3 s apart differ',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await hold(page, true);
+      await hold(page, false); // the sway restarts at phase 0 at this moment
+      // Few samples are enough: the peak (+), after 5 s (still on the same side, so the period is
+      // above 10 s) and the opposite peak (-). The limits themselves are unit-tested too.
+      let t = 0;
+      for (const [at, expectation] of [
+        [SWAY_PERIOD_MS / 4, 'peak'],
+        [5000, 'same side'],
+        [(3 * SWAY_PERIOD_MS) / 4, 'opposite peak'],
+      ] as const) {
+        await advance(page, at - t);
+        t = at;
+        const a = await cameraAngles(page);
+        expect(a.tilt, `tilt at ${at} ms`).toBeLessThanOrEqual(35);
+        expect(Math.abs(a.sway), `sway at ${at} ms`).toBeLessThanOrEqual(3);
+        if (expectation === 'peak') expect(a.sway).toBeGreaterThan(1.5);
+        if (expectation === 'same side') expect(a.sway, 'half period above 5 s').toBeGreaterThan(0);
+        if (expectation === 'opposite peak') expect(a.sway).toBeLessThan(-1.5);
+      }
 
-    // Two frames 3 s apart differ (tile bevels and the tray edge slide). Restart at phase 0:
-    // the sine is symmetric around its peak, so two arbitrary times can show the same angle.
-    await hold(page, true);
-    await hold(page, false);
-    const board = await grid(page).boundingBox();
-    if (!board) throw new Error('no board box');
-    const points = Array.from({ length: 1600 }, (_, i) => ({
-      x: board.x - 20 + ((i % 40) * (board.width + 40)) / 40,
-      y: board.y - 20 + (Math.floor(i / 40) * (board.height + 40)) / 40,
-    }));
-    const frame = () =>
-      page.evaluate((pts) => (window as TestWindow).__board3dProbe?.pixels(pts) ?? [], points);
-    const first = await frame();
-    await advance(page, 3000);
-    const second = await frame();
-    expect(differing(first, second), 'pixels that moved').toBeGreaterThan(10);
-  });
+      // Two frames 3 s apart differ (tile bevels and the tray edge slide). Restart at phase 0:
+      // the sine is symmetric around its peak, so two arbitrary times can show the same angle.
+      await hold(page, true);
+      await hold(page, false);
+      const board = await grid(page).boundingBox();
+      if (!board) throw new Error('no board box');
+      const points = Array.from({ length: 1600 }, (_, i) => ({
+        x: board.x - 20 + ((i % 40) * (board.width + 40)) / 40,
+        y: board.y - 20 + (Math.floor(i / 40) * (board.height + 40)) / 40,
+      }));
+      const frame = () =>
+        page.evaluate((pts) => (window as TestWindow).__board3dProbe?.pixels(pts) ?? [], points);
+      const first = await frame();
+      await advance(page, 3000);
+      const second = await frame();
+      expect(differing(first, second), 'pixels that moved').toBeGreaterThan(10);
+    },
+  );
 });
 
 test.describe('size', () => {
@@ -465,100 +472,104 @@ test.describe('animations', () => {
     await choose3d(page);
   });
 
-  test('AC2: a reveal flips within 150 to 400 ms, the name is immediate; a flag is planted within 300 ms and removed within 300 ms', async ({
-    page,
-  }) => {
-    await startFixed(page, 9, 9, ROW4);
-    await hold(page, true);
-    const number = index(9, 5, 5);
+  test(
+    'AC2: a reveal flips within 150 to 400 ms, the name is immediate; a flag is planted within 300 ms and removed within 300 ms',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await startFixed(page, 9, 9, ROW4);
+      await hold(page, true);
+      const number = index(9, 5, 5);
 
-    // Reveal: names first (no advance yet), then the frames.
-    await advance(page, 0);
-    await cell(page, 5, 5).click();
-    await expect(cell(page, 5, 5)).toHaveAccessibleName('Row 5, column 5, 2 mines nearby');
-    const during = (await cellPixels(page, number)).rgb;
-    await advance(page, 140);
-    const at140 = (await cellPixels(page, number)).rgb;
-    await advance(page, 260);
-    const at400 = (await cellPixels(page, number)).rgb;
-    await advance(page, 1600);
-    const final = (await cellPixels(page, number)).rgb;
-    expect(differing(during, final), 'the first frame is not the final state').toBeGreaterThan(0);
-    expect(differing(at140, final), 'still moving at +140 ms').toBeGreaterThan(0);
-    expect(differing(at400, final), 'finished at +400 ms').toBe(0);
+      // Reveal: names first (no advance yet), then the frames.
+      await advance(page, 0);
+      await cell(page, 5, 5).click();
+      await expect(cell(page, 5, 5)).toHaveAccessibleName('Row 5, column 5, 2 mines nearby');
+      const during = (await cellPixels(page, number)).rgb;
+      await advance(page, 140);
+      const at140 = (await cellPixels(page, number)).rgb;
+      await advance(page, 260);
+      const at400 = (await cellPixels(page, number)).rgb;
+      await advance(page, 1600);
+      const final = (await cellPixels(page, number)).rgb;
+      expect(differing(during, final), 'the first frame is not the final state').toBeGreaterThan(0);
+      expect(differing(at140, final), 'still moving at +140 ms').toBeGreaterThan(0);
+      expect(differing(at400, final), 'finished at +400 ms').toBe(0);
 
-    // Plant with F on a hidden cell: the counter and name change at once.
-    const target = index(9, 3, 3);
-    await cell(page, 3, 3).focus();
-    await page.keyboard.press('f');
-    await expect(cell(page, 3, 3)).toHaveAccessibleName('Row 3, column 3, flagged');
-    await expect(counter(page)).toHaveText('Mines left: 3');
-    await advance(page, 40);
-    const planting = (await cellPixels(page, target)).rgb;
-    await advance(page, 260);
-    const planted300 = (await cellPixels(page, target)).rgb;
-    await advance(page, 700);
-    const planted = (await cellPixels(page, target)).rgb;
-    expect(differing(planting, planted), 'plant animation at +40 ms').toBeGreaterThan(0);
-    expect(differing(planted300, planted), 'plant finished at +300 ms').toBe(0);
+      // Plant with F on a hidden cell: the counter and name change at once.
+      const target = index(9, 3, 3);
+      await cell(page, 3, 3).focus();
+      await page.keyboard.press('f');
+      await expect(cell(page, 3, 3)).toHaveAccessibleName('Row 3, column 3, flagged');
+      await expect(counter(page)).toHaveText('Mines left: 3');
+      await advance(page, 40);
+      const planting = (await cellPixels(page, target)).rgb;
+      await advance(page, 260);
+      const planted300 = (await cellPixels(page, target)).rgb;
+      await advance(page, 700);
+      const planted = (await cellPixels(page, target)).rgb;
+      expect(differing(planting, planted), 'plant animation at +40 ms').toBeGreaterThan(0);
+      expect(differing(planted300, planted), 'plant finished at +300 ms').toBe(0);
 
-    // Removal.
-    await page.keyboard.press('f');
-    await expect(cell(page, 3, 3)).toHaveAccessibleName('Row 3, column 3, hidden');
-    await expect(counter(page)).toHaveText('Mines left: 4');
-    await advance(page, 90);
-    const removing = (await cellPixels(page, target)).rgb;
-    await advance(page, 210);
-    const removed300 = (await cellPixels(page, target)).rgb;
-    await advance(page, 700);
-    const removed = (await cellPixels(page, target)).rgb;
-    expect(differing(removing, removed), 'removal animation at +90 ms').toBeGreaterThan(0);
-    expect(differing(removed300, removed), 'removal finished at +300 ms').toBe(0);
-    expect(differing(planted, removed), 'the flag is gone').toBeGreaterThan(0);
-  });
+      // Removal.
+      await page.keyboard.press('f');
+      await expect(cell(page, 3, 3)).toHaveAccessibleName('Row 3, column 3, hidden');
+      await expect(counter(page)).toHaveText('Mines left: 4');
+      await advance(page, 90);
+      const removing = (await cellPixels(page, target)).rgb;
+      await advance(page, 210);
+      const removed300 = (await cellPixels(page, target)).rgb;
+      await advance(page, 700);
+      const removed = (await cellPixels(page, target)).rgb;
+      expect(differing(removing, removed), 'removal animation at +90 ms').toBeGreaterThan(0);
+      expect(differing(removed300, removed), 'removal finished at +300 ms').toBe(0);
+      expect(differing(planted, removed), 'the flag is gone').toBeGreaterThan(0);
+    },
+  );
 
-  test('AC2: a cascade is a wave from the clicked cell, finished within 1.2 s on 30 x 30, and input during it takes effect at once', async ({
-    page,
-  }) => {
-    test.setTimeout(90_000); // software WebGL renders a 30 x 30 frame in 100 to 200 ms
-    await startFixed(page, 30, 30, WALL_COLUMN_26);
-    await hold(page, true);
-    const origin = index(30, 1, 1);
-    const far = index(30, 30, 24);
-    await scroller(page).evaluate((el) => (el.scrollTop = 0));
-    const before = {
-      origin: (await cellPixels(page, origin)).rgb,
-      far: (await cellPixels(page, far)).rgb,
-    };
-    await cell(page, 1, 1).click();
-    await expect(cell(page, 1, 1)).toHaveAccessibleName('Row 1, column 1, empty');
-    await expect(cell(page, 30, 24)).toHaveAccessibleName('Row 30, column 24, empty'); // at once
-    await advance(page, 60);
-    const early = {
-      origin: (await cellPixels(page, origin)).rgb,
-      far: (await cellPixels(page, far)).rgb,
-    };
-    expect(
-      differing(before.origin, early.origin),
-      'the wave has started at the click',
-    ).toBeGreaterThan(0);
-    expect(differing(before.far, early.far), 'the far cell has not started yet').toBe(0);
+  test(
+    'AC2: a cascade is a wave from the clicked cell, finished within 1.2 s on 30 x 30, and input during it takes effect at once',
+    { tag: '@timing' },
+    async ({ page }) => {
+      test.setTimeout(90_000); // software WebGL renders a 30 x 30 frame in 100 to 200 ms
+      await startFixed(page, 30, 30, WALL_COLUMN_26);
+      await hold(page, true);
+      const origin = index(30, 1, 1);
+      const far = index(30, 30, 24);
+      await scroller(page).evaluate((el) => (el.scrollTop = 0));
+      const before = {
+        origin: (await cellPixels(page, origin)).rgb,
+        far: (await cellPixels(page, far)).rgb,
+      };
+      await cell(page, 1, 1).click();
+      await expect(cell(page, 1, 1)).toHaveAccessibleName('Row 1, column 1, empty');
+      await expect(cell(page, 30, 24)).toHaveAccessibleName('Row 30, column 24, empty'); // at once
+      await advance(page, 60);
+      const early = {
+        origin: (await cellPixels(page, origin)).rgb,
+        far: (await cellPixels(page, far)).rgb,
+      };
+      expect(
+        differing(before.origin, early.origin),
+        'the wave has started at the click',
+      ).toBeGreaterThan(0);
+      expect(differing(before.far, early.far), 'the far cell has not started yet').toBe(0);
 
-    // (d) Input during the wave (the scene clock stays at +60 ms): flag by right-click and
-    // reveal by keyboard take effect at once.
-    await cell(page, 1, 29).click({ button: 'right' });
-    await expect(cell(page, 1, 29)).toHaveAccessibleName('Row 1, column 29, flagged');
-    await expect(counter(page)).toHaveText('Mines left: 29');
-    await cell(page, 5, 27).focus();
-    await page.keyboard.press('Enter');
-    await expect(cell(page, 5, 27)).toHaveAccessibleName('Row 5, column 27, 3 mines nearby');
+      // (d) Input during the wave (the scene clock stays at +60 ms): flag by right-click and
+      // reveal by keyboard take effect at once.
+      await cell(page, 1, 29).click({ button: 'right' });
+      await expect(cell(page, 1, 29)).toHaveAccessibleName('Row 1, column 29, flagged');
+      await expect(counter(page)).toHaveText('Mines left: 29');
+      await cell(page, 5, 27).focus();
+      await page.keyboard.press('Enter');
+      await expect(cell(page, 5, 27)).toHaveAccessibleName('Row 5, column 27, 3 mines nearby');
 
-    // The final state is shown at the latest 1.2 s after the click.
-    await advance(page, 1140);
-    const at1200 = await frameAfter(page, 0);
-    const at3000 = await frameAfter(page, 1800);
-    expect(at1200).toBe(at3000);
-  });
+      // The final state is shown at the latest 1.2 s after the click.
+      await advance(page, 1140);
+      const at1200 = await frameAfter(page, 0);
+      const at3000 = await frameAfter(page, 1800);
+      expect(at1200).toBe(at3000);
+    },
+  );
 });
 
 test.describe('reduced motion', () => {
@@ -567,43 +578,45 @@ test.describe('reduced motion', () => {
     await openGame(page);
   });
 
-  test('AC4: the switch is immediate, nothing sways, changes show as a static picture, a lost board is static', async ({
-    page,
-  }) => {
-    // The module is loaded by a first switch; the second one must be immediate.
-    await choose3d(page);
-    await radio2d(page).check();
-    await radio3d(page).check();
-    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-    await startFixed(page, 9, 9, ROW4);
-    expect(await page.evaluate(() => document.querySelector('canvas') !== null)).toBe(true);
-    expect((await cameraAngles(page)).sway).toBeCloseTo(0, 5);
+  test(
+    'AC4: the switch is immediate, nothing sways, changes show as a static picture, a lost board is static',
+    { tag: '@timing' },
+    async ({ page }) => {
+      // The module is loaded by a first switch; the second one must be immediate.
+      await choose3d(page);
+      await radio2d(page).check();
+      await radio3d(page).check();
+      expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+      await startFixed(page, 9, 9, ROW4);
+      expect(await page.evaluate(() => document.querySelector('canvas') !== null)).toBe(true);
+      expect((await cameraAngles(page)).sway).toBeCloseTo(0, 5);
 
-    // Static after a cascade and a flag: the frame right after the input is the final frame.
-    await cell(page, 9, 5).click();
-    await cell(page, 3, 3).click({ button: 'right' });
-    await page.mouse.move(0, 0);
-    await expect(cell(page, 3, 3)).toHaveAccessibleName('Row 3, column 3, flagged');
-    const right = await frameAfter(page, 0);
-    const later = await frameAfter(page, 3000);
-    expect(right, 'no flip, wave or plant animation').toBe(later);
+      // Static after a cascade and a flag: the frame right after the input is the final frame.
+      await cell(page, 9, 5).click();
+      await cell(page, 3, 3).click({ button: 'right' });
+      await page.mouse.move(0, 0);
+      await expect(cell(page, 3, 3)).toHaveAccessibleName('Row 3, column 3, flagged');
+      const right = await frameAfter(page, 0);
+      const later = await frameAfter(page, 3000);
+      expect(right, 'no flip, wave or plant animation').toBe(later);
 
-    // No sway: neither the camera nor the picture moves when the scene clock runs on.
-    const a = await cellPixels(page, index(9, 5, 5));
-    await advance(page, SWAY_PERIOD_MS / 4);
-    expect((await cameraAngles(page)).sway).toBeCloseTo(0, 5);
-    const b = await cellPixels(page, index(9, 5, 5));
-    expect(differing(a.rgb, b.rgb), 'no sway under reduced motion').toBe(0);
+      // No sway: neither the camera nor the picture moves when the scene clock runs on.
+      const a = await cellPixels(page, index(9, 5, 5));
+      await advance(page, SWAY_PERIOD_MS / 4);
+      expect((await cameraAngles(page)).sway).toBeCloseTo(0, 5);
+      const b = await cellPixels(page, index(9, 5, 5));
+      expect(differing(a.rgb, b.rgb), 'no sway under reduced motion').toBe(0);
 
-    // A lost board is static and its names are as in 005/AC9.
-    await cell(page, 4, 2).click();
-    await expect(page.getByText(LOST)).toBeVisible();
-    const names = await grid(page).ariaSnapshot();
-    expect(names).toContain('exploded mine');
-    expect(names).toContain('Row 4, column 4, mine');
-    const lostNow = await frameAfter(page, 0);
-    expect(await frameAfter(page, 3000)).toBe(lostNow);
-  });
+      // A lost board is static and its names are as in 005/AC9.
+      await cell(page, 4, 2).click();
+      await expect(page.getByText(LOST)).toBeVisible();
+      const names = await grid(page).ariaSnapshot();
+      expect(names).toContain('exploded mine');
+      expect(names).toContain('Row 4, column 4, mine');
+      const lostNow = await frameAfter(page, 0);
+      expect(await frameAfter(page, 3000)).toBe(lostNow);
+    },
+  );
 });
 
 test.describe('alignment and parity', () => {
@@ -669,37 +682,39 @@ test.describe('alignment and parity', () => {
     }
   });
 
-  test('AC5: after a round trip through 3D the 2D board is pixel-identical and has no leftovers', async ({
-    page,
-  }) => {
-    await startFixed(page, 5, 5, [
-      [1, 3],
-      [2, 3],
-      [3, 3],
-      [4, 3],
-      [5, 3],
-    ]);
-    await cell(page, 3, 3).click({ button: 'right' });
-    await cell(page, 3, 1).click();
-    await page.mouse.move(0, 0);
-    await radio2d(page).focus();
-    const shoot = async () => {
-      await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
-      return scroller(page).screenshot();
-    };
-    const a = await shoot();
-    await choose3d(page);
-    await page.mouse.move(0, 0);
-    expect((await cameraAngles(page)).tilt).toBeGreaterThan(20);
-    await radio2d(page).check();
-    await page.mouse.move(0, 0);
-    const c = await shoot();
-    expect(await differingPixels(page, a, c), '2D after 3D equals 2D before').toBe(0);
-    expect(await grid(page).evaluate((el) => getComputedStyle(el).transform)).toBe('none');
-    expect(await grid(page).evaluate((el) => el.getAttribute('style') ?? '')).not.toContain(
-      'transform',
-    );
-  });
+  test(
+    'AC5: after a round trip through 3D the 2D board is pixel-identical and has no leftovers',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await startFixed(page, 5, 5, [
+        [1, 3],
+        [2, 3],
+        [3, 3],
+        [4, 3],
+        [5, 3],
+      ]);
+      await cell(page, 3, 3).click({ button: 'right' });
+      await cell(page, 3, 1).click();
+      await page.mouse.move(0, 0);
+      await radio2d(page).focus();
+      const shoot = async () => {
+        await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
+        return scroller(page).screenshot();
+      };
+      const a = await shoot();
+      await choose3d(page);
+      await page.mouse.move(0, 0);
+      expect((await cameraAngles(page)).tilt).toBeGreaterThan(20);
+      await radio2d(page).check();
+      await page.mouse.move(0, 0);
+      const c = await shoot();
+      expect(await differingPixels(page, a, c), '2D after 3D equals 2D before').toBe(0);
+      expect(await grid(page).evaluate((el) => getComputedStyle(el).transform)).toBe('none');
+      expect(await grid(page).evaluate((el) => el.getAttribute('style') ?? '')).not.toContain(
+        'transform',
+      );
+    },
+  );
 });
 
 test.describe('forced colours', () => {

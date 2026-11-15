@@ -13,6 +13,8 @@ export default createAppPlaywrightConfig({
   // 6.6 s, frame cost max 6.8 s), so 3D tests time out; one worker passed 109 of 110 there and
   // was not slower in total (7.4 min against 7.9 to 11.3 min). Local runs keep the default.
   ciWorkers: 1,
+  // Story 039: the tag a pull-request run leaves out; unset on a publishing run (CI names it).
+  skipTag: process.env.E2E_SKIP_TAG,
   extraProjects: [
     {
       // Story 008/AC4: the flows of 005 (flag, long press, keyboard, lose, win) once more with

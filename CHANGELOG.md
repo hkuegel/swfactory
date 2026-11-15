@@ -7,6 +7,19 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- `platform`: the mutation check is one call. The tester names its candidates and the narrowest scope that can see
+  each assertion; a candidate that cannot change one location is refused and its command never runs, every file the
+  pass wrote is put back from the backup taken before the first change and verified by hash, and a command that
+  names `verify` or `--mode=full` is refused before anything is touched (#038).
+- `platform`: the tests that compare rendered pixels or frame timing carry the tag `@timing`, and the Playwright
+  configs take the tag to exclude as data, so a run for a pull request filters them out while the publishing run,
+  a run started from the UI and the nightly run keep them (#039).
+- `platform`: the CI workflow has a schedule trigger on `main` at 03:00 UTC, which runs the tagged tests; the deploy
+  step stays conditioned on `push` and `workflow_dispatch`, so the nightly run does not deploy (#039).
+- `platform`: `check:structure` gains four rules: a pixel or frame assertion must carry the tag (#039), an open
+  question names its kind and a decision line names its owner from story 040 on (#040), a retro proposal names what
+  it changes and a P number cannot be used twice from story 041 on (#041), and more than one story in flight is a
+  problem (#043).
 - `npm run test:scripts` runs the tests of `scripts/`, which is not an npm workspace, with its
   own Vitest config (#026).
 - New app `laz`, the Lebensarbeitszeitkonto calculator. It shows the maximum monthly payout a
@@ -111,6 +124,12 @@ All notable changes to this project are documented here, following
 
 ### Changed
 
+- `platform`: a green run records the change set it covered, not only the whole tree, so a markdown-only round is
+  covered by its own two checks and a story costs one run for its results and one covering run for the record as
+  committed. A record written by an affected run does not answer a full run, a tooling or data-file change is still
+  the full plan, and a run that ran nothing claims nothing (#037).
+- `platform`: a green step prints the lines that name its scope and the closing block with its counts, and a failing
+  step prints everything, so a green run is read in a few lines and nothing that failed is hidden (#042).
 - `laz`: the money fields have no invented cap. A value is refused only when it is negative, has more
   decimals than its unit, or exceeds the largest integer a calculation can hold exactly; the field copy
   names the rule of the unit instead of quoting a maximum amount (#030).

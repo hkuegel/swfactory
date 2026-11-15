@@ -140,59 +140,65 @@ test('AC3: the reinvested refund counts as contribution of the next year; at the
   expect(await endValue(page)).toBe(checkedEnd);
 });
 
-test('AC4: table column and chart series appear while checked, add up, update and vanish when unchecked', async ({
-  page,
-}) => {
-  await setReference(page);
-  await rateInput(page).fill('42');
+test(
+  'AC4: table column and chart series appear while checked, add up, update and vanish when unchecked',
+  {
+    tag: '@timing',
+  },
+  async ({ page }) => {
+    await setReference(page);
+    await rateInput(page).fill('42');
 
-  const unchecked = await page.getByRole('columnheader').allInnerTexts();
-  expect(unchecked.map((h) => h.trim())).not.toContain('Wieder angelegt');
-  expect((await chartSeriesPixels(page)).reinvested).toBe(0);
-  await expect(chart(page)).not.toHaveAccessibleName(/reinvestierte Steuererstattung/);
+    const unchecked = await page.getByRole('columnheader').allInnerTexts();
+    expect(unchecked.map((h) => h.trim())).not.toContain('Wieder angelegt');
+    expect((await chartSeriesPixels(page)).reinvested).toBe(0);
+    await expect(chart(page)).not.toHaveAccessibleName(/reinvestierte Steuererstattung/);
 
-  await reinvestBox(page).check();
-  const headers = (await page.getByRole('columnheader').allInnerTexts()).map((h) => h.trim());
-  expect(headers).toContain('Wieder angelegt');
+    await reinvestBox(page).check();
+    const headers = (await page.getByRole('columnheader').allInnerTexts()).map((h) => h.trim());
+    expect(headers).toContain('Wieder angelegt');
 
-  const assertRows = async () => {
-    const own = await columnTexts(page, 'Eigene Beiträge');
-    const zul = await columnTexts(page, 'Zulagen gutgeschrieben');
-    const re = await columnTexts(page, 'Wieder angelegt');
-    const ret = await columnTexts(page, 'Erträge');
-    const bal = await columnTexts(page, 'Kontostand am Jahresende');
-    expect(own.length).toBeGreaterThan(1);
-    for (let i = 0; i < own.length; i += 1) {
-      const sum =
-        cents(own[i] ?? '') + cents(zul[i] ?? '') + cents(re[i] ?? '') + cents(ret[i] ?? '');
-      expect(sum, `row ${i + 1}`).toBe(cents(bal[i] ?? ''));
-    }
-    expect(cents(re[0] ?? '')).toBe(0);
-    expect(cents(re[re.length - 1] ?? '')).toBe(cents(await figure(page, REINVESTED).innerText()));
-  };
-  await assertRows();
+    const assertRows = async () => {
+      const own = await columnTexts(page, 'Eigene Beiträge');
+      const zul = await columnTexts(page, 'Zulagen gutgeschrieben');
+      const re = await columnTexts(page, 'Wieder angelegt');
+      const ret = await columnTexts(page, 'Erträge');
+      const bal = await columnTexts(page, 'Kontostand am Jahresende');
+      expect(own.length).toBeGreaterThan(1);
+      for (let i = 0; i < own.length; i += 1) {
+        const sum =
+          cents(own[i] ?? '') + cents(zul[i] ?? '') + cents(re[i] ?? '') + cents(ret[i] ?? '');
+        expect(sum, `row ${i + 1}`).toBe(cents(bal[i] ?? ''));
+      }
+      expect(cents(re[0] ?? '')).toBe(0);
+      expect(cents(re[re.length - 1] ?? '')).toBe(
+        cents(await figure(page, REINVESTED).innerText()),
+      );
+    };
+    await assertRows();
 
-  await expect(page.getByText(REINVESTED, { exact: true })).toHaveCount(2); // figure and legend
-  await expect(chart(page)).toHaveAccessibleName(/reinvestierte Steuererstattung 3\.099,60\s€/);
-  expect((await chartSeriesPixels(page)).reinvested).toBeGreaterThan(50);
+    await expect(page.getByText(REINVESTED, { exact: true })).toHaveCount(2); // figure and legend
+    await expect(chart(page)).toHaveAccessibleName(/reinvestierte Steuererstattung 3\.099,60\s€/);
+    expect((await chartSeriesPixels(page)).reinvested).toBeGreaterThan(50);
 
-  await monthlyInput(page).fill('100');
-  await assertRows();
-  const reinvested = cents(await figure(page, REINVESTED).innerText());
-  expect(reinvested).not.toBe(309960);
-  await expect(chart(page)).toHaveAccessibleName(
-    new RegExp(
-      `reinvestierte Steuererstattung ${(reinvested / 100).toLocaleString('de-DE', { minimumFractionDigits: 2 }).replace(/\./g, '\\.')}\\s€`,
-    ),
-  );
+    await monthlyInput(page).fill('100');
+    await assertRows();
+    const reinvested = cents(await figure(page, REINVESTED).innerText());
+    expect(reinvested).not.toBe(309960);
+    await expect(chart(page)).toHaveAccessibleName(
+      new RegExp(
+        `reinvestierte Steuererstattung ${(reinvested / 100).toLocaleString('de-DE', { minimumFractionDigits: 2 }).replace(/\./g, '\\.')}\\s€`,
+      ),
+    );
 
-  await reinvestBox(page).uncheck();
-  expect((await page.getByRole('columnheader').allInnerTexts()).map((h) => h.trim())).not.toContain(
-    'Wieder angelegt',
-  );
-  await expect(page.getByText(REINVESTED, { exact: true })).toHaveCount(0);
-  expect((await chartSeriesPixels(page)).reinvested).toBe(0);
-});
+    await reinvestBox(page).uncheck();
+    expect(
+      (await page.getByRole('columnheader').allInnerTexts()).map((h) => h.trim()),
+    ).not.toContain('Wieder angelegt');
+    await expect(page.getByText(REINVESTED, { exact: true })).toHaveCount(0);
+    expect((await chartSeriesPixels(page)).reinvested).toBe(0);
+  },
+);
 
 test('AC5: zero refund and one saving year reinvest 0,00; an invalid field keeps the box and shows no bad amount', async ({
   page,

@@ -22,6 +22,12 @@ export interface AppE2eOptions {
    * workers on the 4-vCPU runner stall its frames and time out its tests (bug 019).
    */
   readonly ciWorkers?: number | undefined;
+  /**
+   * Tag to leave out of the run (story 039, P34): the config answers `grepInvert` with it, which
+   * removes exactly the tests that carry that tag. Unset or blank filters nothing, so a run that is
+   * not filtered runs everything. The tag is data, so this config names no group of tests of its own.
+   */
+  readonly skipTag?: string | undefined;
 }
 
 /**
@@ -45,6 +51,11 @@ export function createAppPlaywrightConfig(
     retries: process.env.CI ? 2 : 0,
     ...(process.env.CI && options.ciWorkers !== undefined ? { workers: options.ciWorkers } : {}),
     reporter: process.env.CI ? 'github' : 'list',
+    // Story 039 (P34): a pull-request run names the tag of the tests that compare rendered pixels or
+    // frame timing, so the flaky group is left out of the per-commit round and kept in the publishing
+    // run and the nightly run. `grep` matches the test title with its tags, so `grepInvert` removes
+    // exactly the tagged tests. An unset variable arrives as an empty string and filters nothing.
+    ...(options.skipTag ? { grepInvert: new RegExp(options.skipTag) } : {}),
     use: {
       baseURL: `http://localhost:${port}`,
       trace: 'on-first-retry',

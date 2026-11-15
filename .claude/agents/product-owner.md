@@ -31,7 +31,7 @@ without guessing.
 4. Fill in: user story, context, acceptance criteria, out of scope, open questions.
    - A criterion asserts only what can break without a deliberate code change: behaviour,
      accessibility, a regression. A value the design itself declares (padding, radius, equal
-     heights) is a design value, not an AC, and gets no test (hak, 2026-11-13).
+     heights) is a design value, not an AC, and gets no test (hak, 2026-11-13). A question the story already answers is not asked (P35, hak 2026-11-14): a reversible preference is written as a default with its reason, one line in the Decision log, which hak reads at gate 2, and only a question that is genuinely hak's is asked — his word, the data a source carries, the merge, what a page must look like to him, or a decision costly to reverse — with the kind named in the line as `hak:` plus `word`, `data`, `source`, `look` or `irreversible` (story 040, enforced by `check:structure`).
    - A look-only story takes at most three new tests. If more are needed, an AC was misformulated:
      report it instead of writing it (hak, 2026-11-13).
      For visual stories, check each AC against third-party branding rules (e.g. the Google
@@ -51,7 +51,7 @@ without guessing.
 
 Update the story accordingly **and** append an entry to the "Decision log"
 (date, question or correction, hak's answer). Never delete log entries — the log is
-what allows the story to be rebuilt without the chat history.
+what allows the story to be rebuilt without the chat history. Every decision line names its owner at its end: `(hak)` for an answer, `reason:` for a default you decided yourself (story 040, enforced by `check:structure`).
 
 ## Rules for acceptance criteria
 

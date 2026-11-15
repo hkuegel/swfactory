@@ -371,96 +371,104 @@ test.describe('loss (light)', () => {
     await page.clock.pauseAt(new Date(T0.getTime() + 60_000));
   });
 
-  test('AC1: a loss shows the message and a stopped timer at once, plays an explosion that is drawn, shakes for at most 0.4 s, reveals the mines one after another and ends within 2.5 s as a static board', async ({
-    page,
-  }) => {
-    await prepareLoss(page);
-    await hold(page, true);
-    await page.clock.runFor(3000);
-    await expect(timer(page)).toHaveText('Time: 3');
-    await expect(counter(page)).toHaveText('Mines left: 8'); // 10 mines, 2 flags
-    const fireBefore = await paint(page, FIRE, 0);
+  test(
+    'AC1: a loss shows the message and a stopped timer at once, plays an explosion that is drawn, shakes for at most 0.4 s, reveals the mines one after another and ends within 2.5 s as a static board',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await prepareLoss(page);
+      await hold(page, true);
+      await page.clock.runFor(3000);
+      await expect(timer(page)).toHaveText('Time: 3');
+      await expect(counter(page)).toHaveText('Mines left: 8'); // 10 mines, 2 flags
+      const fireBefore = await paint(page, FIRE, 0);
 
-    await loseNow(page);
+      await loseNow(page);
 
-    // Message and timer are there with the scene clock still at the click: they do not wait.
-    await expect(page.getByText(LOST)).toBeVisible();
-    await expect(timer(page)).toHaveText('Time: 3');
-    await page.clock.runFor(5000);
-    await expect(timer(page)).toHaveText('Time: 3'); // stopped
-    expect((await fxState(page)).running, 'the effect has not progressed yet').toBe(true);
+      // Message and timer are there with the scene clock still at the click: they do not wait.
+      await expect(page.getByText(LOST)).toBeVisible();
+      await expect(timer(page)).toHaveText('Time: 3');
+      await page.clock.runFor(5000);
+      await expect(timer(page)).toHaveText('Time: 3'); // stopped
+      expect((await fxState(page)).running, 'the effect has not progressed yet').toBe(true);
 
-    // It is drawn: fire-coloured pixels appear that the quiet board does not have.
-    const bang = await paint(page, FIRE, 180); // fireball, ring and shards
-    expect(bang.count, 'fire pixels at 180 ms').toBeGreaterThan(fireBefore.count + 150);
-    const at180 = await fxState(page);
-    expect(at180.particles, 'particles at 180 ms').toBeGreaterThan(0);
-    expect(at180.shake, 'the camera shakes').toBeGreaterThan(0);
+      // It is drawn: fire-coloured pixels appear that the quiet board does not have.
+      const bang = await paint(page, FIRE, 180); // fireball, ring and shards
+      expect(bang.count, 'fire pixels at 180 ms').toBeGreaterThan(fireBefore.count + 150);
+      const at180 = await fxState(page);
+      expect(at180.particles, 'particles at 180 ms').toBeGreaterThan(0);
+      expect(at180.shake, 'the camera shakes').toBeGreaterThan(0);
 
-    // Shake: none from 0.4 s on. Chain: the pending mines never go up, are above 0 at the start,
-    // end at 0 and take several distinct steps.
-    const samples = (await sampleFx(page, [...every(20, 220), ...every(100, 2100)])).map((s) => ({
-      t: s.t + 180, // scene time since the click
-      fx: s.fx,
-    }));
-    expect(
-      samples.filter((s) => s.t >= SHAKE_LIMIT_MS).every((s) => s.fx.shake === 0),
-      'no shake from 0.4 s on',
-    ).toBe(true);
-    const pending = [at180, ...samples.map((s) => s.fx)].map((fx) => fx.minesPending);
-    expect(pending[0], 'mines still to be revealed after the bang').toBeGreaterThan(0);
-    for (let i = 1; i < pending.length; i++)
-      expect(pending[i], `pending at sample ${i}`).toBeLessThanOrEqual(pending[i - 1] ?? 0);
-    expect(pending.at(-1)).toBe(0);
-    expect(new Set(pending).size, 'mines are revealed one after another').toBeGreaterThanOrEqual(3);
+      // Shake: none from 0.4 s on. Chain: the pending mines never go up, are above 0 at the start,
+      // end at 0 and take several distinct steps.
+      const samples = (await sampleFx(page, [...every(20, 220), ...every(100, 2100)])).map((s) => ({
+        t: s.t + 180, // scene time since the click
+        fx: s.fx,
+      }));
+      expect(
+        samples.filter((s) => s.t >= SHAKE_LIMIT_MS).every((s) => s.fx.shake === 0),
+        'no shake from 0.4 s on',
+      ).toBe(true);
+      const pending = [at180, ...samples.map((s) => s.fx)].map((fx) => fx.minesPending);
+      expect(pending[0], 'mines still to be revealed after the bang').toBeGreaterThan(0);
+      for (let i = 1; i < pending.length; i++)
+        expect(pending[i], `pending at sample ${i}`).toBeLessThanOrEqual(pending[i - 1] ?? 0);
+      expect(pending.at(-1)).toBe(0);
+      expect(new Set(pending).size, 'mines are revealed one after another').toBeGreaterThanOrEqual(
+        3,
+      );
 
-    // Over by 2.5 s: nothing left, the board is static (the frame does not change any more).
-    expect(samples.at(-1)?.t).toBeLessThanOrEqual(LOSS_LIMIT_MS);
-    expect(await fxState(page)).toEqual(IDLE);
-    expect((await paint(page, FIRE, 0)).count, 'no fire left').toBeLessThan(fireBefore.count + 20);
-    const end = await frameAfter(page, 0);
-    expect(await frameAfter(page, 5000), 'the final board is static').toBe(end);
-    await expect(page.getByText(LOST)).toBeVisible();
-  });
+      // Over by 2.5 s: nothing left, the board is static (the frame does not change any more).
+      expect(samples.at(-1)?.t).toBeLessThanOrEqual(LOSS_LIMIT_MS);
+      expect(await fxState(page)).toEqual(IDLE);
+      expect((await paint(page, FIRE, 0)).count, 'no fire left').toBeLessThan(
+        fireBefore.count + 20,
+      );
+      const end = await frameAfter(page, 0);
+      expect(await frameAfter(page, 5000), 'the final board is static').toBe(end);
+      await expect(page.getByText(LOST)).toBeVisible();
+    },
+  );
 
-  test('AC1: Start during the effect stops it at once; a preset alone changes nothing until Start', async ({
-    page,
-  }) => {
-    await prepareLoss(page);
-    await hold(page, true);
-    await loseNow(page);
-    await advance(page, 300);
-    expect((await fxState(page)).running).toBe(true);
+  test(
+    'AC1: Start during the effect stops it at once; a preset alone changes nothing until Start',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await prepareLoss(page);
+      await hold(page, true);
+      await loseNow(page);
+      await advance(page, 300);
+      expect((await fxState(page)).running).toBe(true);
 
-    // 006/AC2: a preset only fills the inputs; the board and its effect stay.
-    await preset(page, 'Beginner').click();
-    await expect(page.getByText(LOST)).toBeVisible();
-    expect((await fxState(page)).running, 'a preset alone leaves the effect').toBe(true);
-    await advance(page, 100);
-    expect((await fxState(page)).particles).toBeGreaterThan(0);
+      // 006/AC2: a preset only fills the inputs; the board and its effect stay.
+      await preset(page, 'Beginner').click();
+      await expect(page.getByText(LOST)).toBeVisible();
+      expect((await fxState(page)).running, 'a preset alone leaves the effect').toBe(true);
+      await advance(page, 100);
+      expect((await fxState(page)).particles).toBeGreaterThan(0);
 
-    // Preset then Start: the new board is fresh and no effect state remains, no advance needed.
-    await startButton(page).click();
-    await expect(page.getByText(LOST)).toHaveCount(0);
-    await expect(grid(page)).toBeVisible();
-    expect(await fxState(page)).toEqual(IDLE);
-    const fresh = await frameAfter(page, 0);
-    expect(await frameAfter(page, 5000), 'no particle or shake is left in the new board').toBe(
-      fresh,
-    );
+      // Preset then Start: the new board is fresh and no effect state remains, no advance needed.
+      await startButton(page).click();
+      await expect(page.getByText(LOST)).toHaveCount(0);
+      await expect(grid(page)).toBeVisible();
+      expect(await fxState(page)).toEqual(IDLE);
+      const fresh = await frameAfter(page, 0);
+      expect(await frameAfter(page, 5000), 'no particle or shake is left in the new board').toBe(
+        fresh,
+      );
 
-    // Start alone (a second effect, cancelled directly).
-    await cell(page, 3, 3).click({ button: 'right' });
-    await cell(page, 9, 5).click();
-    await page.mouse.move(0, 0);
-    await loseNow(page);
-    await advance(page, 300);
-    expect((await fxState(page)).running).toBe(true);
-    await startButton(page).click();
-    expect(await fxState(page)).toEqual(IDLE);
-    const again = await frameAfter(page, 0);
-    expect(await frameAfter(page, 5000)).toBe(again);
-  });
+      // Start alone (a second effect, cancelled directly).
+      await cell(page, 3, 3).click({ button: 'right' });
+      await cell(page, 9, 5).click();
+      await page.mouse.move(0, 0);
+      await loseNow(page);
+      await advance(page, 300);
+      expect((await fxState(page)).running).toBe(true);
+      await startButton(page).click();
+      expect(await fxState(page)).toEqual(IDLE);
+      const again = await frameAfter(page, 0);
+      expect(await frameAfter(page, 5000)).toBe(again);
+    },
+  );
 });
 
 // --- AC2 --------------------------------------------------------------------------------------
@@ -476,92 +484,96 @@ test.describe('win (dark)', () => {
     await page.clock.pauseAt(new Date(T0.getTime() + 60_000));
   });
 
-  test('AC2: a win shows the message and a stopped timer at once, plays confetti that is drawn and leaves the board readable, and ends within 4 s without a loop', async ({
-    page,
-  }) => {
-    await prepareWin(page);
-    await hold(page, true);
-    await page.clock.runFor(2000);
-    await expect(timer(page)).toHaveText('Time: 2');
-    await advance(page, 2000); // the cascade of (9,9) has ended
+  test(
+    'AC2: a win shows the message and a stopped timer at once, plays confetti that is drawn and leaves the board readable, and ends within 4 s without a loop',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await prepareWin(page);
+      await hold(page, true);
+      await page.clock.runFor(2000);
+      await expect(timer(page)).toHaveText('Time: 2');
+      await advance(page, 2000); // the cascade of (9,9) has ended
 
-    await winNow(page);
+      await winNow(page);
 
-    await expect(page.getByText(WON)).toBeVisible();
-    await expect(counter(page)).toHaveText('Mines left: 0');
-    await expect(timer(page)).toHaveText('Time: 2');
-    await page.clock.runFor(5000);
-    await expect(timer(page)).toHaveText('Time: 2'); // stopped
-    expect((await fxState(page)).running, 'the celebration has not progressed yet').toBe(true);
+      await expect(page.getByText(WON)).toBeVisible();
+      await expect(counter(page)).toHaveText('Mines left: 0');
+      await expect(timer(page)).toHaveText('Time: 2');
+      await page.clock.runFor(5000);
+      await expect(timer(page)).toHaveText('Time: 2'); // stopped
+      expect((await fxState(page)).running, 'the celebration has not progressed yet').toBe(true);
 
-    // Confetti is drawn, and covers only a small part of the board (it stays readable).
-    const seen: { count: number; share: number }[] = [];
-    let previous = 0;
-    for (const t of [150, 400, 700, 1000, 1400, 2000, 3000]) {
-      seen.push(await paint(page, CONFETTI, t - previous));
-      previous = t;
-      if (t === 700) {
-        expect((await fxState(page)).particles).toBeGreaterThan(0);
-        expect((await fxState(page)).shake, 'no camera shake on a win').toBe(0);
+      // Confetti is drawn, and covers only a small part of the board (it stays readable).
+      const seen: { count: number; share: number }[] = [];
+      let previous = 0;
+      for (const t of [150, 400, 700, 1000, 1400, 2000, 3000]) {
+        seen.push(await paint(page, CONFETTI, t - previous));
+        previous = t;
+        if (t === 700) {
+          expect((await fxState(page)).particles).toBeGreaterThan(0);
+          expect((await fxState(page)).shake, 'no camera shake on a win').toBe(0);
+        }
       }
-    }
 
-    // Over by 4 s; the frame never changes again (no loop).
-    await advance(page, WIN_LIMIT_MS - previous);
-    expect(await fxState(page)).toEqual(IDLE);
-    const final = await paint(page, CONFETTI, 0); // the flags of the final board are red as well
-    expect(
-      Math.max(...seen.map((s) => s.count)),
-      'confetti-coloured pixels beyond those of the final board',
-    ).toBeGreaterThan(final.count + 150);
-    expect(
-      Math.max(...seen.map((s) => s.share)) - final.share,
-      'share of the canvas covered by confetti at the busiest frame',
-    ).toBeLessThan(0.15);
-    const end = await frameAfter(page, 0);
-    expect(await frameAfter(page, 5000), 'static, no second round').toBe(end);
-    expect(await fxState(page)).toEqual(IDLE);
-  });
+      // Over by 4 s; the frame never changes again (no loop).
+      await advance(page, WIN_LIMIT_MS - previous);
+      expect(await fxState(page)).toEqual(IDLE);
+      const final = await paint(page, CONFETTI, 0); // the flags of the final board are red as well
+      expect(
+        Math.max(...seen.map((s) => s.count)),
+        'confetti-coloured pixels beyond those of the final board',
+      ).toBeGreaterThan(final.count + 150);
+      expect(
+        Math.max(...seen.map((s) => s.share)) - final.share,
+        'share of the canvas covered by confetti at the busiest frame',
+      ).toBeLessThan(0.15);
+      const end = await frameAfter(page, 0);
+      expect(await frameAfter(page, 5000), 'static, no second round').toBe(end);
+      expect(await fxState(page)).toEqual(IDLE);
+    },
+  );
 
-  test('AC2: during the celebration the presets, the view control and Start work; Start stops it at once', async ({
-    page,
-  }) => {
-    await prepareWin(page);
-    await hold(page, true);
-    await winNow(page);
-    await advance(page, 700);
-    expect((await fxState(page)).running).toBe(true);
+  test(
+    'AC2: during the celebration the presets, the view control and Start work; Start stops it at once',
+    { tag: '@timing' },
+    async ({ page }) => {
+      await prepareWin(page);
+      await hold(page, true);
+      await winNow(page);
+      await advance(page, 700);
+      expect((await fxState(page)).running).toBe(true);
 
-    // A preset works (inputs only) and the celebration goes on.
-    await preset(page, 'Intermediate').click();
-    await expect(page.getByLabel('Rows', { exact: true })).toHaveValue('16');
-    await expect(page.getByText(WON)).toBeVisible();
-    expect((await fxState(page)).running).toBe(true);
+      // A preset works (inputs only) and the celebration goes on.
+      await preset(page, 'Intermediate').click();
+      await expect(page.getByLabel('Rows', { exact: true })).toHaveValue('16');
+      await expect(page.getByText(WON)).toBeVisible();
+      expect((await fxState(page)).running).toBe(true);
 
-    // The view control works: 2D shows the board without a canvas, 3D again shows it static.
-    await radio2d(page).check();
-    await expect(page.locator('canvas')).toHaveCount(0);
-    await expect(grid(page)).toBeVisible();
-    await choose3d(page);
-    expect(await fxState(page), 'no replay after the switch').toEqual(IDLE);
+      // The view control works: 2D shows the board without a canvas, 3D again shows it static.
+      await radio2d(page).check();
+      await expect(page.locator('canvas')).toHaveCount(0);
+      await expect(grid(page)).toBeVisible();
+      await choose3d(page);
+      expect(await fxState(page), 'no replay after the switch').toEqual(IDLE);
 
-    // Start during a (new) celebration.
-    await page.getByLabel('Rows', { exact: true }).fill('9');
-    await page.getByLabel('Columns', { exact: true }).fill('9');
-    await page.getByLabel('Mines', { exact: true }).fill(String(WIN.length));
-    await startButton(page).click();
-    await hold(page, true);
-    await cell(page, 9, 9).click();
-    await page.mouse.move(0, 0);
-    await winNow(page);
-    await advance(page, 700);
-    expect((await fxState(page)).running).toBe(true);
-    await startButton(page).click();
-    await expect(page.getByText(WON)).toHaveCount(0);
-    expect(await fxState(page)).toEqual(IDLE);
-    const fresh = await frameAfter(page, 0);
-    expect(await frameAfter(page, 5000), 'no confetti is left in the new board').toBe(fresh);
-  });
+      // Start during a (new) celebration.
+      await page.getByLabel('Rows', { exact: true }).fill('9');
+      await page.getByLabel('Columns', { exact: true }).fill('9');
+      await page.getByLabel('Mines', { exact: true }).fill(String(WIN.length));
+      await startButton(page).click();
+      await hold(page, true);
+      await cell(page, 9, 9).click();
+      await page.mouse.move(0, 0);
+      await winNow(page);
+      await advance(page, 700);
+      expect((await fxState(page)).running).toBe(true);
+      await startButton(page).click();
+      await expect(page.getByText(WON)).toHaveCount(0);
+      expect(await fxState(page)).toEqual(IDLE);
+      const fresh = await frameAfter(page, 0);
+      expect(await frameAfter(page, 5000), 'no confetti is left in the new board').toBe(fresh);
+    },
+  );
 });
 
 // --- AC1 + AC2: nothing flashes more than three times in any second ----------------------------
@@ -643,42 +655,44 @@ test.describe('no replay', () => {
   });
 
   for (const end of ['loss', 'win'] as const) {
-    test(`AC3: switching to 3D after a ${end} shows the static final board without an effect, whether the game ended in 3D or in 2D`, async ({
-      page,
-    }) => {
-      const prepare = end === 'loss' ? prepareLoss : prepareWin;
-      const finish = end === 'loss' ? loseNow : winNow;
-      const limit = end === 'loss' ? LOSS_LIMIT_MS : WIN_LIMIT_MS;
+    test(
+      `AC3: switching to 3D after a ${end} shows the static final board without an effect, whether the game ended in 3D or in 2D`,
+      { tag: '@timing' },
+      async ({ page }) => {
+        const prepare = end === 'loss' ? prepareLoss : prepareWin;
+        const finish = end === 'loss' ? loseNow : winNow;
+        const limit = end === 'loss' ? LOSS_LIMIT_MS : WIN_LIMIT_MS;
 
-      // Ended in 3D: the end-of-effect frame is the reference.
-      await prepare(page);
-      await hold(page, true);
-      await finish(page);
-      await advance(page, 300);
-      expect((await fxState(page)).running, 'the effect plays in 3D').toBe(true);
-      await advance(page, limit - 300);
-      const reference = await frameAfter(page, 0);
-      expect(await fxState(page)).toEqual(IDLE);
+        // Ended in 3D: the end-of-effect frame is the reference.
+        await prepare(page);
+        await hold(page, true);
+        await finish(page);
+        await advance(page, 300);
+        expect((await fxState(page)).running, 'the effect plays in 3D').toBe(true);
+        await advance(page, limit - 300);
+        const reference = await frameAfter(page, 0);
+        expect(await fxState(page)).toEqual(IDLE);
 
-      // 3D -> 2D -> 3D: nothing plays, the board is the same picture.
-      await radio2d(page).check();
-      await choose3d(page);
-      await hold(page, true);
-      expect(await fxState(page), 'no replay after 2D -> 3D').toEqual(IDLE);
-      expect(await frameAfter(page, 0)).toBe(reference);
-      expect(await frameAfter(page, limit)).toBe(reference);
+        // 3D -> 2D -> 3D: nothing plays, the board is the same picture.
+        await radio2d(page).check();
+        await choose3d(page);
+        await hold(page, true);
+        expect(await fxState(page), 'no replay after 2D -> 3D').toEqual(IDLE);
+        expect(await frameAfter(page, 0)).toBe(reference);
+        expect(await frameAfter(page, limit)).toBe(reference);
 
-      // Ended in 2D: the same moves in the 2D view, then 3D.
-      await radio2d(page).check();
-      await prepare(page);
-      await finish(page);
-      await expect(page.getByText(end === 'loss' ? LOST : WON)).toBeVisible();
-      await choose3d(page);
-      await hold(page, true);
-      expect(await fxState(page), 'no effect for a game that ended in 2D').toEqual(IDLE);
-      expect(await frameAfter(page, 0), 'the static final board').toBe(reference);
-      expect(await frameAfter(page, limit)).toBe(reference);
-    });
+        // Ended in 2D: the same moves in the 2D view, then 3D.
+        await radio2d(page).check();
+        await prepare(page);
+        await finish(page);
+        await expect(page.getByText(end === 'loss' ? LOST : WON)).toBeVisible();
+        await choose3d(page);
+        await hold(page, true);
+        expect(await fxState(page), 'no effect for a game that ended in 2D').toEqual(IDLE);
+        expect(await frameAfter(page, 0), 'the static final board').toBe(reference);
+        expect(await frameAfter(page, limit)).toBe(reference);
+      },
+    );
   }
 });
 
@@ -889,46 +903,48 @@ test.describe('reduced motion', () => {
     await choose3d(page);
   });
 
-  test('AC4: with reduced motion a loss and a win show the static final board at once, and the two are clearly different', async ({
-    page,
-  }) => {
-    // Lost: no effect state at all, the picture right after the click is the final one.
-    await prepareLoss(page);
-    await loseNow(page);
-    await expect(page.getByText(LOST)).toBeVisible();
-    expect(await fxState(page), 'no effect under reduced motion').toEqual(IDLE);
-    const lost = await frameAfter(page, 0);
-    expect(await frameAfter(page, 3000), 'static right after the click').toBe(lost);
-    expect(
-      (await paint(page, DANGER, 0, 24, index(9, ...LOSS_CLICK))).count,
-      'the red disc of the exploded mine',
-    ).toBeGreaterThan(200);
-    const lostNames = await grid(page).ariaSnapshot();
-    expect(lostNames).toContain('exploded mine');
-    expect(lostNames).toContain('Row 4, column 4, mine');
-    expect(lostNames).toContain('wrong flag, no mine here');
-    expect(await cell(page, 1, 1).getAttribute('aria-label')).toContain('flagged'); // a right flag stays
+  test(
+    'AC4: with reduced motion a loss and a win show the static final board at once, and the two are clearly different',
+    { tag: '@timing' },
+    async ({ page }) => {
+      // Lost: no effect state at all, the picture right after the click is the final one.
+      await prepareLoss(page);
+      await loseNow(page);
+      await expect(page.getByText(LOST)).toBeVisible();
+      expect(await fxState(page), 'no effect under reduced motion').toEqual(IDLE);
+      const lost = await frameAfter(page, 0);
+      expect(await frameAfter(page, 3000), 'static right after the click').toBe(lost);
+      expect(
+        (await paint(page, DANGER, 0, 24, index(9, ...LOSS_CLICK))).count,
+        'the red disc of the exploded mine',
+      ).toBeGreaterThan(200);
+      const lostNames = await grid(page).ariaSnapshot();
+      expect(lostNames).toContain('exploded mine');
+      expect(lostNames).toContain('Row 4, column 4, mine');
+      expect(lostNames).toContain('wrong flag, no mine here');
+      expect(await cell(page, 1, 1).getAttribute('aria-label')).toContain('flagged'); // a right flag stays
 
-    // Won: all mines flagged, counter 0.
-    await startFixed(page, 9, 9, WIN);
-    await cell(page, 9, 9).click();
-    await page.mouse.move(0, 0);
-    await winNow(page);
-    await expect(page.getByText(WON)).toBeVisible();
-    await expect(counter(page)).toHaveText('Mines left: 0');
-    expect(await fxState(page), 'no celebration under reduced motion').toEqual(IDLE);
-    const won = await frameAfter(page, 0);
-    expect(await frameAfter(page, 4500), 'static right after the click').toBe(won);
-    await expect(cell(page, 1, 1)).toHaveAccessibleName('Row 1, column 1, flagged');
-    await expect(cell(page, 1, 3)).toHaveAccessibleName('Row 1, column 3, flagged');
-    expect(await grid(page).ariaSnapshot()).not.toContain('exploded mine');
+      // Won: all mines flagged, counter 0.
+      await startFixed(page, 9, 9, WIN);
+      await cell(page, 9, 9).click();
+      await page.mouse.move(0, 0);
+      await winNow(page);
+      await expect(page.getByText(WON)).toBeVisible();
+      await expect(counter(page)).toHaveText('Mines left: 0');
+      expect(await fxState(page), 'no celebration under reduced motion').toEqual(IDLE);
+      const won = await frameAfter(page, 0);
+      expect(await frameAfter(page, 4500), 'static right after the click').toBe(won);
+      await expect(cell(page, 1, 1)).toHaveAccessibleName('Row 1, column 1, flagged');
+      await expect(cell(page, 1, 3)).toHaveAccessibleName('Row 1, column 3, flagged');
+      expect(await grid(page).ariaSnapshot()).not.toContain('exploded mine');
 
-    // Distinguishable at a glance: the lost board has the red marker disc at the exploded cell
-    // (the danger colour), the won board has nothing like it at that cell.
-    const exploded = index(9, ...LOSS_CLICK);
-    expect(
-      (await paint(page, DANGER, 0, 24, exploded)).count,
-      'danger-coloured pixels at the won board cell',
-    ).toBeLessThan(10);
-  });
+      // Distinguishable at a glance: the lost board has the red marker disc at the exploded cell
+      // (the danger colour), the won board has nothing like it at that cell.
+      const exploded = index(9, ...LOSS_CLICK);
+      expect(
+        (await paint(page, DANGER, 0, 24, exploded)).count,
+        'danger-coloured pixels at the won board cell',
+      ).toBeLessThan(10);
+    },
+  );
 });

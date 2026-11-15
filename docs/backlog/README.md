@@ -42,3 +42,10 @@ of an app live in `apps/<name>/docs/backlog/`. This table lists every story of e
 | 034 | platform    | [A publish run checks the whole tree only for the checks that read the whole tree](034-publish-run-scopes-the-workspace-steps.md)                         | done   |
 | 035 | laz         | [The fund list funds the first and the last year of the phase](../../apps/laz/docs/backlog/035-laz-funding-year-for-the-phase-boundary-years.md)          | done   |
 | 036 | laz         | [The fund table shows the fund name, the ISIN and the current course](../../apps/laz/docs/backlog/036-laz-fund-table-name-isin-and-course-columns.md)     | done   |
+| 037 | platform    | [A story needs one run for its results and one covering run](037-one-run-for-results-and-one-covering-run.md)                                             | done   |
+| 038 | platform    | [A mutation check runs its candidates in one call at the narrowest scope](038-mutation-checks-run-in-one-call-at-the-narrowest-scope.md)                  | done   |
+| 039 | platform    | [Frame-timing and pixel tests are not in the pull-request run](039-timing-and-pixel-tests-are-not-in-the-pull-request-run.md)                             | done   |
+| 040 | platform    | [The product owner writes a default with the reason, not a question](040-product-owner-writes-a-default-not-a-question.md)                                | done   |
+| 041 | platform    | [A retro proposal names the rule or story it changes](041-retro-proposal-names-what-it-changes.md)                                                        | done   |
+| 042 | platform    | [A green step reports its closing block, a failing step reports everything](042-green-step-reports-its-closing-block.md)                                  | done   |
+| 043 | platform    | [One story is in flight at a time](043-one-story-in-flight-at-a-time.md)                                                                                  | done   |

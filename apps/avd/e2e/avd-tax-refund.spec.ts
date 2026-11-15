@@ -126,48 +126,50 @@ async function depotColumns(page: Page): Promise<string[][]> {
   return out;
 }
 
-test('AC5: edits update refund, net and column; a rate-only change leaves every depot figure and the chart untouched', async ({
-  page,
-}) => {
-  await setReference(page);
-  await rateInput(page).fill('42');
-  await expect(tableRows(page)).toHaveCount(8);
-  const refunds = await columnTexts(page, 'Steuererstattung');
-  expect(refunds).toHaveLength(8);
-  expect(refunds.every((text) => euro('442,80').test(text))).toBe(true);
+test(
+  'AC5: edits update refund, net and column; a rate-only change leaves every depot figure and the chart untouched',
+  { tag: '@timing' },
+  async ({ page }) => {
+    await setReference(page);
+    await rateInput(page).fill('42');
+    await expect(tableRows(page)).toHaveCount(8);
+    const refunds = await columnTexts(page, 'Steuererstattung');
+    expect(refunds).toHaveLength(8);
+    expect(refunds.every((text) => euro('442,80').test(text))).toBe(true);
 
-  // Any other input: 9,99 EUR per month has no refund, net equals own contributions.
-  await monthlyInput(page).fill('9,99');
-  await expect(figure(page, TOTAL)).toHaveText(euro('0,00'));
-  await expect(figure(page, NET)).toHaveText(euro('959,04'));
-  expect((await columnTexts(page, 'Steuererstattung')).every((t) => euro('0,00').test(t))).toBe(
-    true,
-  );
-  await monthlyInput(page).fill('150');
-  await expect(figure(page, TOTAL)).toHaveText(euro('3.542,40'));
+    // Any other input: 9,99 EUR per month has no refund, net equals own contributions.
+    await monthlyInput(page).fill('9,99');
+    await expect(figure(page, TOTAL)).toHaveText(euro('0,00'));
+    await expect(figure(page, NET)).toHaveText(euro('959,04'));
+    expect((await columnTexts(page, 'Steuererstattung')).every((t) => euro('0,00').test(t))).toBe(
+      true,
+    );
+    await monthlyInput(page).fill('150');
+    await expect(figure(page, TOTAL)).toHaveText(euro('3.542,40'));
 
-  // Rate-only change.
-  const depot = ['Eigene Beiträge', 'Zulagen gesamt', 'Erträge', 'Endwert'];
-  const readDepot = async () => Promise.all(depot.map((l) => figure(page, l).innerText()));
-  const figuresBefore = await readDepot();
-  const columnsBefore = await depotColumns(page);
-  const chartBefore = await chart(page).screenshot({ animations: 'disabled' });
-  const nameBefore = await chart(page).getAttribute('aria-label');
-  expect(nameBefore).not.toMatch(/erstattung/i);
+    // Rate-only change.
+    const depot = ['Eigene Beiträge', 'Zulagen gesamt', 'Erträge', 'Endwert'];
+    const readDepot = async () => Promise.all(depot.map((l) => figure(page, l).innerText()));
+    const figuresBefore = await readDepot();
+    const columnsBefore = await depotColumns(page);
+    const chartBefore = await chart(page).screenshot({ animations: 'disabled' });
+    const nameBefore = await chart(page).getAttribute('aria-label');
+    expect(nameBefore).not.toMatch(/erstattung/i);
 
-  await rateInput(page).fill('50');
-  await expect(figure(page, PER_YEAR)).toHaveText(euro('630,00'));
-  await expect(figure(page, TOTAL)).toHaveText(euro('5.040,00'));
-  await expect(figure(page, NET)).toHaveText(euro('9.360,00'));
-  expect((await columnTexts(page, 'Steuererstattung'))[0]).toMatch(euro('630,00'));
+    await rateInput(page).fill('50');
+    await expect(figure(page, PER_YEAR)).toHaveText(euro('630,00'));
+    await expect(figure(page, TOTAL)).toHaveText(euro('5.040,00'));
+    await expect(figure(page, NET)).toHaveText(euro('9.360,00'));
+    expect((await columnTexts(page, 'Steuererstattung'))[0]).toMatch(euro('630,00'));
 
-  expect(await readDepot()).toEqual(figuresBefore);
-  expect(await depotColumns(page)).toEqual(columnsBefore);
-  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
-  const chartAfter = await chart(page).screenshot({ animations: 'disabled' });
-  expect(chartAfter.equals(chartBefore)).toBe(true);
-  expect(await chart(page).getAttribute('aria-label')).toBe(nameBefore);
-});
+    expect(await readDepot()).toEqual(figuresBefore);
+    expect(await depotColumns(page)).toEqual(columnsBefore);
+    await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
+    const chartAfter = await chart(page).screenshot({ animations: 'disabled' });
+    expect(chartAfter.equals(chartBefore)).toBe(true);
+    expect(await chart(page).getAttribute('aria-label')).toBe(nameBefore);
+  },
+);
 
 test('AC6: an invalid tax rate names field and range, replaces the result and leaves no NaN or negative amount', async ({
   page,
