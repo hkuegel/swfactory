@@ -10,11 +10,14 @@ import {
   unitDigits,
 } from './parseInputs.ts';
 
-/** The example phase, so only the field under test can fail (T5: the parsing branches). Story 031 removed the rate field, so `BASE` has no rate. */
+/** The example phase, so only the field under test can fail (T5: the parsing branches). Story 031 removed
+ * the rate field, so `BASE` has no rate; story 045 adds the flat field, whose prefilled text is here so
+ * that only the field under test can fail. */
 const BASE: RawInputs = {
   phaseStart: '1.1.2028',
   phaseEnd: '31.3.2034',
   amount: '10000,00',
+  flatRate: '2,24',
 };
 
 function errorsOf(changes: Partial<RawInputs>) {
@@ -100,6 +103,32 @@ describe('parseInputs', () => {
         error: { kind: 'range' },
       });
     }
+
+    // Story 045, AC1: the flat field is the one field of the form that keeps the bound a percent means
+    // (0 to 100 %), and its unit is the hundredth of a percent, so the exact-unit error names that unit.
+    // Hand values: 2,24 % is 224; three decimals is a format error; 100,00 % is 10000 and the value
+    // above it is refused; the sign stays its own rule. Each line is one assertion, so the mutation of
+    // `fieldSpec('flatRate').max` can only move the range line (P32): the bound itself is not asserted
+    // in `fieldCopy.test.ts`, where the copy strings are.
+    expect(parseField(fieldSpec('flatRate'), '2,24')).toEqual({ ok: true, value: 224 });
+    expect(parseField(fieldSpec('flatRate'), '2,245')).toEqual({
+      ok: false,
+      error: { kind: 'format' },
+    });
+    expect(parseField(fieldSpec('flatRate'), '100,00')).toEqual({ ok: true, value: 10000 });
+    expect(parseField(fieldSpec('flatRate'), '100,01')).toEqual({
+      ok: false,
+      error: { kind: 'range' },
+    });
+    expect(parseField(fieldSpec('flatRate'), '-0,01')).toEqual({
+      ok: false,
+      error: { kind: 'range' },
+    });
+    // The field is required: the empty branch is its own. Hand value of the prefilled text: 224.
+    expect(errorOf('flatRate', '')).toEqual({ kind: 'empty' });
+    const okFlat = parseInputs(BASE);
+    if (!okFlat.ok) throw new Error('the prefilled flat text must parse');
+    expect(okFlat.inputs.flatRateHundredths).toBe(224);
 
     // The NAV cell in micro-euro (story 025): the same rule in its own unit, 6 decimals.
     for (const [text, microEur] of [

@@ -1,11 +1,14 @@
 /**
  * The payout phase and the one closed form in both directions (ADR 0012):
- * `F = Σ m_y / ρ′_y`, `P = D / F` and `D = P · F`. A phase year is funded by the fund whose
- * maturity year is `year − 1`; values stay unrounded here.
+ * `F = Σ m_y / ρ′_y`, `P = (D − cash) / F` and `D = P · F + cash`. A phase year is funded by the fund
+ * whose maturity year is `year − 1`; values stay unrounded here. Story 045 AC5: `cash` is the flat tax of
+ * the funds that fund a phase year, undiscounted, because the yearly payments are money that leaves the
+ * plan, not money that is invested. With `flat = FLAT_OFF` this is the pair ADR 0012 gives.
  */
 
 import { monthKeyOf, monthParts } from './fields.ts';
-import type { Fund } from './fund.ts';
+import { FUND_LIST_AS_OF, type Fund } from './fund.ts';
+import { flatBaseFactor, flatTaxMicroEur, type FlatRate } from './flat.ts';
 import { payoutFactor, type Tax } from './projection.ts';
 
 /** Whole calendar months, inclusive, as `YYYY-MM` (normalised by the parser from TT.MM.JJJJ). */
@@ -33,6 +36,8 @@ export interface Plan {
   readonly monthlyCents: number;
   readonly depotCents: number;
   readonly totalCents: number;
+  /** Story 045 AC5: the part of the depot the fund table does not show, in cents, unrounded. */
+  readonly flatCashCents: number;
 }
 
 /** The phase months in one year (a partly covered year: 3 months for 1.1–31.3.2034). */
@@ -61,35 +66,71 @@ export function fundingFund(funds: readonly Fund[], year: number): Fund | null {
 }
 
 /** ρ′ of the fund that funds one year; a year without a fund has no ρ′ (AC2). */
-export function phaseFactor(funds: readonly Fund[], phase: Phase, tax: Tax): number {
+export function phaseFactor(
+  funds: readonly Fund[],
+  phase: Phase,
+  tax: Tax,
+  flat: FlatRate,
+  asOf: string = FUND_LIST_AS_OF,
+): number {
   let factor = 0;
   for (const year of phaseYears(phase)) {
     const fund = fundingFund(funds, year);
     if (fund === null) continue;
-    factor += monthsInYear(phase, year) / payoutFactor(fund, tax);
+    const base = flatBaseFactor(fund, flat, asOf);
+    factor += monthsInYear(phase, year) / payoutFactor(fund, tax, base, asOf);
   }
   return factor;
 }
 
-/** Depot value → monthly payout (AC2): `P = D / F`. */
+/**
+ * The flat tax of the funds that fund a phase year, undiscounted, in cents (unrounded). Only those funds
+ * are in the depot: a fund outside the phase is not bought, so its money is not part of the depot (the
+ * architect's decision of 2026-11-15, the same reason story 032 AC3 gives for its dash).
+ */
+export function flatCashCents(
+  funds: readonly Fund[],
+  phase: Phase,
+  tax: Tax,
+  flat: FlatRate,
+  asOf: string = FUND_LIST_AS_OF,
+): number {
+  let cash = 0;
+  for (const year of phaseYears(phase)) {
+    const fund = fundingFund(funds, year);
+    if (fund === null) continue;
+    cash += flatTaxMicroEur(fund, flat, tax, asOf) / 10000;
+  }
+  return cash;
+}
+
+/** Depot value → monthly payout (AC2, AC5 of 045): `P = (D − cash) / F`. */
 export function payoutFromDepotCents(
   depotCents: number,
   funds: readonly Fund[],
   phase: Phase,
   tax: Tax,
+  flat: FlatRate,
+  asOf: string = FUND_LIST_AS_OF,
 ): number {
-  const factor = phaseFactor(funds, phase, tax);
-  return factor === 0 ? 0 : depotCents / factor;
+  const factor = phaseFactor(funds, phase, tax, flat, asOf);
+  if (factor === 0) return 0;
+  return (depotCents - flatCashCents(funds, phase, tax, flat, asOf)) / factor;
 }
 
-/** Monthly target → depot value (AC2 the other way): `D = P · F`, the same `F` inverted. */
+/** Monthly target → depot value (the same pair inverted): `D = P · F + cash`. */
 export function depotFromPayoutCents(
   monthlyCents: number,
   funds: readonly Fund[],
   phase: Phase,
   tax: Tax,
+  flat: FlatRate,
+  asOf: string = FUND_LIST_AS_OF,
 ): number {
-  return monthlyCents * phaseFactor(funds, phase, tax);
+  return (
+    monthlyCents * phaseFactor(funds, phase, tax, flat, asOf) +
+    flatCashCents(funds, phase, tax, flat, asOf)
+  );
 }
 
 export function yearRows(funds: readonly Fund[], phase: Phase, monthlyCents: number): YearRow[] {
@@ -105,19 +146,24 @@ export function yearRows(funds: readonly Fund[], phase: Phase, monthlyCents: num
   });
 }
 
-/** The plan the components read; both directions use the same `F`. */
+/** The plan the components read; both directions use the same `F` and the same `cash`. */
 export function buildPlan(
   funds: readonly Fund[],
   phase: Phase,
   tax: Tax,
+  flat: FlatRate,
   amountCents: number,
   direction: 'depot' | 'payout',
+  asOf: string = FUND_LIST_AS_OF,
 ): Plan {
-  const factor = phaseFactor(funds, phase, tax);
+  const factor = phaseFactor(funds, phase, tax, flat, asOf);
+  const cash = flatCashCents(funds, phase, tax, flat, asOf);
   // A phase with no funding fund has no factor (risk 4 in the technical design), so there is no
   // division by zero here; the UI shows "no result possible" instead of a figure.
   const monthlyCents =
-    direction === 'depot' ? payoutFromDepotCents(amountCents, funds, phase, tax) : amountCents;
+    direction === 'depot'
+      ? payoutFromDepotCents(amountCents, funds, phase, tax, flat, asOf)
+      : amountCents;
   const rows = yearRows(funds, phase, monthlyCents);
   const fundedYears = rows.filter((row) => row.fundingFund !== null);
   return {
@@ -125,8 +171,9 @@ export function buildPlan(
     fundedYears,
     phaseFactor: factor,
     monthlyCents,
-    depotCents: direction === 'depot' ? amountCents : monthlyCents * factor,
+    depotCents: direction === 'depot' ? amountCents : monthlyCents * factor + cash,
     totalCents: fundedYears.reduce((sum, row) => sum + row.yearAmountCents, 0),
+    flatCashCents: cash,
   };
 }
 

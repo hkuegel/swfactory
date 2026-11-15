@@ -21,6 +21,8 @@ export interface ParsedInputs {
   readonly phaseEnd: string;
   /** Cents, in the unit of the chosen direction. */
   readonly amountCents: number;
+  /** Story 045: whole hundredths of a percent, 2,24 % is 224 (the unit of a percent field, story 033). */
+  readonly flatRateHundredths: number;
 }
 
 export type FieldError =
@@ -164,9 +166,10 @@ export function parseField(spec: FieldSpec, raw: string): FieldResult {
 }
 
 /**
- * The three fields of the form. Story 031 removed the typed rate, so nothing here reads a rate; the
- * phase fields have no range (story 033) and the amount field has no maximum (story 030). A phase field
- * that is not complete yet names no error, so it appears in neither the values nor the errors.
+ * The four fields of the form. Story 031 removed the typed rate, so nothing here reads a rate; the
+ * phase fields have no range (story 033), the amount field has no maximum (story 030), and the flat rate
+ * keeps the bound of a percent, 0 to 100 % (story 045). A phase field that is not complete yet names no
+ * error, so it appears in neither the values nor the errors.
  */
 export function parseInputs(raw: RawInputs): ParseResult {
   const errors: Partial<Record<FieldId, FieldError>> = {};
@@ -180,6 +183,7 @@ export function parseInputs(raw: RawInputs): ParseResult {
   const phaseStart = values.phaseStart;
   const phaseEnd = values.phaseEnd;
   const amount = values.amount;
+  const flatRate = values.flatRate;
 
   if (phaseStart !== undefined && phaseEnd !== undefined && phaseEnd < phaseStart) {
     errors.phaseEnd = { kind: 'endBeforeStart', start: monthName(phaseStart) };
@@ -187,7 +191,14 @@ export function parseInputs(raw: RawInputs): ParseResult {
 
   // One error per invalid field: nothing is calculated while a field is invalid (UX design §3).
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  if (phaseStart === undefined || phaseEnd === undefined || amount === undefined) {
+  // The four fields of the form are required, so a value is missing only for an entry that names no
+  // error yet (a typing state, story 033 AC2).
+  if (
+    phaseStart === undefined ||
+    phaseEnd === undefined ||
+    amount === undefined ||
+    flatRate === undefined
+  ) {
     return { ok: false, errors };
   }
 
@@ -197,6 +208,7 @@ export function parseInputs(raw: RawInputs): ParseResult {
       phaseStart: monthName(phaseStart),
       phaseEnd: monthName(phaseEnd),
       amountCents: amount,
+      flatRateHundredths: flatRate,
     },
   };
 }

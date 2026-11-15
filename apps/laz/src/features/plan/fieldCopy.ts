@@ -12,7 +12,7 @@ import {
   type OverrideField,
 } from './logic/fields.ts';
 import type { FieldError } from './logic/parseInputs.ts';
-import type { PurchaseReason } from './logic/purchase.ts';
+import type { FlatRowReason, PurchaseReason } from './logic/purchase.ts';
 import { formatDate, formatMonth } from './logic/format.ts';
 
 export interface FieldCopy {
@@ -68,6 +68,16 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
     hint: '0 € oder mehr, höchstens 2 Nachkommastellen; der Wert muss eine ganze Anzahl Cent sein.',
     formatWord: 'keine gültige Zahl',
     unit: 'Cent',
+  },
+  // Story 045 AC1: the flat rate keeps the bound a percent means, which no other field of the form has
+  // since story 031 removed the typed rate. Its unit is a hundredth of a percent, so the exact-unit error
+  // names that unit.
+  flatRate: {
+    label: 'Vorabpauschale',
+    range: '0,00 bis 100,00 %',
+    hint: 'Prozentsatz, höchstens 2 Nachkommastellen. Er bleibt über die ganze Laufzeit gleich und zählt nur, wenn die Kapitalertragsteuer angehakt ist; der Depot-Auszug nennt das Vorsteuerpauschale.',
+    formatWord: 'keine gültige Zahl',
+    unit: 'Hundertstel Prozent',
   },
 };
 
@@ -192,6 +202,22 @@ export const COPY = {
     'ein überschriebener Wert wird markiert und die Hochrechnung rechnet mit ihm. Kurs: höchstens 6 ' +
     'Nachkommastellen, der Wert muss eine ganze Anzahl Micro-Euro sein. YTM: höchstens 2 ' +
     'Nachkommastellen.',
+  /** Story 045 AC4: the new column names the money it shows; `Vorabpauschale` stays on the field's label,
+   * so the column uses the shorthand. `Haltedauer` occurs here once. */
+  flatColumn: 'Pauschalsteuer über die Haltedauer in Euro',
+  /** The fund section states the sum once, as a paragraph, never as a `dd`. `{wert}` is `formatEuro` of
+   * the shown parts; the paragraph is not shown when no row has a flat figure. */
+  flatSumLine: (wert: string): string => `Summe der Pauschalsteuer über alle Fonds: ${wert}.`,
+  /** The three facts AC4 names, stated once in the fund section. */
+  flatFacts:
+    'Die Pauschalsteuer für ein Jahr wird am ersten Werktag des nächsten Jahres gezahlt (für 2026: ' +
+    '4.1.2027). Das Jahr der Auflösung zählt nicht. Das Geld kommt vom Verrechnungskonto, der Wert des ' +
+    'Fonds wird dadurch nicht kleiner.',
+  /** The one sentence that names what the searched depot includes (AC5); it states the rule the result
+   * figure follows, so it is read in the fund section, not in the result block. */
+  flatDepotNote:
+    'Das Depot, das die App sucht, enthält die jährlichen Pauschalsteuer-Zahlungen; eine negative ' +
+    'monatliche Auszahlung wird als negative Zahl gezeigt.',
   emptyResult: 'Noch kein Ergebnis: bitte Phase und Betrag ausfüllen.',
   invalidResult: 'Kein Ergebnis möglich. Bitte die markierten Felder korrigieren.',
   noFundingYear: 'Kein Ergebnis möglich: die Phase hat kein Jahr mit einem Fonds.',
@@ -210,6 +236,18 @@ export function purchaseReasonText(reason: PurchaseReason): string {
   if (reason === 'after-phase-end') return 'Auflösung nach Phasenende';
   if (reason === 'before-phase-start') return 'Auflösung vor Phasenbeginn';
   return 'keine Hochrechnung je Anteil';
+}
+
+/**
+ * The flat column's dash (story 045 AC4). The three new reasons are the copy of UX §2; a phase-side reason
+ * keeps the string of story 032, because a row outside the phase names the same thing in both columns. A
+ * row can show two dashes with two different reasons, so this reads the flat column's own one.
+ */
+export function flatReasonText(reason: FlatRowReason): string {
+  if (reason === 'outside-tax-case') return 'Steuer nicht angehakt';
+  if (reason === 'no-year-counts') return 'kein Jahr zählt (nur das Auflösungsjahr)';
+  if (reason === 'no-year-pays') return 'kein Jahr zahlt Steuer';
+  return purchaseReasonText(reason);
 }
 
 /** Projection label (AC5), the accessible description of every projection figure. */

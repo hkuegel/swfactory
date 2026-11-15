@@ -1,10 +1,16 @@
 import { useId } from 'react';
-import { COPY, overrideCopy, projectionLabel, purchaseReasonText } from './fieldCopy.ts';
+import {
+  COPY,
+  flatReasonText,
+  overrideCopy,
+  projectionLabel,
+  purchaseReasonText,
+} from './fieldCopy.ts';
 import { formatEuro, formatEuroMicroEur, formatShares, fundValueText } from './logic/format.ts';
 import type { OverrideField } from './logic/fields.ts';
 import type { Fund } from './logic/fund.ts';
 import type { FieldError } from './logic/parseInputs.ts';
-import { displayPurchaseCents, type PurchaseRow } from './logic/purchase.ts';
+import { displayFundParts, flatPartsSum, type PurchaseRow } from './logic/purchase.ts';
 import { TextField } from './TextField.tsx';
 import styles from './FundTable.module.css';
 
@@ -41,9 +47,13 @@ export function FundTable({
 }: FundTableProps) {
   const headingId = useId();
   const labelId = `${headingId}-projection`;
-  // AC2: the shown parts must add up to the shown depot, so the last one is derived from the total.
-  const shownCents =
-    purchases !== null && totalCents !== null ? displayPurchaseCents(purchases, totalCents) : null;
+  // AC2: the shown parts must add up to the shown depot, so the last part that has a figure is derived
+  // from the total (story 045 reads them row by row: the purchase part, then the flat part).
+  const parts =
+    purchases !== null && totalCents !== null ? displayFundParts(purchases, totalCents) : null;
+  // AC4: the fund section states the flat sum once, and nothing is invented for an empty sum (the display
+  // rule ux-designer recorded on 2026-11-15), so the line is shown only when a row has a flat figure.
+  const flatSum = parts === null ? null : flatPartsSum(parts);
   return (
     <section className={styles.section} aria-labelledby={headingId}>
       <h2 id={headingId}>{COPY.fundsHeading}</h2>
@@ -71,6 +81,8 @@ export function FundTable({
               {/* Story 032: the purchase side of the same model (AC1). */}
               <th scope="col">{COPY.sharesColumn}</th>
               <th scope="col">{COPY.purchaseColumn}</th>
+              {/* Story 045 AC4: the flat column, the last one. */}
+              <th scope="col">{COPY.flatColumn}</th>
             </tr>
           </thead>
           <tbody>
@@ -79,13 +91,20 @@ export function FundTable({
               const rowErrors = errors.get(fund.year) ?? {};
               const rowMarkers = markers.get(fund.year) ?? {};
               const purchase = purchases?.[index] ?? null;
-              const cents = shownCents?.[index] ?? null;
+              const part = parts?.[index] ?? null;
+              const purchaseCents = part?.purchaseCents ?? null;
+              const flatCents = part?.flatCents ?? null;
               // AC3: no number is invented for a fund outside the phase or for a payout per share of 0.
               // The cell keeps its dash and names why; while there is no result yet the dash stands alone.
               const dash = (row: PurchaseRow): string =>
                 row.reason === null
                   ? COPY.missingAmount
                   : `${COPY.missingAmount} ${purchaseReasonText(row.reason)}`;
+              // Story 045 AC4: a row can show two dashes with two reasons, so the flat column reads its own.
+              const flatDash = (row: PurchaseRow): string =>
+                row.flatReason === null
+                  ? COPY.missingAmount
+                  : `${COPY.missingAmount} ${flatReasonText(row.flatReason)}`;
               return (
                 <tr key={fund.year}>
                   <th scope="row">{String(fund.year)}</th>
@@ -135,9 +154,23 @@ export function FundTable({
                     >
                       {purchase === null
                         ? COPY.missingAmount
-                        : cents === null
+                        : purchaseCents === null
                           ? dash(purchase)
-                          : formatEuro(cents)}
+                          : formatEuro(purchaseCents)}
+                    </span>
+                  </td>
+                  {/* Story 045 AC4: the flat part of the same row, money with the single rounding (032 AC2
+                      extended), described by the projection label like the other figures. */}
+                  <td>
+                    <span
+                      className={`${styles.figure} ${purchase?.flatReason ? styles.reason : ''}`}
+                      aria-describedby={labelId}
+                    >
+                      {purchase === null
+                        ? COPY.missingAmount
+                        : flatCents === null
+                          ? flatDash(purchase)
+                          : formatEuro(flatCents)}
                     </span>
                   </td>
                 </tr>
@@ -146,6 +179,13 @@ export function FundTable({
           </tbody>
         </table>
       </div>
+      {/* Story 045 AC4: the sum the section states once, as a paragraph, never as a `dd`, and nothing for
+          an empty sum; then the three facts AC4 names and the one sentence about the depot (AC5). */}
+      {flatSum !== null && (
+        <p className={styles.footnote}>{COPY.flatSumLine(formatEuro(flatSum))}</p>
+      )}
+      <p className={styles.footnote}>{COPY.flatFacts}</p>
+      <p className={styles.footnote}>{COPY.flatDepotNote}</p>
       {/* Story 044: the rule the input cells used to repeat in every cell is stated once here, below the
           table. It is not an input's description, so the description of an override cell stays the marker
           alone (024 AC5). */}

@@ -14,6 +14,7 @@ import {
 } from './logic/fields.ts';
 import { FUND_LIST, FUND_LIST_AS_OF, effectiveFund, type FundOverride } from './logic/fund.ts';
 import { formatEuro } from './logic/format.ts';
+import { FLAT_OFF, flatBaseFactor, type FlatRate } from './logic/flat.ts';
 import { parseField, parseInputs, type FieldError, type FieldErrors } from './logic/parseInputs.ts';
 import { buildPlan, type Phase, type Plan } from './logic/phase.ts';
 import { payoutPerShareMicroEur, type Tax } from './logic/projection.ts';
@@ -24,11 +25,12 @@ import styles from './PlanCalculator.module.css';
 /** The live region speaks only after typing has paused this long (UX §4). */
 const LIVE_REGION_DELAY_MS = 700;
 
-/** The first render: hak's example phase (story 033, AC3), nothing typed in the other fields, direction 1, both tax checkboxes off (UX §3). */
+/** The first render: hak's example phase (story 033, AC3), nothing typed in the other fields, direction 1, both tax checkboxes off (UX §3). Story 045: the flat field is prefilled with `2,24`, the rate of the prefill AC1 names. */
 const DEFAULT_INPUTS: RawInputs = {
   phaseStart: '01.2028',
   phaseEnd: '03.2034',
   amount: '',
+  flatRate: '2,24',
 };
 
 /** The tax start state story 031 defines: no checkbox checked, Bayern as the default Bundesland (hak, 2026-11-13). */
@@ -82,6 +84,9 @@ export function PlanCalculator() {
     // Story 031: the tax comes from the two checkboxes, not from a typed rate. The church tax counts only
     // while the Kapitalertragsteuer checkbox is checked, because it is computed on that tax.
     const tax = taxFromState(taxState);
+    // Story 045: the flat rate is the parsed value of its field. While a field is invalid nothing is
+    // calculated, so the fallback shape is never read — outside the tax case `flat.ts` produces no tax.
+    const flat: FlatRate = parsed.ok ? { hundredths: parsed.inputs.flatRateHundredths } : FLAT_OFF;
 
     const projections = new Map<number, number>();
     const overrideErrors = new Map<number, Partial<Record<OverrideField, FieldError>>>();
@@ -116,15 +121,27 @@ export function PlanCalculator() {
       : null;
     const plan =
       parsed.ok && phase !== null
-        ? buildPlan(funds, phase, tax, parsed.inputs.amountCents, direction)
+        ? buildPlan(funds, phase, tax, flat, parsed.inputs.amountCents, direction)
         : null;
 
-    for (const fund of funds) projections.set(fund.year, payoutPerShareMicroEur(fund, tax));
+    for (const fund of funds) {
+      projections.set(
+        fund.year,
+        payoutPerShareMicroEur(
+          fund,
+          tax,
+          flatBaseFactor(fund, flat, FUND_LIST_AS_OF),
+          FUND_LIST_AS_OF,
+        ),
+      );
+    }
 
     // Story 032: the purchase side of the same model, on the same effective funds and tax state. The
     // fund table's rows are funds, so a fund row shows the phase year after its liquidation year.
     const purchases =
-      plan === null || phase === null ? null : purchaseRows(funds, phase, plan.monthlyCents, tax);
+      plan === null || phase === null
+        ? null
+        : purchaseRows(funds, phase, plan.monthlyCents, tax, flat);
 
     return {
       errors,
