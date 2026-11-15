@@ -94,6 +94,13 @@ chat. Append only._
 - 2026-11-15 — Decision (orchestrator): the phase labels become sentences, and the `endBeforeStart` error
   reads the label it is given instead of hard-coding `Phase Ende (Monat)`, so the error cannot disagree with
   the label.
+- 2026-11-15 — hak's question: does a change in `apps/laz/**` run the minesweeper checks? Answer from the
+  mapping of 026 and 034: no, the plan for this change is `mode affected, 8 of 12 steps, apps: laz`, and the
+  whole-tree checks stay whole tree (hak's rule B of 2026-11-14). The mapping result is in the Test report.
+- 2026-11-15 — hak's instruction: commit and push. Ports as they are now: the dev server for hak runs on
+  5173, and 5174 stays free for the e2e runs, because the e2e-mode sign-in fake is bound to 5174 and a dev
+  server on that port makes the sign-in tests time out. The server that had been on 5173 belonged to another
+  checkout (`swfactory-main`) and was ended at hak's request.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -222,11 +229,19 @@ Affected plan for this change, as the mapping of 026 answers it with the changed
 against the minesweeper app; the whole-tree checks (`check:structure`, `format:check`, `lint`, `typecheck`,
 `build`, `test`, `test:e2e`, `check:dist`) stay whole tree (hak's rule B of 2026-11-14, story 034), and
 `test:e2e` runs the workspaces the change can reach, which is `laz` and the platform.
-The full run of 2026-11-15 (no record, so all 12 steps) went red only on the known flaky minesweeper 3D
-e2e group, `apps/minesweeper/e2e/minesweeper-3d-effects.spec.ts`, seven tests with 30 s timeouts in the
-`beforeEach` hook: machine load under 16 parallel workers, no defect story (hak's answer of 2026-11-14,
-story 034 open question 1). It is not this change: the app code of laz is not read by that group, and the
-laz group in the same run passed.
+The full run of 2026-11-15 (no record, so all 12 steps) went red on the minesweeper 3D group and on the
+platform sign-in tests, and neither red is this change. Two reasons, named separately: a dev server was
+holding port 5174, which is the port the e2e-mode sign-in fake needs, so the sign-in tests timed out in the
+`beforeEach` hook; and the minesweeper 3D group,
+`apps/minesweeper/e2e/minesweeper-3d-effects.spec.ts`, is the known flaky group — machine load under 16
+parallel workers, no defect story (hak's answer of 2026-11-14, story 034 open question 1). With the port
+free the laz group passed 57, as counted above, and the plan for this change does not read minesweeper at
+all, so no minesweeper result is needed for this story.
+
+CI: the branch push alone starts no run, because the workflow runs on a push to `main`, a pull request or a
+`workflow_dispatch`. The green CI run of the Definition of Done is open until hak opens the pull request or
+dispatches the workflow (`gh` is not installed on this machine, story 026); the run id goes into this
+section when the run exists.
 
 ### Mutation check
 
