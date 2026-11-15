@@ -30,7 +30,7 @@ to the code.
    `document.getAnimations()` is empty. When a check script or a harness bound is changed,
    run its failure path by hand once with a deliberately bad input, on the machine where the
    change is made. Revert a mutation from a backup copy made before it, never with `git checkout`,
-   `git restore` or `git stash`. Prove only the checks this story adds or changes: an assertion
+   `git restore` or `git stash`. A mutation check is not reported until the runner shows the mutated file is byte-identical to the backup taken before the run — that equality is an assertion of the runner, not a step of the script — and the runner keeps its backups outside the repository (story 044, P32, hak's approval of 2026-11-15). Prove only the checks this story adds or changes: an assertion
    inherited from an earlier story is not re-proven (hak, 2026-11-13). For a parser that converts text
    by string arithmetic, include the case where the input has more digits than the unit's precision —
    that is where a silent wrong value appears (story 025, P23). A hand value is written in the field's
