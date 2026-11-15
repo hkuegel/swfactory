@@ -6,6 +6,7 @@ import {
   cellByHeader,
   fixtureAsOf,
   fixtureFunds,
+  flatInput,
   euro,
   figure,
   fundInput,
@@ -458,6 +459,10 @@ test('031 AC1, AC2: no control for a typed rate, the two checkboxes and the Bund
   await expect(land).toHaveValue('bayern');
   await expect(land.getByRole('option').first()).toHaveText('Bayern (8 %)');
 
+  // Story 045: the flat field is prefilled with 2,24, and the hand factor below is the one ADR 0012 gives
+  // when the flat base is 0, so the flat field is set to 0 before the tax checks.
+  await flatInput(page).fill('0');
+
   // Hand case on one fund row, so the projection is a plain multiplication: NAV 40,00 € typed, YTM 100 %,
   // and the file's asOf (31.12.2026) is 731 days before the liquidation of 2028, so the factor is
   // 2^(731/365) = 4,0076034. The figures below are hand values derived from that factor, not read from
@@ -506,6 +511,9 @@ test('032 AC1: a fund row inside the phase shows the hand shares and the hand pu
   await phaseStartInput(page).fill('01.2028');
   await phaseEndInput(page).fill('03.2034');
   await amountInput(page).fill('10000,00');
+  // Story 045: the hand factors below are the pre-tax factors, which the model uses when the flat rate
+  // is 0, so the flat field is set to 0 (its prefilled 2,24 would change the projection).
+  await flatInput(page).fill('0');
 
   const table = fundTable(page);
   const hand: [string, string, string][] = [
@@ -549,6 +557,9 @@ test('032 AC2: the shown parts add up to the shown depot, with the last part tak
   await phaseStartInput(page).fill('01.2029');
   await phaseEndInput(page).fill('12.2030');
   await page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true }).fill('1000,01');
+  // Story 045: the hand parts below are the flat-free parts, which `displayFundParts` returns when the
+  // flat rate is 0 (then no row has a flat figure), so the flat field is set to 0.
+  await flatInput(page).fill('0');
 
   await expect(figure(page, 'Benötigtes Depot für die Phase')).toHaveText(euro('22.676,07'));
 
@@ -704,6 +715,9 @@ test('036 AC1, AC2, AC3: the fund row shows the hand name and ISIN, the course c
     'Hochrechnung je Anteil in Euro',
     'Anteile jetzt kaufen',
     'Kaufpreis heute in Euro',
+    // Story 045 AC4: the new last column names its money with the shorthand, because `Vorabpauschale`
+    // stays on the field's label (UX §2).
+    'Pauschalsteuer über die Haltedauer in Euro',
   ]);
 
   const hand = {
@@ -745,4 +759,165 @@ test('036 AC1, AC2, AC3: the fund row shows the hand name and ISIN, the course c
   for (const header of ['Fondsname', 'ISIN']) {
     await expect(await cellByHeader(table, row, header)).not.toHaveAccessibleDescription(label);
   }
+});
+
+// Story 045 – the flat rate for accumulating funds (§ 18 InvStG), one rate constant over the term,
+// prefilled with 2,24 %. Hand oracles, the tester's own arithmetic on the fixture copy as story 035
+// extended it (asOf 31.12.2026, so the counted years of a fund are 2026 through its fund year − 1): the
+// value at the start of a year is (1 + YTM)^(days/365), days the whole days between asOf and 1.1. of that
+// year and never negative; a year's base is the smaller of that year's increase and that start value ×
+// 2,24 % × whole months / 12, whole months being 1 for 2026 (asOf is in December) and 12 for every later
+// year; the tax is base × NAV × 26,375 %, in Cent:
+//   2029  0,270613 + 89,606062 + 91,846213 = 181,722888 € -> 47,929412 Cent -> 0,48 €
+//   2030  0,340142 + 94,087619 + 96,910248 + 99,825639 = 291,163648 € -> 76,794412 Cent -> 0,77 €
+//   2031  0,414722 + 98,569290 + 102,019215 + 105,599840 + 109,295834 = 415,898900 € -> 109,693335 Cent -> 1,10 €
+//   2032  0,494315 + 103,051073 + 107,173116 + 111,472018 + 115,930898 + 120,568134 = 558,689554 € -> 147,354370 Cent -> 1,47 €
+//   2033  0,578887 + 107,532967 + 112,371951 + 117,442850 + 122,727779 + 128,250529 + 134,021803 = 722,926765 € -> 190,671934 Cent -> 1,91 €
+// The whole list would read 1.132,29 Cent = 11,32 €, which the fund section must not state for a phase
+// that funds only some of the funds (risk 5).
+test('045 AC1: the flat field in the tax block with the copy of UX §2, prefilled 2,24, and nothing counted while the tax is off', async ({
+  page,
+}) => {
+  const taxBlock = page.getByRole('group', { name: 'Steuer auf den Gewinn', exact: true });
+
+  // AC1: the field is the last control of the tax block, prefilled with the value AC1 names, and reads as
+  // a number in its own unit.
+  await expect(
+    taxBlock.getByRole('textbox', { name: 'Vorabpauschale', exact: true }),
+  ).toBeVisible();
+  await expect(flatInput(page)).toHaveValue('2,24');
+  await expect(flatInput(page)).toHaveAttribute('inputmode', 'decimal');
+  await expect(flatInput(page)).not.toBeDisabled();
+
+  // The hint says the rate stays the same over the whole term and counts only in the tax case. The whole
+  // string is asserted in `fieldCopy.test.ts`; here only the two phrases AC1 names, so this test does not
+  // read its oracle from the copy module it checks (P16).
+  await expect(flatInput(page)).toHaveAccessibleDescription(
+    /über die ganze Laufzeit gleich und zählt nur, wenn die Kapitalertragsteuer angehakt ist/,
+  );
+
+  const table = fundTable(page);
+  const fundSection = page.getByRole('region', { name: 'Fondsstaffel', exact: true });
+  const flatCell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Pauschalsteuer über die Haltedauer in Euro');
+
+  // A result must exist for a reason to be named: the initial state has no amount typed, where story 032
+  // lets the dash stand alone. Hand case, hak's example phase 01.2028–03.2034 (the prefilled one), so the
+  // rows inside the phase are 2027 to 2033.
+  await amountInput(page).fill('10000,00');
+
+  // Negative half of the rule: while the Kapitalertragsteuer is off, no flat-rate tax is calculated
+  // anywhere, so every row inside the phase shows the dash with its reason and the section has no sum line.
+  for (const year of ['2027', '2028', '2029', '2030', '2031', '2032', '2033']) {
+    await expect(await flatCell(year), `row ${year}`).toHaveText('– Steuer nicht angehakt');
+  }
+  await expect(fundSection.getByText('Summe der Pauschalsteuer über alle Fonds')).toHaveCount(0);
+
+  // Positive pair of the same rule: the tax on gives row 2031 the hand figure 1,10 € and the section does
+  // state a sum. Row 2031 funds the phase year 2032 of the example phase, so it has a figure.
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).check();
+  await expect(await flatCell('2031')).toHaveText(euro('1,10'));
+  await expect(fundSection.getByText(/^Summe der Pauschalsteuer über alle Fonds: \d/)).toHaveCount(
+    1,
+  );
+});
+
+// The sum line and the column figure are read from the tester's own table above; the hand phase is chosen
+// so that the shown parts are not the whole-list reading (risk 5): phase 01.2030–12.2031 has two funded
+// years, 2030 and 2031, so only rows 2029 and 2030 have a figure.
+test('045 AC4: the flat column shows the hand figure, the fund section states the sum once, and each dash names its reason', async ({
+  page,
+}) => {
+  await phaseStartInput(page).fill('01.2030');
+  await phaseEndInput(page).fill('12.2031');
+  await amountInput(page).fill('10000,00');
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).check();
+
+  const table = fundTable(page);
+  const fundSection = page.getByRole('region', { name: 'Fondsstaffel', exact: true });
+  const flatCell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Pauschalsteuer über die Haltedauer in Euro');
+
+  // Hand figures of the tester's table, in the order the table reads them. Row 2030 is the last part, so
+  // here the money rule and its own rounding give the same Cent (76,794412 -> 77), which is why this test
+  // cannot be moved by the derived-part rule; AC5 reads a case where they differ.
+  await expect(await flatCell('2029')).toHaveText(euro('0,48'));
+  await expect(await flatCell('2030')).toHaveText(euro('0,77'));
+
+  // AC4: the sum the section states once is the sum of the SHOWN parts, 48 + 77 = 125 Cent. It is stated
+  // as a paragraph, never as a `dd`, and it is not the whole-list reading of 11,32 €.
+  await expect(fundSection.getByText('Summe der Pauschalsteuer über alle Fonds')).toHaveText(
+    'Summe der Pauschalsteuer über alle Fonds: 1,25\u00a0€.',
+  );
+
+  // The dashes, one per reason. A row outside the phase keeps story 032's reason.
+  await expect(await flatCell('2028')).toHaveText('– Auflösung vor Phasenbeginn');
+  await expect(await flatCell('2034')).toHaveText('– Auflösung nach Phasenende');
+
+  // A row can show two dashes with two different reasons: a typed YTM of −100 % keeps the purchase
+  // column's reason and names the flat reason here. The three flat reasons are asserted where they are the
+  // only ones; `kein Jahr zählt` cannot be reached in e2e, because the fixture copy's asOf (31.12.2026) is
+  // not inside any fund year, so the tester asserts it in `flat.test.ts` through `purchaseRows`.
+  await fundInput(page, 'ytm', 2030).fill('-100,00');
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2030'), 'Anteile jetzt kaufen'),
+  ).toHaveText('– keine Hochrechnung je Anteil');
+  await expect(await flatCell('2030')).toHaveText('– kein Jahr zahlt Steuer');
+
+  // The order the copy reads: the tax case names every cell, so a row that has a phase reason shows the
+  // tax reason while the checkbox is off.
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).uncheck();
+  await expect(await flatCell('2028')).toHaveText('– Steuer nicht angehakt');
+});
+
+// AC5 reads a case where the derived last part differs from its own rounding: phase 01.2033–12.2034,
+// monthly target 100,01 € = 10.001 Cent, tax 26,375 %, rate 2,24 %. The tester's own arithmetic:
+// ρ′ = 1,2275749139 (row 2032) and 1,3056495265 (row 2033), so F = 18,9661986526 and
+// D = 10.001 × F + cash = 190.018,979029 Cent -> shown depot 190.019 Cent = 1.900,19 €.
+// Parts in the order the table reads them: 97.763 and 147 (row 2032), 91.917 and the rule's value
+// 190.019 − 189.827 = 192 Cent for row 2033, one Cent more than its own rounding (190,671934 -> 191).
+test('045 AC5: the depot includes the yearly payments, the parts of both columns add up to it, and the last part is the total minus the others', async ({
+  page,
+}) => {
+  await page
+    .getByRole('radio', { name: 'Die monatliche Auszahlung ist gegeben, gesucht wird das Depot' })
+    .check();
+  await phaseStartInput(page).fill('01.2033');
+  await phaseEndInput(page).fill('12.2034');
+  await page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true }).fill('100,01');
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).check();
+
+  const table = fundTable(page);
+  const fundSection = page.getByRole('region', { name: 'Fondsstaffel', exact: true });
+  const flatCell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Pauschalsteuer über die Haltedauer in Euro');
+
+  await expect(figure(page, 'Benötigtes Depot für die Phase')).toHaveText(euro('1.900,19'));
+
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2032'), 'Anteile jetzt kaufen'),
+  ).toHaveText('21,25');
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2032'), 'Kaufpreis heute in Euro'),
+  ).toHaveText(euro('977,63'));
+  await expect(await flatCell('2032')).toHaveText(euro('1,47'));
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2033'), 'Anteile jetzt kaufen'),
+  ).toHaveText('19,15');
+  await expect(
+    await cellByHeader(table, rowByHeader(table, '2033'), 'Kaufpreis heute in Euro'),
+  ).toHaveText(euro('919,17'));
+  // The rule's figure, not its own rounding: 192 Cent, one Cent more than 190,671934 would round to.
+  await expect(await flatCell('2033')).toHaveText(euro('1,92'));
+
+  // The shown parts add up to the shown depot, which is what makes the last one the total minus the others.
+  expect(97763 + 147 + 91917 + 192, 'the shown parts, in whole Cent').toBe(190019);
+
+  // The sum line is the sum of the shown parts: 147 + 192 = 339 Cent. A reader adding the column gets this
+  // figure, not the whole-list reading of 11,32 €, because the rows outside the phase show no figure.
+  await expect(fundSection.getByText('Summe der Pauschalsteuer über alle Fonds')).toHaveText(
+    'Summe der Pauschalsteuer über alle Fonds: 3,39\u00a0€.',
+  );
+  await expect(await flatCell('2029')).toHaveText('– Auflösung vor Phasenbeginn');
+  await expect(await flatCell('2035')).toHaveText('– Auflösung nach Phasenende');
 });

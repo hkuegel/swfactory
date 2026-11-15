@@ -250,6 +250,10 @@ is the run that covers the words of this story, because the whole-tree checks in
 the workspace steps ran for `laz` and the platform. The run that publishes is the run of the merge to `main`;
 its id goes below when it exists.
 
+Record, 2026-11-15: the run of the merge commit `b41c14f` is **run 43714838543**, a `push` on `main`,
+`mode publish`, 12 of 12 steps, whole tree, green (verify 6 m 51 s, deploy green, base
+`a878ec1c80a16d9209f3648a942c81be3e430742`). This is the run that published the words of this story.
+
 ### Mutation check
 
 One mutation per rule, run alone on the story's spec, then reverted from a backup made before it; each

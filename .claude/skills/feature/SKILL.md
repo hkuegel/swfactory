@@ -15,9 +15,18 @@ yourself. Track the steps with the task list. After each step, read the story fi
 confirm the agent did its part before moving on. Collect every "Suggested for
 CLAUDE.md" item the agents return — you need them in the retro.
 
-**Model economy:** pass `model: haiku` for regression runs of the `tester` and for
-small doc edits (Decision log entries, status changes, index rows). For follow-ups
-within the same story (review fixes, answers to questions), resume the agent with
+**Model economy:** every agent file has `model: inherit`, so a run uses the session's model
+unless the Agent call passes another. Which models exist depends on the environment:
+
+- **Claude Code** (Anthropic models): pass `model: opus` for `architect` and `reviewer`,
+  `model: haiku` for `tech-writer`, regression runs of the `tester` and small doc edits
+  (Decision log entries, status changes, index rows), and `model: sonnet` for every other
+  run except the `developer`, which inherits.
+- **Any other environment** (e.g. OpenCode with a local model): pass no model. An alias the
+  environment does not have ends the run with an error, which is what killed two runs on
+  2026-11-15; map models per agent in that tool's own configuration instead.
+
+For follow-ups within the same story (review fixes, answers to questions), resume the agent with
 SendMessage instead of starting a new one — it keeps its context. But when the remaining
 work is small and self-contained, prefer a fresh agent: its cost is then measurable (a
 resumed run's tokens are always `n/a`; its tool uses and duration are kept).

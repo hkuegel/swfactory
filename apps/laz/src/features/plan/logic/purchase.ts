@@ -6,10 +6,15 @@
  *
  * The row of the fund table is the fund, and the fund finances the phase year `year + 1`; a fund whose
  * liquidation falls outside the phase has no phase year, so it shows no purchase.
+ *
+ * Story 045 adds the flat part of the same row: the Vorabpauschale of the years the fund is held, read
+ * through `flat.ts` for the same funds `phase.ts` used for `cash`, so the figures in the table and the
+ * depot are the same numbers.
  */
 
 import { monthKeyOf, monthParts } from './fields.ts';
-import type { Fund } from './fund.ts';
+import { FUND_LIST_AS_OF, type Fund } from './fund.ts';
+import { flatBaseFactor, flatTaxMicroEur, flatYears, type FlatRate } from './flat.ts';
 import { monthsInYear, phaseYears, type Phase } from './phase.ts';
 import { payoutPerShareMicroEur, type Tax } from './projection.ts';
 
@@ -19,6 +24,12 @@ import { payoutPerShareMicroEur, type Tax } from './projection.ts';
  * before the phase begins or for a payout per share of 0, where no number may be invented.
  */
 export type PurchaseReason = 'after-phase-end' | 'before-phase-start' | 'no-payout-per-share';
+
+/** Story 045 AC4: the three reasons of the flat column; `fieldCopy.ts` turns them into the copy. */
+export type FlatReason = 'outside-tax-case' | 'no-year-counts' | 'no-year-pays';
+
+/** A row can show two dashes with two different reasons, so the flat column reads its own one. */
+export type FlatRowReason = PurchaseReason | FlatReason;
 
 export interface PurchaseRow {
   readonly fundYear: number;
@@ -32,6 +43,10 @@ export interface PurchaseRow {
   readonly purchaseMicroEur: number | null;
   /** Set only when there is no number. */
   readonly reason: PurchaseReason | null;
+  /** Story 045 AC4: the flat tax of the counted years of this fund, unrounded, or null for a dash. */
+  readonly flatMicroEur: number | null;
+  /** Set only when the flat column shows a dash. */
+  readonly flatReason: FlatRowReason | null;
 }
 
 /** The fund row's phase year: a fund finances the phase year after its liquidation year. */
@@ -40,74 +55,173 @@ export function fundPhaseYear(phase: Phase, fundYear: number): number | null {
   return phaseYears(phase).includes(phaseYear) ? phaseYear : null;
 }
 
+/**
+ * The flat column's reason (AC4), in the order the copy reads it: the tax case first, because AC1 says the
+ * rate counts only there and ux-designer lets that reason name every cell; then story 032's phase-side
+ * reason, because a fund outside the phase is not bought and its money is not part of the depot; then the
+ * two flat reasons. A row can name a flat reason while its purchase columns name another one, so this is
+ * read on its own: a typed YTM of −100 % keeps `keine Hochrechnung je Anteil` in the purchase columns and
+ * names `kein Jahr zahlt Steuer` here.
+ */
+export function flatReasonFor(
+  row: Pick<PurchaseRow, 'phaseYear' | 'reason'>,
+  fund: Fund,
+  flat: FlatRate,
+  tax: Tax,
+  asOf: string,
+): FlatRowReason | null {
+  if (!tax.on) return 'outside-tax-case';
+  if (row.phaseYear === null) return row.reason;
+  if (flatYears(asOf, fund.year).length === 0) return 'no-year-counts';
+  // A year whose increase is not positive pays nothing (AC2), and a rate of 0 pays nothing either, so no
+  // number is invented for this column either.
+  return flatTaxMicroEur(fund, flat, tax, asOf) === 0 ? 'no-year-pays' : null;
+}
+
+/**
+ * The flat column's figure. No number is invented for a dash (the rule story 032 AC3 gives for the
+ * purchase columns, which AC4 of 045 extends to this column), so the part stays null when the reason names
+ * one. `cash` in `phase.ts` sums the same funds, so the parts still add up to the depot: a row that shows a
+ * dash contributes nothing on either side.
+ */
+function withFlatFigure(
+  row: PurchaseRow,
+  fund: Fund,
+  flat: FlatRate,
+  tax: Tax,
+  asOf: string,
+): PurchaseRow {
+  const flatReason = flatReasonFor(row, fund, flat, tax, asOf);
+  return {
+    ...row,
+    flatReason,
+    flatMicroEur: flatReason === null ? flatTaxMicroEur(fund, flat, tax, asOf) : null,
+  };
+}
+
 export function purchaseRows(
   funds: readonly Fund[],
   phase: Phase,
   monthlyCents: number,
   tax: Tax,
+  flat: FlatRate,
+  asOf: string = FUND_LIST_AS_OF,
 ): PurchaseRow[] {
   const startYear = monthParts(monthKeyOf(phase.startMonth)).year;
   return funds.map((fund) => {
     const phaseYear = fundPhaseYear(phase, fund.year);
-    if (phaseYear === null) {
-      return {
-        fundYear: fund.year,
-        phaseYear: null,
-        yearAmountMicroEur: 0,
-        shares: null,
-        purchaseMicroEur: null,
-        reason: fund.year + 1 > startYear ? 'after-phase-end' : 'before-phase-start',
-      };
-    }
+    const row: PurchaseRow = {
+      fundYear: fund.year,
+      phaseYear,
+      yearAmountMicroEur: 0,
+      shares: null,
+      purchaseMicroEur: null,
+      reason:
+        phaseYear === null
+          ? fund.year + 1 > startYear
+            ? 'after-phase-end'
+            : 'before-phase-start'
+          : null,
+      flatMicroEur: null,
+      flatReason: null,
+    };
+    if (phaseYear === null) return withFlatFigure(row, fund, flat, tax, asOf);
+
     const yearAmountMicroEur = monthlyCents * monthsInYear(phase, phaseYear) * 10000;
     // A payout per share of 0 cannot be divided by: no number is invented (AC3). The model reaches it
     // through a typed YTM of −100 %, where the factor is 0.
-    const payoutPerShare = payoutPerShareMicroEur(fund, tax);
+    const payoutPerShare = payoutPerShareMicroEur(
+      fund,
+      tax,
+      flatBaseFactor(fund, flat, asOf),
+      asOf,
+    );
     if (payoutPerShare === 0) {
-      return {
-        fundYear: fund.year,
-        phaseYear,
-        yearAmountMicroEur,
-        shares: null,
-        purchaseMicroEur: null,
-        reason: 'no-payout-per-share',
-      };
+      return withFlatFigure(
+        { ...row, yearAmountMicroEur, reason: 'no-payout-per-share' },
+        fund,
+        flat,
+        tax,
+        asOf,
+      );
     }
     const shares = yearAmountMicroEur / payoutPerShare;
-    return {
-      fundYear: fund.year,
-      phaseYear,
-      yearAmountMicroEur,
-      shares,
-      purchaseMicroEur: shares * fund.navMicroEur,
-      reason: null,
-    };
+    return withFlatFigure(
+      {
+        ...row,
+        yearAmountMicroEur,
+        shares,
+        purchaseMicroEur: shares * fund.navMicroEur,
+      },
+      fund,
+      flat,
+      tax,
+      asOf,
+    );
   });
 }
 
+/** Round once, in the unit of the display (ADR 0012): the single rounding of the money rule. */
+function roundEuroCents(microEur: number): number {
+  return Math.round(microEur / 10000);
+}
+
 /**
- * Cents as shown (ADR 0012, story 032 AC2): rounded once, with the last purchase part derived from the
- * total instead of rounded on its own, so the shown parts add up to the shown depot. `null` for a row
- * without a number. The parts are the parts of the depot, because `Σ shares × NAV = monthly × F`.
+ * Cents as shown (ADR 0012, story 032 AC2, extended by story 045): rounded once, with the last part that
+ * has a figure derived from the shown depot instead of rounded on its own, so the shown parts add up to
+ * the shown depot. The parts are read in the order the table shows them, row by row: the purchase part of
+ * the row, then its flat part. `null` for a part without a figure. The parts are the parts of the depot,
+ * because `Σ (shares × NAV) + Σ flat = monthly × F + cash` (AC5). When no row has a flat figure the result
+ * is identical to story 032's, which is what keeps its hand values.
  */
-export function displayPurchaseCents(
+export interface FundParts {
+  readonly purchaseCents: number | null;
+  readonly flatCents: number | null;
+}
+
+export function displayFundParts(
   rows: readonly PurchaseRow[],
   totalCents: number,
-): readonly (number | null)[] {
-  const parts = rows.filter(
-    (row): row is PurchaseRow & { purchaseMicroEur: number } => row.purchaseMicroEur !== null,
-  );
-  if (parts.length === 0) return rows.map(() => null);
-  const cents = new Map<number, number>();
-  let others = 0;
-  for (const row of parts.slice(0, -1)) {
-    const value = Math.round(row.purchaseMicroEur / 10000);
-    cents.set(row.fundYear, value);
-    others += value;
+): readonly FundParts[] {
+  const parts: FundParts[] = rows.map((row) => ({
+    purchaseCents: row.purchaseMicroEur === null ? null : roundEuroCents(row.purchaseMicroEur),
+    flatCents: row.flatMicroEur === null ? null : roundEuroCents(row.flatMicroEur),
+  }));
+  const shown: { part: FundParts; key: 'purchaseCents' | 'flatCents'; cents: number }[] = [];
+  for (const part of parts) {
+    if (part.purchaseCents !== null) {
+      shown.push({ part, key: 'purchaseCents', cents: part.purchaseCents });
+    }
+    if (part.flatCents !== null) {
+      shown.push({ part, key: 'flatCents', cents: part.flatCents });
+    }
   }
+  if (shown.length === 0) return parts;
+  const total = Math.round(totalCents);
+  const others = shown.slice(0, -1).reduce((sum, entry) => sum + entry.cents, 0);
   // The last part is read through the slice, not through an index, so no undefined value is used.
-  for (const row of parts.slice(-1)) {
-    cents.set(row.fundYear, Math.round(totalCents) - others);
+  for (const entry of shown.slice(-1)) {
+    const derived = total - others;
+    return parts.map((part) =>
+      part === entry.part
+        ? entry.key === 'purchaseCents'
+          ? { ...part, purchaseCents: derived }
+          : { ...part, flatCents: derived }
+        : part,
+    );
   }
-  return rows.map((row) => cents.get(row.fundYear) ?? null);
+  return parts;
+}
+
+/**
+ * The sum the fund section states once (AC4): the sum of the shown flat parts, so a reader adding the
+ * column gets the figure the section names. `null` when no row has a flat figure: nothing is invented for
+ * an empty sum, the display rule ux-designer recorded on 2026-11-15.
+ */
+export function flatPartsSum(parts: readonly FundParts[]): number | null {
+  const shown = parts.filter(
+    (part): part is FundParts & { flatCents: number } => part.flatCents !== null,
+  );
+  if (shown.length === 0) return null;
+  return shown.reduce((sum, part) => sum + part.flatCents, 0);
 }

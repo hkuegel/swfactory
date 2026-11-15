@@ -4,6 +4,7 @@ import {
   amountCopy,
   errorMessage,
   FIELD_COPY,
+  firstInvalidField,
   overrideCopy,
   projectionLabel,
   TAX_COPY,
@@ -67,7 +68,9 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     expect(fieldSpec('amount').max).toBeNull();
     expect(OVERRIDE_SPECS.nav.max).toBeNull();
     // Story 031 removed the percent bound of a typed rate, so no field of the form quotes a range that is
-    // not the rule of its own unit; the fund-row YTM cell keeps the bound a percent means.
+    // not the rule of its own unit; the fund-row YTM cell keeps the bound a percent means. Story 045 adds
+    // the flat field, which is the one field of the form that keeps the bound of a percent (0 to 100 %), so
+    // the copies above are the money fields without it.
     expect(fieldSpec('phaseStart').max).toBeNull();
     expect(OVERRIDE_SPECS.ytm.max).toBe(10000);
   });
@@ -142,8 +145,47 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
       '8 % in Bayern und Baden-Württemberg, 9 % in den anderen Bundesländern; wird nur gerechnet, wenn die Kapitalertragsteuer angehakt ist.',
     );
     expect(TAX_COPY.bundeslandLabel).toBe('Bundesland für die Kirchensteuer');
-    // The copy has no entry for a typed rate: the accessibility tree shows no such control (AC1).
-    expect(Object.keys(FIELD_COPY)).toEqual(['phaseStart', 'phaseEnd', 'amount']);
+    // The copy has no entry for a typed rate: the accessibility tree shows no such control (AC1). Story 045
+    // adds the flat field as the control of the tax block, so the key list gains `flatRate`, last, in the
+    // form order of `FIELD_IDS` (the hand strings of UX §2 are asserted in the story's own test).
+    expect(Object.keys(FIELD_COPY)).toEqual(['phaseStart', 'phaseEnd', 'amount', 'flatRate']);
     expect(Object.keys(FIELD_COPY)).not.toContain('taxRate');
+  });
+
+  it('045 AC1: the copy of the flat field, and the form order that names it last', () => {
+    // Hand strings from UX §2 of the story, written here rather than read from the module (P16). The
+    // bound itself (0 to 10000 hundredths) is asserted in `parseInputs.test.ts`, where the range error
+    // is the assertion the mutation of the bound can move; here only the copy is asserted.
+    expect(FIELD_COPY.flatRate.label).toBe('Vorabpauschale');
+    expect(FIELD_COPY.flatRate.range).toBe('0,00 bis 100,00 %');
+    expect(FIELD_COPY.flatRate.hint).toBe(
+      'Prozentsatz, höchstens 2 Nachkommastellen. Er bleibt über die ganze Laufzeit gleich und zählt nur, wenn die Kapitalertragsteuer angehakt ist; der Depot-Auszug nennt das Vorsteuerpauschale.',
+    );
+    expect(FIELD_COPY.flatRate.formatWord).toBe('keine gültige Zahl');
+    expect(FIELD_COPY.flatRate.unit).toBe('Hundertstel Prozent');
+    // The errors the pattern gives, in the words UX §2 names.
+    expect(errorMessage(FIELD_COPY.flatRate, { kind: 'format' })).toBe(
+      'Vorabpauschale: keine gültige Zahl. Erlaubt: 0,00 bis 100,00 %.',
+    );
+    expect(errorMessage(FIELD_COPY.flatRate, { kind: 'range' })).toBe(
+      'Vorabpauschale: Wert außerhalb des erlaubten Bereichs. Erlaubt: 0,00 bis 100,00 %.',
+    );
+    expect(errorMessage(FIELD_COPY.flatRate, { kind: 'empty' })).toBe(
+      'Vorabpauschale: Wert fehlt. Erlaubt: 0,00 bis 100,00 %.',
+    );
+    // The word `Vorabpauschale` stays on exactly one element, the label (UX §2), so no other copy of the
+    // form repeats it; the colloquial word is named once, inside the hint.
+    for (const [key, copy] of Object.entries(FIELD_COPY)) {
+      if (key !== 'flatRate') expect(copy.label, `copy ${key}`).not.toContain('Vorabpauschale');
+    }
+    // AC1, the form order: `flatRate` is last in `FIELD_IDS`, so a flat error is named only when the
+    // fields before it are valid. Hand order: phaseStart, phaseEnd, amount, flatRate.
+    expect(firstInvalidField({ flatRate: { kind: 'empty' } })).toBe('flatRate');
+    expect(firstInvalidField({ amount: { kind: 'empty' }, flatRate: { kind: 'empty' } })).toBe(
+      'amount',
+    );
+    expect(firstInvalidField({ flatRate: { kind: 'range' }, phaseStart: { kind: 'format' } })).toBe(
+      'phaseStart',
+    );
   });
 });

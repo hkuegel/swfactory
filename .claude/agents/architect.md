@@ -2,7 +2,7 @@
 name: architect
 description: Software architect. Use after a story is ready to produce its technical design (modules, types, data flow, dependencies, risks) and to write ADRs for significant decisions. Also use for questions about structure, dependencies or refactoring direction.
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: opus
+model: inherit
 memory: project
 color: blue
 ---

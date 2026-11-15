@@ -1,5 +1,5 @@
-/** The fields of the form, in the order of the form (UX design §1). Story 031 removed the typed rate: the rates come from the checkboxes. */
-export type FieldId = 'phaseStart' | 'phaseEnd' | 'amount';
+/** The fields of the form, in the order of the form (UX design §1). Story 031 removed the typed rate: the rates come from the checkboxes. Story 045 adds the flat rate as the last control of the tax block, which is what makes this order agree with the Tab order. */
+export type FieldId = 'phaseStart' | 'phaseEnd' | 'amount' | 'flatRate';
 
 /** Which way the app calculates; decides the label and the range of the amount field. */
 export type Direction = 'depot' | 'payout';
@@ -25,8 +25,10 @@ export interface FieldSpec {
   readonly date: boolean;
 }
 
-/** Form order; also the order in which the first invalid field is named. */
-export const FIELD_IDS: readonly FieldId[] = ['phaseStart', 'phaseEnd', 'amount'];
+/** Form order; also the order in which the first invalid field is named. `flatRate` is last: the tax block
+ * renders after the amount field, so its only parsed field is last in the form order whatever UX puts
+ * first inside the block. */
+export const FIELD_IDS: readonly FieldId[] = ['phaseStart', 'phaseEnd', 'amount', 'flatRate'];
 
 /** A whole calendar month as `year * 12 + month`, which is how the phase ranges compare. */
 export function monthKey(year: number, month: number): number {
@@ -54,12 +56,19 @@ export function monthKeyOf(name: string): number {
  * exact-integer bound of that unit (story 030); a phase month has no range (story 033): the 1.1.2027 –
  * 31.12.2034 bound 024 had was not a business rule, because a phase year the fund list cannot fund is
  * already reported as a missing year (024 AC2). Story 031 removed the typed rate field, so no field of
- * the form has a percent bound of its own any more; the fund-row YTM cell keeps -100 % to 100 %. The
- * amount field exists once, with the rule of the chosen direction.
+ * the form has a percent bound of its own any more — the flat rate of story 045 is the exception, the only
+ * field with a percent bound, 0 to 100 % — and the fund-row YTM cell keeps -100 % to 100 %. The amount
+ * field exists once, with the rule of the chosen direction.
  */
 export function fieldSpec(field: FieldId): FieldSpec {
   if (field === 'amount') {
     return { min: 0, max: null, decimals: 2, date: false };
+  }
+  // Story 045: the flat rate keeps the bound that belongs to what a percent means, 0 to 100 %, and its
+  // unit is whole hundredths of a percent (2,24 % is 224). It cannot hold a negative value, so
+  // `TextField` keeps `inputMode="decimal"`: the negative-range rule does not apply to this field.
+  if (field === 'flatRate') {
+    return { min: 0, max: 10000, decimals: 2, date: false };
   }
   return { min: null, max: null, decimals: 0, date: true };
 }

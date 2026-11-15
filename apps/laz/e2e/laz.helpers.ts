@@ -19,6 +19,10 @@ export const phaseEndInput = (page: Page): Locator =>
 export const amountInput = (page: Page): Locator =>
   page.getByLabel('Depot am Anfang der Phase (EUR)', { exact: true });
 
+/** Story 045: the field for the flat rate, read by its label (UX §2), never by position. */
+export const flatInput = (page: Page): Locator =>
+  page.getByLabel('Vorabpauschale', { exact: true });
+
 /** A fund-row override input by its visually hidden label (UX §2), never by cell position. */
 export const fundInput = (page: Page, field: 'nav' | 'ytm', year: number): Locator =>
   page.getByLabel(

@@ -28,23 +28,34 @@ export function dayCount(asOf: string, liquidation: string): number {
 }
 
 /**
- * ρ′ = ρ − r·max(0, ρ − 1), the payout factor per euro invested, where ρ = (1 + ytm)^(d/365). This
- * is `pre-tax − r × max(0, gain)` (review round 1, finding 7): equivalent to `NAV + (1 − r)·gain`
- * for a positive gain, but a negative gain stays untaxed instead of being lifted back to the NAV,
- * so tax ON at r = 0 % still returns exactly the pre-tax projection (AC4). Tax off gives ρ.
+ * ρ′ = ρ − r·max(0, ρ − 1 − flatBaseFactor), the payout factor per euro invested, where
+ * ρ = (1 + ytm)^(d/365). This is `pre-tax − r × max(0, gain)` (review round 1, finding 7): equivalent to
+ * `NAV + (1 − r)·gain` for a positive gain, but a negative gain stays untaxed instead of being lifted
+ * back to the NAV, so tax ON at r = 0 % still returns exactly the pre-tax projection (AC4). Tax off gives
+ * ρ. Story 045 AC3: `flatBaseFactor` is the sum of the flat bases already taxed in the earlier years, so
+ * the tax at liquidation reads the gain minus those bases and no base is taxed twice; with
+ * `flatBaseFactor = 0` this is exactly the value ADR 0012 gives. The base factor comes from `flat.ts`,
+ * which reads the year-start values on this same day count, so the bases are a part of the gain here
+ * (risk 1); `projection.ts` does not import `flat.ts`, so no cycle appears.
  * `asOf` is the file-level asOf of the data file (ADR 0013), the default the app uses.
  */
-export function payoutFactor(fund: Fund, tax: Tax, asOf: string = FUND_LIST_AS_OF): number {
+export function payoutFactor(
+  fund: Fund,
+  tax: Tax,
+  flatBaseFactor: number,
+  asOf: string = FUND_LIST_AS_OF,
+): number {
   const rho = Math.pow(1 + fund.ytmBp / 10000, dayCount(asOf, liquidationDate(fund)) / 365);
   if (!tax.on) return rho;
-  return rho - (tax.rateMillionths / RATE_UNIT) * Math.max(0, rho - 1);
+  return rho - (tax.rateMillionths / RATE_UNIT) * Math.max(0, rho - 1 - flatBaseFactor);
 }
 
-/** Payout per share in micro-euro, unrounded: `navMicroEur · ρ′` (AC1, AC4 of 024). */
+/** Payout per share in micro-euro, unrounded: `navMicroEur · ρ′` (AC1, AC4 of 024, AC3 of 045). */
 export function payoutPerShareMicroEur(
   fund: Fund,
   tax: Tax,
+  flatBaseFactor: number,
   asOf: string = FUND_LIST_AS_OF,
 ): number {
-  return fund.navMicroEur * payoutFactor(fund, tax, asOf);
+  return fund.navMicroEur * payoutFactor(fund, tax, flatBaseFactor, asOf);
 }

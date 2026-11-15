@@ -2,7 +2,7 @@
 name: tech-writer
 description: Technical writer. Use at the end of a story to update README, CHANGELOG and developer docs so they match what was built.
 tools: Read, Write, Edit, Glob, Grep
-model: haiku
+model: inherit
 memory: project
 color: purple
 ---

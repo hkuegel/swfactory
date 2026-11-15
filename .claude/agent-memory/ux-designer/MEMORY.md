@@ -68,3 +68,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - A shared hint that must be the accessible description of several figures: write it once as a paragraph and reference it with aria-describedby from each figure; never put the header text inside the hint, or the header becomes a substring of it (story 024).
 - Two-direction calculator: one radiogroup plus one amount field whose label follows the direction, so no field is ever disabled and no unused field exists (story 024).
 - Empty state needs its own string, separate from the invalid-input string, and field errors appear only after the first edit; keep the empty-state live text empty (story 024).
+- A term an AC quotes as a field label stays on exactly one element, so the table column that shows its money names what it shows with a shorthand instead of repeating the term (story 045).
+- A sum a section states is a paragraph, not a live-region figure; when no row has a figure the section states nothing rather than an invented 0,00 € (story 045).
+- A field that counts only in one mode stays visible and editable, never disabled, and carries that condition in its own hint, because the hint is the field's description and the footnote cannot be it (story 045).
