@@ -17,7 +17,7 @@ The repo has three parts. They are kept apart
   stories and ADRs, and sets its own page heading and title. Today there are three apps:
   [Minesweeper](apps/minesweeper/README.md), `avd`, the
   [Altersvorsorgedepot calculator](apps/avd/README.md), and `laz`, the
-  [Lebensarbeitszeitkonto calculator](apps/laz/README.md).
+  [Bond ladder calculator](apps/laz/README.md) (a Lebensarbeitszeitkonto depot).
 
 ## Getting started
 

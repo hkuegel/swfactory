@@ -182,6 +182,8 @@ export function PlanCalculator() {
 
   return (
     <div className={styles.panel}>
+      {/* Story 044: the first text a reader meets, so the app says what it computes before any control. */}
+      <p className={styles.intro}>{COPY.intro}</p>
       {/* No field error before the first edit (UX design §3). */}
       <PhaseForm
         direction={direction}

@@ -156,7 +156,7 @@ test('AC5: the projection label is the accessible description of the figures, na
   // AC5's claim: the date the page shows is the file-level asOf, read back from the page (risk 2:
   // the app formats it from the parts, and so does this oracle).
   const labelLine = await page
-    .getByRole('region', { name: 'Fondsplan', exact: true })
+    .getByRole('region', { name: 'Fondsstaffel', exact: true })
     .locator('p')
     .filter({ hasText: 'Stand der Daten:' })
     .first()
@@ -166,7 +166,9 @@ test('AC5: the projection label is the accessible description of the figures, na
   expect(shown, 'shown date equals the file-level asOf').toBe(germanDate(fileAsOf));
   expect(shown, 'the displayed date stays the hand value 31.12.2026').toBe('31.12.2026');
 
-  await expect(page.getByRole('region', { name: 'Fondsplan', exact: true })).toContainText(label);
+  await expect(page.getByRole('region', { name: 'Fondsstaffel', exact: true })).toContainText(
+    label,
+  );
 
   // Every projection figure of the column carries the label as its accessible description (AC5).
   for (const fund of fixtureFunds()) {
@@ -304,7 +306,10 @@ test('030 AC1: an amount above the maximum 024 had is accepted and used for the 
   await expect(figure(page, 'Summe der finanzierten Jahre')).toHaveText(euro('280.068,55'));
 
   // The other direction, on the monthly target above 024's maximum.
-  await page.getByRole('radio', { name: 'Auszahlung gegeben, Depot gesucht' }).check();
+  // Story 044: the radio names the whole rule, so the test names the radio by its copy.
+  await page
+    .getByRole('radio', { name: 'Die monatliche Auszahlung ist gegeben, gesucht wird das Depot' })
+    .check();
   const target = page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true });
   await target.fill('12000,00');
   await expect(target).not.toHaveAttribute('aria-invalid');
@@ -362,7 +367,7 @@ test('033 AC1, AC2: a phase outside the fund list keeps every year, the short mo
   await expect(start).toHaveAttribute('aria-invalid', 'true');
   await expect(
     page.getByText(
-      'Phase Beginn (Monat): kein gültiges Datum. Erlaubt: Monat und Jahr, zum Beispiel 01.2028; ein ergänzter Tag muss ein echter Tag dieses Monats sein.',
+      'Erster Monat der Auszahlungsphase: kein gültiges Datum. Erlaubt: Monat und Jahr, zum Beispiel 01.2028; ein ergänzter Tag muss ein echter Tag dieses Monats sein.',
       { exact: true },
     ),
   ).toBeVisible();
@@ -537,7 +542,10 @@ test('032 AC1: a fund row inside the phase shows the hand shares and the hand pu
 test('032 AC2: the shown parts add up to the shown depot, with the last part taken from the total', async ({
   page,
 }) => {
-  await page.getByRole('radio', { name: 'Auszahlung gegeben, Depot gesucht' }).check();
+  // Story 044: the radio names the whole rule, so the test names the radio by its copy.
+  await page
+    .getByRole('radio', { name: 'Die monatliche Auszahlung ist gegeben, gesucht wird das Depot' })
+    .check();
   await phaseStartInput(page).fill('01.2029');
   await phaseEndInput(page).fill('12.2030');
   await page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true }).fill('1000,01');
@@ -726,7 +734,7 @@ test('036 AC1, AC2, AC3: the fund row shows the hand name and ISIN, the course c
   await expect(fundInput(page, 'nav', hand.year)).toHaveValue(hand.kurs);
   const label = `Diese Beträge sind eine Hochrechnung aus YTM und NAV und kein veröffentlichter Marktwert. Stand der Daten: ${germanDate(fixtureAsOf())}.`;
   await expect(
-    page.getByRole('region', { name: 'Fondsplan', exact: true }).locator('p').first(),
+    page.getByRole('region', { name: 'Fondsstaffel', exact: true }).locator('p').first(),
   ).toHaveText(label);
 
   // The figures of the row are still described by the label; the name and the ISIN are not figures, so the

@@ -13,9 +13,9 @@ export async function open(page: Page): Promise<void> {
 }
 
 export const phaseStartInput = (page: Page): Locator =>
-  page.getByLabel('Phase Beginn (Monat)', { exact: true });
+  page.getByLabel('Erster Monat der Auszahlungsphase', { exact: true });
 export const phaseEndInput = (page: Page): Locator =>
-  page.getByLabel('Phase Ende (Monat)', { exact: true });
+  page.getByLabel('Letzter Monat der Auszahlungsphase', { exact: true });
 export const amountInput = (page: Page): Locator =>
   page.getByLabel('Depot am Anfang der Phase (EUR)', { exact: true });
 
@@ -36,7 +36,7 @@ export const liveRegion = (page: Page): Locator => result(page).locator('p[aria-
 export const yearTable = (page: Page): Locator =>
   page.getByRole('region', { name: 'Jahresübersicht', exact: true }).getByRole('table');
 export const fundTable = (page: Page): Locator =>
-  page.getByRole('region', { name: 'Fondsplan', exact: true }).getByRole('table');
+  page.getByRole('region', { name: 'Fondsstaffel', exact: true }).getByRole('table');
 
 /** The `dd` of a `dt` with exactly this text inside `scope`. */
 const valueOf = (scope: Locator, label: string): Locator =>

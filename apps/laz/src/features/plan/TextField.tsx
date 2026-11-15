@@ -27,7 +27,7 @@ export function TextField({
   hiddenLabel,
   onChange,
 }: TextFieldProps) {
-  const hintId = `${inputId}-hint`;
+  const hintId = copy.hint === undefined ? undefined : `${inputId}-hint`;
   const errorId = `${inputId}-error`;
   const markerId = marker === undefined ? undefined : `${inputId}-marker`;
   const description = [hintId, error === undefined ? undefined : errorId, markerId].filter(
@@ -52,9 +52,11 @@ export function TextField({
           onChange(event.target.value);
         }}
       />
-      <p id={hintId} className={styles.hint}>
-        {copy.hint}
-      </p>
+      {copy.hint !== undefined && (
+        <p id={hintId} className={styles.hint}>
+          {copy.hint}
+        </p>
+      )}
       {markerId !== undefined && (
         <p id={markerId} className={styles.marker}>
           {marker}

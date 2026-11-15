@@ -37,6 +37,13 @@ All notable changes to this project are documented here, following
   the NAV, and the parts add up to the shown depot because the last part is taken from the shown total, which can
   differ from the separately rounded last part by a cent. The two new columns are in the fund table only, shares
   have two decimals, and a fund outside the phase shows the dash with the reason named in the cell (#032).
+- `laz` is named `Bond ladder` in the page title and in the app shell, which names the model the app shows: one
+  fund per year, each fund liquidated in December, the money of a fund paying the phase year after it. The app id,
+  the folder, the package name and the published path stay `laz`. The screen explains itself: an intro before the
+  form says what the app calculates, the direction group names what is given and what is searched, and the phase
+  labels name the first and the last month as a sentence. The rule the fund table printed in every input cell is
+  printed once, as the footnote below the table, and no cell repeats it; each input keeps its own label of field
+  and year, and the override marker is still the description of its own input (#044).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).

@@ -33,9 +33,18 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     expect(overrideCopy('nav', 2028).range).toBe(
       `0 € oder mehr, höchstens 6 Nachkommastellen, ${MICRO}`,
     );
-    expect(overrideCopy('nav', 2028).hint).toBe(
-      'Wert aus der Fondsliste; eigener Wert, höchstens 6 Nachkommastellen; der Wert muss eine ganze Anzahl Micro-Euro sein.',
+    // Story 044: a cell has no hint of its own; the rule the cells share is the section's footnote,
+    // written once (hand string from the AC of 044).
+    expect(overrideCopy('nav', 2028).hint).toBeUndefined();
+    expect(COPY.fundFootnote).toBe(
+      'Die Werte in den Kurs- und YTM-Zellen stammen aus der Fondsliste und können überschrieben ' +
+        'werden; ein überschriebener Wert wird markiert und die Hochrechnung rechnet mit ihm. Kurs: ' +
+        'höchstens 6 Nachkommastellen, der Wert muss eine ganze Anzahl Micro-Euro sein. YTM: ' +
+        'höchstens 2 Nachkommastellen.',
     );
+    // The footnote names both units, so it is the rule of the column, not of one row.
+    expect(COPY.fundFootnote).toContain('Kurs');
+    expect(COPY.fundFootnote).toContain('YTM');
   });
 
   it('the copy quotes no maximum amount; the number it quotes is the bound of the unit (025 defect pattern)', () => {
@@ -48,7 +57,8 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
       overrideCopy('nav', 2028),
     ];
     for (const copy of copies) {
-      const quoted = `${copy.hint} ${copy.range}`;
+      // A copy without a hint (story 044: a table cell) is checked through its rule alone.
+      const quoted = [copy.hint, copy.range].filter((part) => part !== undefined).join(' ');
       expect(quoted).not.toMatch(/200\.000|10\.000|20\.000/u);
       const digits = (quoted.match(/bis ([\d.]+) /u) ?? [])[1] ?? '';
       expect(digits.replace(/\./g, '')).toBe(MAX_EXACT_UNITS);
@@ -94,14 +104,21 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     expect(FIELD_COPY.phaseStart.range).toBe(
       'Monat und Jahr, zum Beispiel 01.2028; ein ergänzter Tag muss ein echter Tag dieses Monats sein',
     );
+    // Story 044: the label says what the field means, so the hint is only what to type.
+    expect(FIELD_COPY.phaseStart.label).toBe('Erster Monat der Auszahlungsphase');
+    expect(FIELD_COPY.phaseEnd.label).toBe('Letzter Monat der Auszahlungsphase');
     expect(FIELD_COPY.phaseStart.hint).toBe(
-      'Erster Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 01.2028; ein Tag kann ergänzt werden.',
+      'Format MM.JJJJ, zum Beispiel 01.2028; ein Tag kann ergänzt werden.',
     );
     expect(FIELD_COPY.phaseEnd.hint).toBe(
-      'Letzter Monat der Auszahlungsphase; Format MM.JJJJ, zum Beispiel 03.2034; ein Tag kann ergänzt werden; muss nach dem Beginn liegen.',
+      'Format MM.JJJJ, zum Beispiel 03.2034; ein Tag kann ergänzt werden; muss nach dem Beginn liegen.',
     );
+    // Story 044: the error quotes the label it is given, so it cannot disagree with the label.
     expect(errorMessage(FIELD_COPY.phaseEnd, { kind: 'format' })).toBe(
-      'Phase Ende (Monat): kein gültiges Datum. Erlaubt: Monat und Jahr, zum Beispiel 03.2034; ein ergänzter Tag muss ein echter Tag dieses Monats sein.',
+      'Letzter Monat der Auszahlungsphase: kein gültiges Datum. Erlaubt: Monat und Jahr, zum Beispiel 03.2034; ein ergänzter Tag muss ein echter Tag dieses Monats sein.',
+    );
+    expect(errorMessage(FIELD_COPY.phaseEnd, { kind: 'endBeforeStart', start: '2034-03' })).toBe(
+      'Letzter Monat der Auszahlungsphase: muss nach dem Beginn liegen (März 2034). Erlaubt: ein Monat ab dem Beginn.',
     );
     // Without a range in the spec the copy cannot quote one: the phase fields have no bounds, and story 031
     // removed the field for a typed rate, so no field of the form has a percent bound.
@@ -110,7 +127,7 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
       expect(fieldSpec(field).max).toBeNull();
     }
     for (const copy of [FIELD_COPY.phaseStart, FIELD_COPY.phaseEnd]) {
-      expect(`${copy.hint} ${copy.range}`).not.toMatch(/2027|2035|TT\.MM\.JJJJ/u);
+      expect(`${copy.hint ?? ''} ${copy.range}`).not.toMatch(/2027|2035|TT\.MM\.JJJJ/u);
     }
   });
 
