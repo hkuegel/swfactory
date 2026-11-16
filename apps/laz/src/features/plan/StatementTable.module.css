@@ -1,4 +1,4 @@
-/* One row per phase year (story 024, UX §1, §5). Only the wrapper scrolls sideways, never the page. */
+/* One row per calendar year (story 048; story 024, UX §1, §5). Only the wrapper scrolls sideways, never the page. */
 .section {
   min-width: 0;
 }
@@ -14,12 +14,8 @@
   outline-offset: -2px;
 }
 
-/* Story 047: thirteen columns, the widest cells are the reason cells, so the table cannot read as
-   one grid inside the viewport. The tester's probe measured at 320 px and at 375 px: the content
-   minimum is 1534 px, 2119 px or more with a reason cell. A floor below that cannot bind, so the
-   rule is dropped and the columns carry the width: the table is never narrower than its content,
-   the scroller scrolls sideways while the page does not, and the year column stays sticky. The
-   design's starting value 1200 px was never a measured number, so it is not kept here. */
+/* Story 048: up to twelve columns, none of them text: the table is never narrower than its content, the
+   scroller scrolls sideways while the page does not, and the year column stays sticky on narrow screens. */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -63,29 +59,11 @@
   font-weight: 400;
 }
 
-/* The row whose year is funded is separated from the missing-year row by a border, not by colour. */
-.table tbody tr:last-child th,
-.table tbody tr:last-child td {
-  border-top: 1px solid var(--color-edge);
-  border-bottom: 0;
-  font-weight: 700;
-}
-
 .footnote {
   margin: var(--space-2) 0 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
-}
-
-/* A dash with its reason in the two parked columns (story 046 AC4). The reason is copy text, longer than a
-   figure, so these cells wrap while the figure columns stay nowrap; the muted colour is the one the footnote
-   and the paragraphs of the section already use (the same pair in tokens.test.ts's PAIRS). The cell keeps the
-   column's alignment, so a row can be read left to right. */
-.reason {
-  color: var(--color-text-muted);
-  white-space: normal;
-  overflow-wrap: anywhere;
 }
 
 /* Narrow: the year column stays in view while the rest scrolls (UX §5). */

@@ -25,9 +25,9 @@
 
 .table {
   width: 100%;
-  /* Story 036 added the name and the ISIN columns; the name is the widest value in the table, so the
-     minimum grew with them. Only the wrapper scrolls (UX §5). */
-  min-width: 760px;
+  /* Story 048 added the way to the gain (twelve columns), so the minimum grew again; the figures stay on one
+     line and the cells that name a reason wrap. Only the wrapper scrolls (UX §5). */
+  min-width: 1500px;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
@@ -72,7 +72,7 @@
    read left like the row header instead of like a figure, and nothing is formatted for them. */
 .identity {
   text-align: left;
-  overflow-wrap: anywhere;
+  min-width: 9rem;
 }
 
 /* Story 044: the shared rule of the input cells, read once below the table (the same rule as the year
@@ -96,7 +96,7 @@
 /* The last column carries the projection; its figures are the ones the label describes (AC5). */
 .table .figure {
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 /* Story 032 AC3: the reason a fund shows no purchase belongs to the dash it explains, so it reads in the
@@ -106,6 +106,10 @@
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   overflow-wrap: anywhere;
+}
+
+.table .reason {
+  white-space: normal;
 }
 
 /* Below 600 px the projection label and the rows stack; the inputs fill their cell. */

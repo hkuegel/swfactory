@@ -148,6 +148,8 @@ Euro`: the base of each counted year is the value at the start of that year time
 
 ### Changed
 
+- laz: an account statement per calendar year replaces the year table; the fund table shows the way
+  to the gain and the result block a check line that adds up to 0,00 € (#048).
 - `laz`: the money fields have no invented cap. A value is refused only when it is negative, has more
   decimals than its unit, or exceeds the largest integer a calculation can hold exactly; the field copy
   names the rule of the unit instead of quoting a maximum amount (#030).
@@ -248,6 +250,9 @@ Euro`: the base of each counted year is the value at the start of that year time
 
 ### Fixed
 
+- laz: the Kirchensteuer lowers the Kapitalertragsteuer by § 32d EStG (27,82 % effective with 8 %
+  instead of 28,375 %), and the Vorabpauschale tax is reserved for the whole holding instead of one
+  share, which had raised the monthly payout (#048).
 - Minesweeper's 3D view loads again in production builds, such as the GitHub Pages site. The
   3D palette accepts the short colour notation that the CSS minifier produces (`#fff`). The
   Pages smoke test also runs app-owned checks and opens 3D on the published build (#020).

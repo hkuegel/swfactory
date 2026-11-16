@@ -3,7 +3,6 @@
  * same strings.
  */
 
-import type { Fund } from './logic/fund.ts';
 import {
   FIELD_IDS,
   MAX_EXACT_UNITS,
@@ -12,8 +11,7 @@ import {
   type OverrideField,
 } from './logic/fields.ts';
 import type { FieldError } from './logic/parseInputs.ts';
-import type { CashflowColumn, CashflowReason, FlatRowReason } from './logic/cashflow.ts';
-import type { ParkReason, ParkTaxReason } from './logic/phase.ts';
+import type { FlowColumn } from './logic/ledger.ts';
 import type { PurchaseReason } from './logic/purchase.ts';
 import { formatDate, formatMonth } from './logic/format.ts';
 
@@ -102,11 +100,12 @@ export const FIELD_COPY: Readonly<Record<FieldId, FieldCopy>> = {
 export const TAX_COPY = {
   legend: 'Steuer auf den Gewinn',
   kstLabel: 'Kapitalertragsteuer (25 %)',
-  kstHint:
-    'Der Solzzuschlag von 5,5 % auf die Kapitalertragsteuer ist enthalten, das sind 26,375 % auf den Gewinn.',
+  /** Story 048 AC1: the effective rate is derived from the tax function and passed in, so the hint can't drift from it. */
+  kstHint: (rate: string): string =>
+    `Der Solzzuschlag von 5,5 % auf die Kapitalertragsteuer ist enthalten, sind das mit den gewählten Einstellungen ${rate} auf den Gewinn.`,
   kistLabel: 'Kirchensteuer auf die Kapitalertragsteuer',
   kistHint:
-    '8 % in Bayern und Baden-Württemberg, 9 % in den anderen Bundesländern; wird nur gerechnet, wenn die Kapitalertragsteuer angehakt ist.',
+    '8 % in Bayern und Baden-Württemberg, 9 % in den anderen Bundesländern; sie mindert die Kapitalertragsteuer (§ 32d EStG) und wird nur gerechnet, wenn die Kapitalertragsteuer angehakt ist.',
   bundeslandLabel: 'Bundesland für die Kirchensteuer',
 } as const;
 
@@ -191,14 +190,11 @@ export const COPY = {
   payoutRadio: 'Die monatliche Auszahlung ist gegeben, gesucht wird das Depot',
   resultHeading: 'Ergebnis',
   inputsHeading: 'Eingaben',
-  yearsHeading: 'Jahresübersicht',
+  yearsHeading: 'Kontoauszug',
   captionPrefix: 'Auszahlungsphase',
   fundsHeading: 'Fondsstaffel',
-  scrollerLabel: 'Jahresübersicht, horizontal scrollbar',
+  scrollerLabel: 'Kontoauszug, horizontal scrollbar',
   yearColumn: 'Jahr',
-  monthsColumn: 'Monate',
-  fundingColumn: 'Finanzierung durch Fonds',
-  amountColumn: 'Betrag für das Jahr',
   /** Story 036 (hak's gate 1 answers of 2026-11-14): the fund row names the fund it is. The strings are
    * the values as the data file stores them, so no formatting is invented for them. */
   nameColumn: 'Fondsname',
@@ -206,19 +202,17 @@ export const COPY = {
   /** Hak's word for the value the source publishes with its asOf date: "nenne es Kurs wenn es der
    * aktuelle Kurs ist" (2026-11-14). The source publishes no separate market price for these funds, so the
    * column shows the net asset value per share the data file has (story 025). */
-  navColumn: 'Kurs',
+  navColumn: 'Kurs heute',
   ytmColumn: 'YTM in Prozent',
   projectionColumn: 'Hochrechnung je Anteil in Euro',
-  /** Story 032: the two columns of the purchase side. Hak's wording is "wieviel ich von jedem ETF JETZT kaufen muss". */
-  sharesColumn: 'Anteile jetzt kaufen',
-  purchaseColumn: 'Kaufpreis heute in Euro',
-  fundingLabel: (fund: Fund): string =>
-    `Fonds ${String(fund.year)} (Auflösung Dezember ${String(fund.year)})`,
-  missingYear: 'kein Fonds für dieses Jahr',
+  /** Story 048 AC4: the way to the gain, in the order of the calculation. */
+  sharesColumn: 'Anteile',
+  einstandColumn: 'Einstand (Anteile × Kurs)',
+  proceedsGrossColumn: 'Erlös brutto (Anteile × Hochrechnung)',
+  gainColumn: 'Gewinn (Erlös − Einstand)',
+  basesColumn: 'Summe der Vorabpauschalen-Basen',
+  taxableGainColumn: 'Steuerpflichtiger Gewinn (Gewinn − Basen)',
   missingAmount: '–',
-  footnote:
-    'Jedes Phase-Jahr wird durch die Auflösung des Fonds im Dezember des Vorjahres finanziert. ' +
-    'Ein Jahr ohne Fonds wird ohne Betrag gezeigt und zählt nicht in der Summe.',
   marker: 'Wert vom Nutzer eingegeben',
   fundCaption: 'Ein Fonds pro Jahr, aufgelöst am 31. Dezember des Jahres',
   fundScrollerLabel: 'Fondsstaffel, horizontal scrollbar',
@@ -229,68 +223,31 @@ export const COPY = {
     'ein überschriebener Wert wird markiert und die Hochrechnung rechnet mit ihm. Kurs: höchstens 6 ' +
     'Nachkommastellen, der Wert muss eine ganze Anzahl Micro-Euro sein. YTM: höchstens 2 ' +
     'Nachkommastellen.',
-  /** Story 047 AC2: one header per cashflow, in the order the UX design names them. `Vorabpauschale` stays
-   * on the field's label, so the two flat columns use the shorthand, and the first tax column reads AC2's
-   * word `Kapitalsteuer`, not `Kapitalertragsteuer` (the decision of 2026-11-16). `Betrag für das Jahr`, the
-   * interest column and its tax column keep the labels 046 gives them, so the reads of 024 AC2, 033 AC1,
-   * 035 AC1 and 046 AC5 stay where they are. */
-  proceedsColumn: 'Erlös aus der Fondsauflösung in Euro',
-  kstColumn: 'Kapitalsteuer in Euro',
-  solzColumn: 'Solzzuschlag in Euro',
-  kistColumn: 'Kirchensteuer in Euro',
-  flatBeforePhaseColumn: 'Pauschalsteuer für die Jahre vor der Phase in Euro',
-  flatForYearColumn: 'Pauschalsteuer für das Phase-Jahr in Euro',
-  payoutColumn: 'Auszahlung in Euro',
-  /** The three facts AC4 names, stated once in the fund section. */
-  flatFacts:
-    'Die Pauschalsteuer für ein Jahr wird am ersten Werktag des nächsten Jahres gezahlt (für 2026: ' +
-    '4.1.2027). Das Jahr der Auflösung zählt nicht. Das Geld kommt vom Verrechnungskonto, der Wert des ' +
-    'Fonds wird dadurch nicht kleiner.',
-  /** The one sentence that names what the searched depot includes (AC5); it states the rule the result
-   * figure follows, so it is read in the fund section, not in the result block. */
-  flatDepotNote:
-    'Das Depot, das die App sucht, enthält die jährlichen Pauschalsteuer-Zahlungen; eine negative ' +
-    'monatliche Auszahlung wird als negative Zahl gezeigt.',
-  /** Story 046 AC4: the two new columns of the year table, read by their header text (CLAUDE.md). */
-  parkColumn: 'Zinsen über das Phase-Jahr in Euro',
-  parkTaxColumn: 'Steuer auf die Zinsen in Euro',
-  /** Story 047 AC3: one sum line per money column, as paragraph text below the table, never a `dd`.
-   * `{label}` is the column's header text as the copy names it and `{wert}` is `formatEuro` of the figures
-   * shown in that column, so a reader adding a column gets the figure the section states. A line is shown
-   * only when that column has a figure (nothing is invented for an empty sum, the display rule 045 records).
-   * The two lines 046 gave the interest columns are replaced by this one base string. */
-  columnSumLine: (label: string, wert: string): string => `Summe ${label}: ${wert}.`,
-  /** The two totals the year section states once (AC3): over the tax columns, and over the columns that are
-   * money of the year. Both are the sum of the shown figures. */
-  taxTotalLine: (wert: string): string => `Summe der Steuer über die Phase-Jahre: ${wert}.`,
-  cashTotalLine: (wert: string): string => `Summe des Gelds der Phase-Jahre: ${wert}.`,
-  /** The line below the table that names which figures a reader adds, so the payout column is not added twice. */
-  readerLine:
-    'Das Geld eines Jahres: die Steuer-Spalten der Auflösung, Betrag für das Jahr und die Zinsen.',
-  payoutCheck:
-    'Dasselbe Geld: die Auszahlung plus die Steuer. Die Auszahlung wird nicht noch einmal addiert.',
-  netNote: 'Das Netto der Zinsen ist die Differenz aus der Zinsenspalte und ihrer Steuerspalte.',
-  /** The two statements the design marks for hak's confirmation (wordings, the arithmetic does not depend on
-   * the second). */
-  flatNote:
-    'Die Pauschalsteuer-Spalten sind Depotteile aus anderen Jahren und zählen nicht zum Geld des Jahres.',
-  parkedNote:
-    'Der Betrag für das Jahr ist das Geld, das am Anfang des Jahres da war, kein Zufluss.',
-  /** The year section's line for a fund whose sale year is not a phase year, stated once with its reason
-   * (answer 12); it reads the reason map, so the string is written once. `{wert}` is `formatEuro` of the
-   * shown figure, and the line is shown only for a fund that has a figure. */
-  flatNoRowLine: (fundYear: number, wert: string): string =>
-    `Fonds ${String(fundYear)}: ${wert} (${cashflowReasonText('sale-year-not-a-phase-year')}).`,
-  /** The rules AC4 names, stated once in the year section below the table, not in the fund section. A copy
-   * has no `hint` of its own, so this is paragraph text. */
-  parkFacts:
-    'Die Zinsen werden einfach gerechnet, auf dem Geld, das bis zur Auszahlung wartet; innerhalb eines ' +
-    'Jahres werden die Zinsen nicht verzinst. Die Steuer auf die Zinsen wird am Zufluss gerechnet, und das ' +
-    'Jahr des Zuflusses ist das Phase-Jahr.',
+  /** Story 048 AC3: the headers of the account statement, in the order of the table. */
+  startColumn: 'Kontostand am Anfang',
+  endColumn: 'Kontostand am Ende',
+  /** The one fact the statement states below the table. */
+  statementNote:
+    'Die Steuer der Vorabpauschale eines Jahres wird am ersten Werktag des nächsten Jahres gezahlt, ' +
+    'das Jahr der Auflösung zählt nicht; das Geld kommt von der Reserve im Depot. Ausgaben stehen mit Minus. ' +
+    'Der Rundungsrest steht in der letzten Auszahlung.',
+  /** Story 048 AC5: the depot as the Einstand of all funds plus the cash reserve, and the check line. */
+  depotParts: (einstand: string, reserve: string, depot: string): string =>
+    `Einstand aller Fonds ${einstand} + Reserve für die Vorabpauschale ${reserve} = Depot ${depot}`,
+  checkLine: (parts: {
+    depot: string;
+    purchase: string;
+    proceeds: string;
+    taxes: string;
+    interest: string;
+    payout: string;
+  }): string =>
+    `Prüfung: Depot ${parts.depot} − Kauf ${parts.purchase} + Erlöse ${parts.proceeds} − alle Steuern ` +
+    `${parts.taxes} + Zinsen ${parts.interest} − Auszahlungen ${parts.payout} = 0,00 €.`,
   emptyResult: 'Noch kein Ergebnis: bitte Phase und Betrag ausfüllen.',
   invalidResult: 'Kein Ergebnis möglich. Bitte die markierten Felder korrigieren.',
   noFundingYear: 'Kein Ergebnis möglich: die Phase hat kein Jahr mit einem Fonds.',
-  sumFigures: 'Summe der finanzierten Jahre',
+  depotFigure: 'Aufteilung des Depots',
   figure: (direction: Direction): string =>
     direction === 'depot' ? 'Maximale monatliche Auszahlung' : 'Benötigtes Depot für die Phase',
 } as const;
@@ -307,100 +264,30 @@ export function purchaseReasonText(reason: PurchaseReason): string {
   return 'keine Hochrechnung je Anteil';
 }
 
-/** The one string the tax-off dash reads in every tax column (hak's gate 1 answer of 2026-11-16: the same
- * answer reads in every tax column), so the flat map, the interest tax map and the table's map read it
- * through this constant instead of writing it again (P32). */
-const TAX_OFF_TEXT = 'Steuer nicht angehakt';
+/** The one string the tax-off dash reads in the fund table (hak's gate 1 answer of 2026-11-16). */
+export const TAX_OFF_TEXT = 'Steuer nicht angehakt';
 
-/**
- * The flat column's dash (story 045 AC4). The three new reasons are the copy of UX §2; a phase-side reason
- * keeps the string of story 032, because a row outside the phase names the same thing in both columns. A
- * row can show two dashes with two different reasons, so this reads the flat column's own one.
- */
-export function flatReasonText(reason: FlatRowReason): string {
-  if (reason === 'outside-tax-case') return TAX_OFF_TEXT;
-  if (reason === 'no-year-counts') return 'kein Jahr zählt (nur das Auflösungsjahr)';
-  if (reason === 'no-year-pays') return 'kein Jahr zahlt Steuer';
-  return purchaseReasonText(reason);
-}
-
-/**
- * The interest column's dash (story 046 AC4), in the first-match-wins order the design gives: `option-off`,
- * `no-funding-fund` (story 024's existing `COPY.missingYear`, the same text the funding cell already reads
- * for a phase year without a fund), `no-money-to-park`, `no-rate`. The three phase-side strings of story 032
- * are not read here: a year row shows a funding fund or `COPY.missingYear`, so it cannot carry a phase-side
- * reason — those strings belong to `purchaseReasonText` of the fund table. The tester reads each dash as the
- * full line text of its cell.
- */
-export function parkReasonText(reason: ParkReason): string {
-  if (reason === 'option-off') return 'Geld wird nicht geparkt (Option aus)';
-  if (reason === 'no-funding-fund') return COPY.missingYear;
-  if (reason === 'no-money-to-park') return 'kein Geld zum Parken (Wert nicht positiv)';
-  return 'kein Zinssatz';
-}
-
-/** The tax column's dash (story 046 AC4): the tax case first, because there is no tax without interest, then
- * the interest column's reasons in the same order. A row can show two dashes with two different reasons, so
- * each column reads its own one. */
-export function parkTaxReasonText(reason: ParkTaxReason): string {
-  if (reason === 'outside-tax-case') return TAX_OFF_TEXT;
-  return parkReasonText(reason);
-}
-
-/**
- * The dash of a cashflow column (story 047 AC4), read through the maps that already have the strings: the
- * three phase-side strings stay `purchaseReasonText`'s, the flat reasons stay `flatReasonText`'s, the
- * parking reasons stay `parkReasonText`'s. Only the three new strings are written here, and the line for a
- * fund whose sale year is not a phase year reads the same string through `COPY.flatNoRowLine`, because it
- * never reads in a cell.
- */
-export function cashflowReasonText(reason: CashflowReason): string {
-  switch (reason) {
-    case 'kist-off':
-      return 'Kirchensteuer nicht angehakt';
-    case 'no-positive-gain':
-      return 'kein Gewinn, darauf keine Steuer';
-    case 'sale-year-not-a-phase-year':
-      return 'Auflösung in einem Jahr, das kein Phase-Jahr ist';
-    case 'outside-tax-case':
-      return TAX_OFF_TEXT;
-    case 'no-year-counts':
-    case 'no-year-pays':
-      return flatReasonText(reason);
-    case 'no-funding-fund':
-      return COPY.missingYear;
-    case 'option-off':
-    case 'no-money-to-park':
-    case 'no-rate':
-      return parkReasonText(reason);
-    default:
-      return purchaseReasonText(reason);
-  }
-}
-
-/** The header text of one column, as the copy names it, so a sum line and a cell name the same column. */
-export function columnLabel(column: CashflowColumn): string {
+/** The header text of one statement column (story 048 AC3). */
+export function columnLabel(column: FlowColumn): string {
   switch (column) {
+    case 'purchase':
+      return 'Kauf der Fonds';
+    case 'flat':
+      return 'Vorabpauschale (Steuer)';
     case 'proceeds':
-      return COPY.proceedsColumn;
-    case 'kst':
-      return COPY.kstColumn;
-    case 'solz':
-      return COPY.solzColumn;
+      return 'Erlös aus Auflösung (brutto)';
+    case 'kapESt':
+      return 'Kapitalertragsteuer';
+    case 'soli':
+      return 'Solidaritätszuschlag';
     case 'kist':
-      return COPY.kistColumn;
-    case 'flatBeforePhase':
-      return COPY.flatBeforePhaseColumn;
-    case 'flatForYear':
-      return COPY.flatForYearColumn;
-    case 'payout':
-      return COPY.payoutColumn;
-    case 'parked':
-      return COPY.amountColumn;
+      return 'Kirchensteuer';
     case 'interest':
-      return COPY.parkColumn;
+      return 'Zinsen Tagesgeld';
     case 'interestTax':
-      return COPY.parkTaxColumn;
+      return 'Steuer auf Zinsen';
+    case 'payout':
+      return 'Auszahlungen';
   }
 }
 
@@ -413,8 +300,8 @@ export function projectionLabel(asOf: string): string {
 }
 
 /** Live region wording (UX §4). */
-export function liveText(direction: Direction, figure: string, sum: string): string {
-  return `${COPY.figure(direction)}: ${figure}. Summe der finanzierten Jahre: ${sum}.`;
+export function liveText(direction: Direction, figure: string): string {
+  return `${COPY.figure(direction)}: ${figure}.`;
 }
 
 export function invalidLiveText(label: string): string {

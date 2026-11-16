@@ -46,17 +46,16 @@ export const result = (page: Page): Locator =>
   page.getByRole('region', { name: 'Ergebnis', exact: true });
 
 /**
- * Story 046: the year section itself, so the two paragraphs AC4 names are read inside their own region and
- * never through a page-wide text query (story 045's rule). The scroller inside it has its own name
- * (`Jahresübersicht, horizontal scrollbar`), so this helper and the table helper never select the same
- * element.
+ * Story 048: the account statement's section, read inside its own region. The scroller inside it has its
+ * own name (`Kontoauszug, horizontal scrollbar`), so this helper and the table helper never select the
+ * same element.
  */
-export const yearRegion = (page: Page): Locator =>
-  page.getByRole('region', { name: 'Jahresübersicht', exact: true });
+export const statementRegion = (page: Page): Locator =>
+  page.getByRole('region', { name: 'Kontoauszug', exact: true });
 
 /** The visually hidden polite live region inside "Ergebnis" (UX §4). */
 export const liveRegion = (page: Page): Locator => result(page).locator('p[aria-live]');
-export const yearTable = (page: Page): Locator => yearRegion(page).getByRole('table');
+export const statementTable = (page: Page): Locator => statementRegion(page).getByRole('table');
 export const fundTable = (page: Page): Locator =>
   page.getByRole('region', { name: 'Fondsstaffel', exact: true }).getByRole('table');
 
@@ -121,3 +120,51 @@ export const germanDate = (iso: string): string => {
   const [year = 0, month = 0, day = 0] = iso.split('-').map(Number);
   return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${String(year)}`;
 };
+
+/** Story 048: a money cell as whole Cent (`-1.234,56 €` is -123456, the dash is 0), parsed by string, not by float. */
+export function toCents(text: string): number {
+  const cleaned = text.replace(/\s|€/g, '');
+  if (cleaned === '–' || cleaned === '') return 0;
+  const negative = cleaned.startsWith('-');
+  const [whole = '0', fraction = '00'] = cleaned.replace(/^-/, '').replace(/\./g, '').split(',');
+  return (negative ? -1 : 1) * (Number(whole) * 100 + Number(fraction.padEnd(2, '0')));
+}
+
+export interface StatementRead {
+  readonly headers: string[];
+  /** One entry per row: the year and the cells by header text, in Cent. */
+  readonly rows: { year: string; cells: Record<string, number> }[];
+}
+
+/** The whole statement read from the page: headers by text, cells by the header they sit under. */
+export async function readStatement(page: Page): Promise<StatementRead> {
+  const table = statementTable(page);
+  const headers = (await table.getByRole('columnheader').allInnerTexts()).map((h) => h.trim());
+  const rows: StatementRead['rows'] = [];
+  for (const row of await table.locator('tbody tr').all()) {
+    const texts = await row.locator('th, td').allInnerTexts();
+    const cells: Record<string, number> = {};
+    headers.forEach((header, index) => {
+      if (index > 0) cells[header] = toCents(texts[index] ?? '');
+    });
+    rows.push({ year: (texts[0] ?? '').trim(), cells });
+  }
+  return { headers, rows };
+}
+
+/** The payout direction: the monthly payout is given, the depot is looked for. */
+export async function givenPayout(page: Page, euroText: string): Promise<void> {
+  await page
+    .getByRole('radio', { name: 'Die monatliche Auszahlung ist gegeben, gesucht wird das Depot' })
+    .check();
+  await page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true }).fill(euroText);
+}
+
+export const kstBox = (page: Page): Locator =>
+  page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true });
+export const kistBox = (page: Page): Locator =>
+  page.getByRole('checkbox', { name: 'Kirchensteuer auf die Kapitalertragsteuer', exact: true });
+
+/** Every money amount in a text, in Cent. */
+export const toCentsAll = (text: string): number[] =>
+  [...text.matchAll(/-?[\d.]+,\d{2}/g)].map((m) => toCents(m[0]));

@@ -1,10 +1,17 @@
 import { useId } from 'react';
-import { COPY, overrideCopy, projectionLabel, purchaseReasonText } from './fieldCopy.ts';
+import {
+  COPY,
+  overrideCopy,
+  projectionLabel,
+  purchaseReasonText,
+  TAX_OFF_TEXT,
+} from './fieldCopy.ts';
 import { formatEuro, formatEuroMicroEur, formatShares, fundValueText } from './logic/format.ts';
 import type { OverrideField } from './logic/fields.ts';
 import type { Fund } from './logic/fund.ts';
 import type { FieldError } from './logic/parseInputs.ts';
-import type { FundParts, PurchaseRow } from './logic/purchase.ts';
+import type { FundFigures } from './logic/ledger.ts';
+import type { PurchaseRow } from './logic/purchase.ts';
 import { TextField } from './TextField.tsx';
 import styles from './FundTable.module.css';
 
@@ -22,9 +29,11 @@ export interface FundTableProps {
   readonly asOf: string;
   /** Story 032: the purchase side, one row per fund in the order of the table; null while no result is possible. */
   readonly purchases: readonly PurchaseRow[] | null;
-  /** Story 047: the shown purchase parts, read through `cashflow.ts`, because the money rule now reads the
-   * flat parts in the other table; null while no result is possible. */
-  readonly parts: readonly FundParts[] | null;
+  /** Story 048 AC4: the way to the gain per fund, rounded once, the same Einstand and Erlös figures the
+   * statement shows; null while no result is possible, and a null entry for a fund that is not bought. */
+  readonly figures: readonly (FundFigures | null)[] | null;
+  /** The Kapitalertragsteuer checkbox: the bases and the taxable gain exist only in the tax case. */
+  readonly taxOn: boolean;
   readonly onOverrideChange: (field: OverrideField, year: number, raw: string) => void;
 }
 
@@ -37,7 +46,8 @@ export function FundTable({
   markers,
   asOf,
   purchases,
-  parts,
+  figures,
+  taxOn,
   onOverrideChange,
 }: FundTableProps) {
   const headingId = useId();
@@ -66,10 +76,14 @@ export function FundTable({
               <th scope="col">{COPY.navColumn}</th>
               <th scope="col">{COPY.ytmColumn}</th>
               <th scope="col">{COPY.projectionColumn}</th>
-              {/* Story 032: the purchase side of the same model (AC1). Story 047 AC1: no tax figure here and
-                  no flat column; that money is read in the year table. */}
+              {/* Story 048 AC4: the way to the gain, in the order of the calculation. No tax amount here
+                  (047 AC1 holds): the tax of a fund is read in the statement. */}
               <th scope="col">{COPY.sharesColumn}</th>
-              <th scope="col">{COPY.purchaseColumn}</th>
+              <th scope="col">{COPY.einstandColumn}</th>
+              <th scope="col">{COPY.proceedsGrossColumn}</th>
+              <th scope="col">{COPY.gainColumn}</th>
+              <th scope="col">{COPY.basesColumn}</th>
+              <th scope="col">{COPY.taxableGainColumn}</th>
             </tr>
           </thead>
           <tbody>
@@ -78,14 +92,24 @@ export function FundTable({
               const rowErrors = errors.get(fund.year) ?? {};
               const rowMarkers = markers.get(fund.year) ?? {};
               const purchase = purchases?.[index] ?? null;
-              const part = parts?.[index] ?? null;
-              const purchaseCents = part?.purchaseCents ?? null;
+              const figure = figures?.[index] ?? null;
               // AC3: no number is invented for a fund outside the phase or for a payout per share of 0.
               // The cell keeps its dash and names why; while there is no result yet the dash stands alone.
-              const dash = (row: PurchaseRow): string =>
+              const dash = (row: PurchaseRow, taxCase = false): string =>
                 row.reason === null
-                  ? COPY.missingAmount
+                  ? taxCase
+                    ? `${COPY.missingAmount} ${TAX_OFF_TEXT}`
+                    : COPY.missingAmount
                   : `${COPY.missingAmount} ${purchaseReasonText(row.reason)}`;
+              // One cell of the way to the gain: the figure, or the dash with the reason it has none.
+              const cell = (
+                text: (entry: FundFigures) => string | null,
+                taxCase = false,
+              ): string => {
+                if (purchase === null) return COPY.missingAmount;
+                const shown = figure === null ? null : text(figure);
+                return shown === null ? dash(purchase, taxCase) : shown;
+              };
               return (
                 <tr key={fund.year}>
                   <th scope="row">{String(fund.year)}</th>
@@ -116,42 +140,39 @@ export function FundTable({
                       {formatEuroMicroEur(projections.get(fund.year) ?? 0)}
                     </span>
                   </td>
-                  {/* Story 032: the two purchase columns. The projection label stays the accessible
-                      description of the row's figures (024 AC5, 032 AC3). */}
-                  <td>
-                    <span
-                      className={`${styles.figure} ${purchase?.reason ? styles.reason : ''}`}
-                      aria-describedby={labelId}
-                    >
-                      {purchase === null
-                        ? COPY.missingAmount
-                        : purchase.shares === null
-                          ? dash(purchase)
-                          : formatShares(purchase.shares)}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className={`${styles.figure} ${purchase?.reason ? styles.reason : ''}`}
-                      aria-describedby={labelId}
-                    >
-                      {purchase === null
-                        ? COPY.missingAmount
-                        : purchaseCents === null
-                          ? dash(purchase)
-                          : formatEuro(purchaseCents)}
-                    </span>
-                  </td>
+                  {(
+                    [
+                      ['shares', (entry: FundFigures) => formatShares(entry.shares), false],
+                      ['einstand', (entry: FundFigures) => formatEuro(entry.einstandCents), false],
+                      ['proceeds', (entry: FundFigures) => formatEuro(entry.proceedsCents), false],
+                      ['gain', (entry: FundFigures) => formatEuro(entry.gainCents), false],
+                      [
+                        'bases',
+                        (entry: FundFigures) => (taxOn ? formatEuro(entry.basesCents) : null),
+                        true,
+                      ],
+                      [
+                        'taxable',
+                        (entry: FundFigures) => (taxOn ? formatEuro(entry.taxableGainCents) : null),
+                        true,
+                      ],
+                    ] as const
+                  ).map(([key, text, taxCase]) => (
+                    <td key={key}>
+                      <span
+                        className={`${styles.figure} ${purchase?.reason ? styles.reason : ''}`}
+                        aria-describedby={labelId}
+                      >
+                        {cell(text, taxCase)}
+                      </span>
+                    </td>
+                  ))}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {/* Story 047 AC1: the fund section states no sum line any more. The three facts AC4 names and the one
-          sentence about the depot (045 AC4, AC5) stay, then the rule of the input cells (044). */}
-      <p className={styles.footnote}>{COPY.flatFacts}</p>
-      <p className={styles.footnote}>{COPY.flatDepotNote}</p>
       {/* Story 044: the rule the input cells used to repeat in every cell is stated once here, below the
           table. It is not an input's description, so the description of an override cell stays the marker
           alone (024 AC5). */}

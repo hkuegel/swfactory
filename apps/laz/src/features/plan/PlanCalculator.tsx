@@ -3,7 +3,7 @@ import { COPY, fieldLabel, firstInvalidField, invalidLiveText, liveText } from '
 import { FundTable } from './FundTable.tsx';
 import { PhaseForm } from './PhaseForm.tsx';
 import { ResultSummary } from './ResultSummary.tsx';
-import { YearTable } from './YearTable.tsx';
+import { StatementTable } from './StatementTable.tsx';
 import { useSettledValue } from './useSettledValue.ts';
 import {
   OVERRIDE_SPECS,
@@ -13,14 +13,14 @@ import {
   type RawInputs,
 } from './logic/fields.ts';
 import { FUND_LIST, FUND_LIST_AS_OF, effectiveFund, type FundOverride } from './logic/fund.ts';
-import { cashflowRows, type CashflowTable } from './logic/cashflow.ts';
 import { DEPOSIT_OFF, type DepositOption } from './logic/deposit.ts';
 import { formatEuro } from './logic/format.ts';
 import { FLAT_OFF, type FlatRate } from './logic/flat.ts';
 import { parseField, parseInputs, type FieldError, type FieldErrors } from './logic/parseInputs.ts';
-import { buildPlan, type Phase, type Plan } from './logic/phase.ts';
-import { preTaxPerShareMicroEur, type Tax } from './logic/projection.ts';
+import { buildPlan, buildStatement, type Plan, type Statement } from './logic/ledger.ts';
+import type { Phase } from './logic/phase.ts';
 import { purchaseRows, type PurchaseRow } from './logic/purchase.ts';
+import { preTaxPerShareMicroEur, type Tax } from './logic/projection.ts';
 import { DEFAULT_BUNDESLAND, taxFromState, type TaxState } from './logic/tax.ts';
 import styles from './PlanCalculator.module.css';
 
@@ -63,11 +63,10 @@ interface Derived {
   readonly tax: Tax;
   /** Story 046 AC1: the parking option, the switch plus the parsed rate in whole hundredths. */
   readonly deposit: DepositOption;
-  /** Story 032: one purchase row per fund, in the order of the fund table, or null while no result is possible. */
+  /** Story 048: the account statement and the fund figures, or null while no result is possible. */
+  readonly statement: Statement | null;
+  /** One purchase row per fund (the shares, or the reason there are none); null while no result is possible. */
   readonly purchases: readonly PurchaseRow[] | null;
-  /** Story 047: the rows, the parts and the sums as the money rule reads them, or null while no result is
-   * possible. The two tables read the same table, so no figure can disagree between them. */
-  readonly cashflow: CashflowTable | null;
 }
 
 /**
@@ -134,7 +133,7 @@ export function PlanCalculator() {
       : null;
     const plan =
       parsed.ok && phase !== null
-        ? buildPlan(funds, phase, tax, flat, deposit, parsed.inputs.amountCents, direction)
+        ? buildPlan(funds, phase, taxState, flat, deposit, parsed.inputs.amountCents, direction)
         : null;
 
     for (const fund of funds) {
@@ -143,19 +142,16 @@ export function PlanCalculator() {
       projections.set(fund.year, preTaxPerShareMicroEur(fund, FUND_LIST_AS_OF));
     }
 
-    // Story 032: the purchase side of the same model, on the same effective funds and tax state. The
-    // fund table's rows are funds, so a fund row shows the phase year after its liquidation year.
+    // Story 048: one ledger for the result block, the statement and the fund table, so no figure can
+    // disagree between them.
     const purchases =
       plan === null || phase === null
         ? null
         : purchaseRows(funds, phase, plan.monthlyCents, tax, flat, deposit);
-
-    // Story 047: one table for both sections, so the parts, the sums and the two totals are read from the
-    // same figures, and the money rule can name its last part in the reading order.
-    const cashflow =
-      plan === null || phase === null || purchases === null
+    const statement =
+      plan === null || phase === null || purchases === null || plan.fundedYears === 0
         ? null
-        : cashflowRows(plan, phase, taxState, flat, purchases, funds, FUND_LIST_AS_OF);
+        : buildStatement(funds, phase, taxState, flat, deposit, plan, FUND_LIST_AS_OF, purchases);
 
     return {
       errors,
@@ -164,11 +160,11 @@ export function PlanCalculator() {
       projections,
       overrideErrors,
       markers,
-      noFundingYear: plan !== null && plan.fundedYears.length === 0,
+      noFundingYear: plan !== null && plan.fundedYears === 0,
       tax,
       deposit,
+      statement,
       purchases,
-      cashflow,
     };
   }, [raw, direction, taxState, parkOn, overrides]);
 
@@ -179,8 +175,7 @@ export function PlanCalculator() {
     : derived.plan !== null && !derived.noFundingYear
       ? liveText(
           direction,
-          formatEuro(derived.plan.monthlyCents),
-          formatEuro(derived.plan.totalCents),
+          formatEuro(direction === 'depot' ? derived.plan.monthlyCents : derived.plan.depotCents),
         )
       : invalid
         ? invalidLiveText(fieldLabel(firstInvalid, direction))
@@ -237,16 +232,16 @@ export function PlanCalculator() {
       />
       <ResultSummary
         plan={derived.plan}
+        statement={derived.statement}
         invalid={invalid}
         edited={edited}
         noFundingYear={derived.noFundingYear}
         direction={direction}
         liveText={settledLiveText}
       />
-      {/* The year table is removed while any field is invalid (UX §3), and a phase year without a
-         funding fund keeps its row with the missing-year line (AC2). */}
-      {derived.plan !== null && derived.phase !== null && derived.cashflow !== null && (
-        <YearTable cashflow={derived.cashflow} phase={derived.phase} />
+      {/* The statement is removed while any field is invalid (UX §3). */}
+      {derived.statement !== null && derived.phase !== null && (
+        <StatementTable statement={derived.statement} phase={derived.phase} />
       )}
       {/* The Fondsplan stays while a field is invalid (UX §3). */}
       <FundTable
@@ -257,7 +252,8 @@ export function PlanCalculator() {
         markers={derived.markers}
         asOf={FUND_LIST_AS_OF}
         purchases={derived.purchases}
-        parts={derived.cashflow?.fundParts ?? null}
+        figures={derived.statement?.funds ?? null}
+        taxOn={taxState.kstOn}
         onOverrideChange={handleOverride}
       />
     </div>

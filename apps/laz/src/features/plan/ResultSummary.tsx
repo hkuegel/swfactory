@@ -3,12 +3,14 @@ import { ErrorIcon } from './ErrorIcon.tsx';
 import { COPY } from './fieldCopy.ts';
 import { formatEuro } from './logic/format.ts';
 import type { Direction } from './logic/fields.ts';
-import type { Plan } from './logic/phase.ts';
+import type { Plan, Statement } from './logic/ledger.ts';
 import styles from './ResultSummary.module.css';
 
 export interface ResultSummaryProps {
   /** null: nothing usable was typed yet, or a field is invalid (UX design §3). */
   readonly plan: Plan | null;
+  /** The account statement the result block sums up (story 048 AC5), or null while there is none. */
+  readonly statement: Statement | null;
   /** The result area shows the no-result callout while a field is invalid. */
   readonly invalid: boolean;
   /** Before the first edit the result area shows the empty string. */
@@ -23,6 +25,7 @@ export interface ResultSummaryProps {
 /** The two figures of the answer (UX design §1, §2). */
 export function ResultSummary({
   plan,
+  statement,
   invalid,
   edited,
   noFundingYear,
@@ -60,12 +63,32 @@ export function ResultSummary({
                   : formatEuro(plan.depotCents)}
               </dd>
             </div>
-            <div className={styles.figure}>
-              <dt>{COPY.sumFigures}</dt>
-              <dd>{formatEuro(plan.totalCents)}</dd>
-            </div>
+            {statement !== null && (
+              <div className={styles.figure}>
+                <dt>{COPY.depotFigure}</dt>
+                <dd>
+                  {COPY.depotParts(
+                    formatEuro(statement.check.purchase),
+                    formatEuro(statement.reserveCents),
+                    formatEuro(statement.depotCents),
+                  )}
+                </dd>
+              </div>
+            )}
           </dl>
         )
+      )}
+      {!invalid && !noFundingYear && edited && statement !== null && (
+        <p className={styles.check}>
+          {COPY.checkLine({
+            depot: formatEuro(statement.check.depot),
+            purchase: formatEuro(statement.check.purchase),
+            proceeds: formatEuro(statement.check.proceeds),
+            taxes: formatEuro(statement.check.taxes),
+            interest: formatEuro(statement.check.interest),
+            payout: formatEuro(statement.check.payout),
+          })}
+        </p>
       )}
     </section>
   );

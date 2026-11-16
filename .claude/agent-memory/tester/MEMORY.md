@@ -100,3 +100,6 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - A digit string quoted in the wrong unit is ten times short: `-131,875` is the Cent value, `1.318.750 µ€` is the micro-euro one. Write both figures side by side in a hand comment (story 047, round 3, nit 8).
 - When a header claims a rule never binds on an asserted number, check that number against the rule before repeating the claim; a capped total cannot carry an uncapped-hand header (story 047, round 3, nit 10).
 - Prettier does not reflow comments, so `--check` green does not prove a comment line is ≤100 characters; measure the comment lines separately (story 047, round 3).
+- Rewriting many e2e specs after a table is replaced: add one `readStatement`-style helper (headers by text, cells by header, Cent by string parse) and rewrite tests as one-per-AC; delete the old ones whose element is gone (story 048).
+- In a python edit script never "safety-replace" a common line (`const table = yearTable(page);`) across the file, and cut a test to its real end with `"\n});\n"`, not the first `});` (story 048).
+- Playwright `--reporter=line` prints every test start with its file:line; parse failures with `^\s+\d+\) \[chromium\]` in a mutation runner or every test looks failed (story 048).

@@ -3,7 +3,8 @@ import { CheckboxOption } from './CheckboxOption.tsx';
 import { DEPOSIT_COPY, amountCopy, COPY, FIELD_COPY, TAX_COPY } from './fieldCopy.ts';
 import { FIELD_IDS, type Direction, type FieldId, type RawInputs } from './logic/fields.ts';
 import type { FieldErrors } from './logic/parseInputs.ts';
-import { BUNDESLAENDER, type TaxState } from './logic/tax.ts';
+import { formatPercent } from './logic/format.ts';
+import { BUNDESLAENDER, effectiveRate, type TaxState } from './logic/tax.ts';
 import { TextField } from './TextField.tsx';
 import styles from './PhaseForm.module.css';
 
@@ -103,7 +104,7 @@ export function PhaseForm({
         <CheckboxOption
           checked={tax.kstOn}
           label={TAX_COPY.kstLabel}
-          hint={TAX_COPY.kstHint}
+          hint={TAX_COPY.kstHint(formatPercent(effectiveRate({ ...tax, kstOn: true })))}
           onChange={(checked) => {
             onTax({ ...tax, kstOn: checked });
           }}

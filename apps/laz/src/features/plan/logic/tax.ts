@@ -1,19 +1,14 @@
 /**
- * The statutory rates story 031 uses, in millionths of a percent (1 % = 1 000 000). The unit is chosen
- * because the Solzzuschlag is 5,5 % of 25 % = 1,375 %, which is not a whole basis point, and the money
- * rule forbids float percentages. The rates are the measured facts of 2026-11-13: Kapitalertragsteuer
- * 25 % of the gain; Solzzuschlag 5,5 % of the Kapitalertragsteuer; Kirchensteuer is computed on the
- * Kapitalertragsteuer, not on the gain — 8 % in Bayern and Baden-Württemberg, 9 % in every other
- * Bundesland.
+ * The statutory rates by § 32d Abs. 1 EStG (story 048 AC1): the Kirchensteuer lowers the Kapitalertragsteuer,
+ * so KapESt = amount · 25 % / (1 + 0,25 · k), Soli = 5,5 % of the KapESt and KiSt = k · KapESt, with k = 8 %
+ * (Bayern, Baden-Württemberg) or 9 % (every other Bundesland) and 0 without the church tax. The division by
+ * 1,02 or 1,0225 has no exact integer unit, so values stay unrounded here and are rounded once, when shown.
  */
 
-import type { Tax } from './projection.ts';
+import { RATE_UNIT, type Tax } from './projection.ts';
 
-/** 25 % of the gain, as millionths of a percent. */
-export const KST_MILLIONTHS = 250_000;
-
-/** 5,5 % of the Kapitalertragsteuer, so 1,375 % of the gain. */
-export const SOLZ_ON_KST_MILLIONTHS = 13_750;
+const KAPEST_NOMINAL = 0.25;
+const SOLZ_ON_KAPEST = 0.055;
 
 export interface Bundesland {
   readonly id: string;
@@ -50,21 +45,35 @@ export interface TaxState {
   readonly bundesland: string;
 }
 
-/** Whole percent × the KSt, exact as integers: 8 % of 250 000 is 20 000, 9 % is 22 500. */
-export function churchTaxMillionths(state: TaxState): number {
+/** k: the church tax as a fraction of the KapESt (0,08 or 0,09), 0 outside the tax case or without the checkbox. */
+function churchFraction(state: TaxState): number {
   if (!state.kstOn || !state.kistOn) return 0;
   const land = BUNDESLAENDER.find((entry) => entry.id === state.bundesland);
-  if (land === undefined) return 0;
-  return (KST_MILLIONTHS * land.kistPercent) / 100;
+  return land === undefined ? 0 : land.kistPercent / 100;
 }
 
-/** The rate on the gain the model uses: KSt plus SolZ, plus the church tax when both checkboxes apply. */
-export function effectiveRateMillionths(state: TaxState): number {
-  if (!state.kstOn) return 0;
-  return KST_MILLIONTHS + SOLZ_ON_KST_MILLIONTHS + churchTaxMillionths(state);
+/** The three parts of the tax on one taxable amount, unrounded; all 0 while the KapESt checkbox is off. */
+export interface TaxParts {
+  readonly kapESt: number;
+  readonly soli: number;
+  readonly kist: number;
+}
+
+/** The one tax function: liquidation, Vorabpauschale and interest all read it (story 048 AC1). */
+export function taxParts(amount: number, state: TaxState): TaxParts {
+  if (!state.kstOn) return { kapESt: 0, soli: 0, kist: 0 };
+  const k = churchFraction(state);
+  const kapESt = (amount * KAPEST_NOMINAL) / (1 + KAPEST_NOMINAL * k);
+  return { kapESt, soli: kapESt * SOLZ_ON_KAPEST, kist: kapESt * k };
+}
+
+/** The effective rate on the gain as a fraction (0,263750 / 0,278186 / 0,279951), derived from `taxParts`. */
+export function effectiveRate(state: TaxState): number {
+  const parts = taxParts(1, state);
+  return parts.kapESt + parts.soli + parts.kist;
 }
 
 /** The same rate as the model's `Tax`, so the projection reads one shape. */
 export function taxFromState(state: TaxState): Tax {
-  return { on: state.kstOn, rateMillionths: effectiveRateMillionths(state) };
+  return { on: state.kstOn, rateMillionths: effectiveRate(state) * RATE_UNIT };
 }

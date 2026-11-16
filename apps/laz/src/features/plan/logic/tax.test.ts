@@ -5,9 +5,9 @@ import { payoutPerShareMicroEur } from './projection.ts';
 import {
   BUNDESLAENDER,
   DEFAULT_BUNDESLAND,
-  churchTaxMillionths,
-  effectiveRateMillionths,
+  effectiveRate,
   taxFromState,
+  taxParts,
   type TaxState,
 } from './tax.ts';
 
@@ -31,14 +31,6 @@ function state(kstOn: boolean, kistOn: boolean, bundesland = DEFAULT_BUNDESLAND)
   return { kstOn, kistOn, bundesland };
 }
 
-/** The hand rates, written as percent of the gain: 25 % + 1,375 % SolZ, plus 2 % or 2,25 % church tax. */
-const HAND = {
-  off: 0,
-  kst: 263750,
-  kist8: 283750,
-  kist9: 286250,
-} as const;
-
 /**
  * The flat base factor is 0 here (story 045): the flat field is prefilled with 2,24, so the existing hand
  * values of the tax case are kept by reading the rate as 0 — `ρ′ = ρ − r × max(0, ρ − 1 − 0)`, which is
@@ -46,63 +38,55 @@ const HAND = {
  */
 const FLAT_BASE = 0;
 
-/** Hand payout per share on NAV 40,00 € with the factor 2: 40 × (2 − rate). */
+/** Hand payout per share on NAV 40,00 € with the factor 2: 40 × (2 − rate), the rate by § 32d EStG. */
 const HAND_PAYOUT = {
   off: 80000000,
   kst: 69450000,
-  kist8: 68650000,
-  kist9: 68550000,
+  kist8: 40000000 * (2 - 0.278186274509804),
+  kist9: 40000000 * (2 - 0.279951100244499),
 } as const;
 
-describe('tax (story 031, the statutory rates)', () => {
-  it('AC1: the KSt checkbox is 26,375 % on the gain, and unchecked the result is exactly the pre-tax projection', () => {
-    expect(effectiveRateMillionths(state(false, false))).toBe(HAND.off);
-    expect(effectiveRateMillionths(state(true, false))).toBe(HAND.kst);
+/** The AC1 oracle of story 048, written by hand: a gain of 1.000,00 € in cents, KapESt / Soli / KiSt. */
+const GAIN_MICRO = 1000_000_000;
+
+describe('tax (story 048 AC1, the rates by § 32d EStG)', () => {
+  it('AC1: the hand oracle for a gain of 1.000,00 €, without KiSt, with 8 % and with 9 %', () => {
+    const cents = (state: TaxState) => {
+      const parts = taxParts(GAIN_MICRO / 10000, state);
+      return [parts.kapESt, parts.soli, parts.kist].map((value) => Math.round(value));
+    };
+    // Hand: 250 / 1,02 = 245,098 € (245,10), 5,5 % of it 13,480 € (13,48), 8 % of it 19,608 € (19,61).
+    expect(cents(state(true, false))).toEqual([25000, 1375, 0]);
+    expect(cents(state(true, true, 'bayern'))).toEqual([24510, 1348, 1961]);
+    expect(cents(state(true, true, 'berlin'))).toEqual([24450, 1345, 2200]);
+    // The total, by hand: 263,75 € / 278,19 € / 279,95 €.
+    const total = (s: TaxState) => Math.round((effectiveRate(s) * GAIN_MICRO) / 10000);
+    expect(total(state(true, false))).toBe(26375);
+    expect(total(state(true, true, 'bayern'))).toBe(27819);
+    expect(total(state(true, true, 'berlin'))).toBe(27995);
+    // The church tax lowers the KapESt, so the three parts do not exceed 25 % + 5,5 % of it + k of it.
+    expect(taxParts(1000, state(false, true, 'bayern'))).toEqual({ kapESt: 0, soli: 0, kist: 0 });
+  });
+
+  it('AC1: the same rate taxes the proceeds at liquidation, and the BL select lists 8 % and 9 %', () => {
     for (const [on, payout] of [
       [false, HAND_PAYOUT.off],
       [true, HAND_PAYOUT.kst],
     ] as const) {
       const tax = taxFromState(state(on, false));
-      expect(payoutPerShareMicroEur(HAND_FUND, tax, FLAT_BASE, AS_OF)).toBe(payout);
-      expect(formatEuroMicroEur(payout)).toBe(on ? '69,45\u00a0€' : '80,00\u00a0€');
+      expect(payoutPerShareMicroEur(HAND_FUND, tax, FLAT_BASE, AS_OF)).toBeCloseTo(payout, 3);
+    }
+    expect(formatEuroMicroEur(HAND_PAYOUT.kst)).toBe('69,45\u00a0€');
+    for (const [land, payout] of [
+      ['bayern', HAND_PAYOUT.kist8],
+      ['baden-wuerttemberg', HAND_PAYOUT.kist8],
+      ['berlin', HAND_PAYOUT.kist9],
+    ] as const) {
+      const tax = taxFromState(state(true, true, land));
+      expect(payoutPerShareMicroEur(HAND_FUND, tax, FLAT_BASE, AS_OF)).toBeCloseTo(payout, 3);
     }
     // A checkbox change cannot produce an invalid value, so there is no error state to test here.
     expect(taxFromState(state(false, true))).toEqual({ on: false, rateMillionths: 0 });
-  });
-
-  it('AC2: 8 % for Bayern and Baden-Württemberg, 9 % for every other Bundesland, measured as effective rates', () => {
-    expect(effectiveRateMillionths(state(true, true, 'bayern'))).toBe(HAND.kist8);
-    expect(effectiveRateMillionths(state(true, true, 'baden-wuerttemberg'))).toBe(HAND.kist8);
-    expect(effectiveRateMillionths(state(true, true, 'berlin'))).toBe(HAND.kist9);
-    expect(
-      payoutPerShareMicroEur(
-        HAND_FUND,
-        taxFromState(state(true, true, 'bayern')),
-        FLAT_BASE,
-        AS_OF,
-      ),
-    ).toBe(HAND_PAYOUT.kist8);
-    expect(
-      payoutPerShareMicroEur(
-        HAND_FUND,
-        taxFromState(state(true, true, 'berlin')),
-        FLAT_BASE,
-        AS_OF,
-      ),
-    ).toBe(HAND_PAYOUT.kist9);
-    // The church tax is computed on the KSt, so it is ignored while the KSt checkbox is unchecked.
-    expect(churchTaxMillionths(state(false, true, 'bayern'))).toBe(0);
-    expect(
-      payoutPerShareMicroEur(
-        HAND_FUND,
-        taxFromState(state(false, true, 'bayern')),
-        FLAT_BASE,
-        AS_OF,
-      ),
-    ).toBe(HAND_PAYOUT.off);
-
-    // The select's list: 16 Bundesländer, Bayern first (hak's default of 2026-11-13), each naming the rate
-    // it uses. Hand: two states at 8 %, fourteen at 9 %.
     expect(BUNDESLAENDER.length).toBe(16);
     expect(BUNDESLAENDER[0]?.id).toBe('bayern');
     const eight = BUNDESLAENDER.filter((land) => land.kistPercent === 8).map((land) => land.name);
@@ -114,14 +98,10 @@ describe('tax (story 031, the statutory rates)', () => {
     ).toBe(true);
   });
 
-  it('AC3: the model keeps a hand rate of 100 % as a model-level case, which the form cannot reach any more', () => {
-    // No control can produce 100 %: the checkboxes are on or off, so this stays a hand value.
+  it('AC3: the model keeps a hand rate of 100 % as a model-level case, and a negative gain stays untaxed', () => {
     const hand = { on: true, rateMillionths: 1000000 };
     expect(payoutPerShareMicroEur(HAND_FUND, hand, FLAT_BASE, AS_OF)).toBe(40000000);
-    // A fund whose gain is negative stays untaxed (024 AC4), here with the KSt rate.
     const loss: Fund = { ...HAND_FUND, ytmBp: -100 };
-    // Hand: factor 0,99 for YTM -1 % over exactly one year, so the payout is 40 × 0,99 = 39,60 €
-    // = 39600000 micro-euro and no tax is taken, because the base is max(0, gain).
     expect(payoutPerShareMicroEur(loss, taxFromState(state(true, false)), FLAT_BASE, AS_OF)).toBe(
       39600000,
     );
