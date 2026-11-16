@@ -55,6 +55,12 @@ Jahr`) that stories 024 AC2 and 046 AC5 pin — it stays, so those tests do not 
 the rate 0 the two cells are the same number, which is why the control figures stay. The interest cell shows the
 gross interest and its tax is its own column; the net is the difference of the two cells, not a third number. The
 row's cash total is the year's tax plus `P · m`, which is the same money as `tax parts + parked + grossInterest`.
+That equality holds on the unrounded values, not on the shown figures: `displayYearCents` derives
+the last funded year's parked figure from `plan.totalCents` (`phase.ts` `287`–`292`), so the two
+readings can differ by one Cent on that row. Over 1000 random states the reviewer's run found the
+difference on 67 of the 470 rows with a cash total, every difference exactly one Cent. So the copy
+line can name the figures a reader adds but cannot state the equality as a fact; whether it
+promises it is hak's to say.
 
 The flat columns are depot parts paid in other years (story 045 AC5), so they are not addends of the row's cash
 total; the copy says so, and that statement needs hak's confirmation, as does the wording that the parked column is
@@ -65,10 +71,17 @@ not still held, because its liquidation year never counts (045 AC2). The identit
 column B of the earlier rows equals that fund's `flatTaxMicroEur`. The tax on the deposit interest stays one figure
 (answer 11); its parts are only the parts of the tax on the sale proceeds.
 
-The money rule has one derived part, and the reading order decides which one it is: the fund table's purchase
-parts row by row, then the year table's flat figures row by row (the column of the counted years before the
-phase before the column of this phase year), then the year section's line for a fund whose sale year is not a
-phase year. Within a fund whose figure is split across cells, the last piece is derived from that fund's part.
+The money rule runs **two** derivations, one per base. The shown depot owns the last part
+with a figure in the reading order: the fund table's purchase parts row by row, then the
+year table's flat figures row by row (the counted-years column before the column of this
+phase year), then the year section's line for a fund whose sale year is not a phase year.
+A fund's own part — that fund's figure, rounded once — owns the last piece inside that fund
+when its figure is split across cells. When a fund's last piece is not also the last part
+in the whole order, the rule runs twice for one total. The reviewer's runs of the real
+modules found no case where the two disagreed: 2880 cases (one depot fund), 22000 cases
+(three depot funds, flat 1–500 hundredths, monthly 9000–15000 Cent), and 1000 random
+states where 341 rows had two or more pieces and all 341 added to the shown depot. So this
+is a rule question, not a reachable state, and it is an open point for hak.
 
 ## Consequences
 

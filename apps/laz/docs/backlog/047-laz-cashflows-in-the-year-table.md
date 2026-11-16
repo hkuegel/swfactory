@@ -648,20 +648,33 @@ computed from. The copy names the net as the difference between the interest cel
 off the tax cells are dashes and `net` is the interest, so `payout = parked + interest`. With the parking option off
 or the rate 0 the interest cells are dashes, `net` is 0 and `payout = parked`, which is exactly 024 AC2's rule.
 
-**The derived part, named per identity** (the money rule allows exactly one):
+**The derived part, named per identity** (the money rule allows one derived part per base):
 
 - the tax identity: the last part **with a figure** in the reading order is derived from the row's tax total — the
   Kirchensteuer while its checkbox is on, and the Solzzuschlag when the church tax is a dash, because a dash has no
   figure to derive. The Solzzuschlag is never derived from its own base (its base is the KSt), and the tax on the
   interest is one figure, not a part (answer 11), so it is not a candidate;
 - the depot identity: the last flat figure in the reading order is derived from the shown depot;
-- `payout = parked + netInterest`: **no derived part**, because `P·m` is a whole number of Cent (no rounding can
-  absorb a difference) and `parked` is the single rounding the fund table already uses. The tester reports a row
-  where `parked + net` does not add to `P·m` as the rounding coupling, not as the rule.
+- `payout = parked + netInterest`: **no derived part**, because `P·m` is a whole
+  number of Cent (no rounding can absorb a difference) and `parked` is the single
+  rounding the fund table already uses. The tester reports a row where `parked + net`
+  does not add to `P·m` as the rounding coupling, not as the rule. The exception is the
+  last funded year: `displayYearCents` derives that row's `parked` from `plan.totalCents`
+  (`phase.ts` `287`–`292`), so there `parked` is a derived part and `taxTotal + payout`
+  can differ from `cashTotalCents` by one Cent. The tester's row 2033 is that case
+  (`118.837` against its own rounding `118.836`), and the reviewer's own run prints it as
+  tax `116`, payout `3755`, parked `3754`, cash `3870`. Over `1000` random states the
+  reviewer's run read `taxTotal + payout` not equal to `cashTotalCents` on `67` of the
+  `470` rows that have a cash total, every difference exactly one Cent. So the identity
+  holds on the unrounded values and not on the shown figures; the copy line `payoutCheck`
+  (`fieldCopy.ts` `270`) cannot state it as an equality, only as which figures the reader
+  adds. Whether the reader line promises the equality is hak's to say, and it is an open
+  point for gate 2.
 
-The tester therefore pins the row where `tax parts + parked + grossInterest` equals the cash total and where the
-derived flat part differs from its own rounding (`purchase.test.ts` `279`–`281`), and pins the same row's
-`parked + net = P·m` from its own arithmetic (AC3).
+The tester therefore pins the row where the shown figures the reader adds equal the cash total, and
+where the derived flat part differs from its own rounding (`purchase.test.ts` `211` and
+`393`–`397`), and pins the same row's `parked + net = P·m` from its own arithmetic (AC3) on the
+unrounded values, not as an equality of the two shown readings (the exception above).
 
 One worked row, computed here with the design's own arithmetic (not a measurement, nothing was run): the monthly
 money `P = 100,000,000 µ€` (`100,00 €`, the value `deposit.test.ts` uses), `12` phase months, the deposit at `2,50 %`
@@ -735,12 +748,23 @@ sale year is not a phase year has no row, so its figure is stated once in the ye
 
 ### The money rule across the two tables
 
-The money rule has one derived part, and the reading order decides which figure it is:
+The money rule runs **two** derivations, one per base, and the design names both bases:
 
-1. **Depot parts** (045 AC5, read across two tables now): the fund table's purchase parts row by row, then the
-   year table's flat figures row by row (column A before column B), then the year section's line for a fund
-   whose sale year is not a phase year. The last part with a figure in that order is derived from the shown
-   depot; within a fund whose figure is split across cells, the last piece is derived from that fund's part.
+1. **Depot parts** (045 AC5, read across two tables now): the fund table's purchase parts row by
+   row, then the year table's flat figures row by row (column A before column B), then the year
+   section's line for a fund whose sale year is not a phase year. Each base owns its own figure:
+   the **shown depot** owns the last part with a figure in that whole order
+   (`cashflow.ts` `476`–`482`), and a **fund's own part** (that fund's figure, rounded once) owns
+   the last piece inside that fund when its figure is split across cells
+   (`cashflow.ts` `462`–`475`). When a fund's last piece is not also the last part in the whole
+   order, both derivations run on two different figures, and the money rule as 032 AC2 words it
+   allows one derived part per total. Whether the rule may run both is hak's to say: this is an
+   open point for gate 2, not a code change. On the reviewer's run of the real modules the two
+   never disagreed: `2880` cases (one depot fund), `22000` cases (three depot funds, flat `1`–`500`
+   hundredths, monthly `9000`–`15000` Cent), and `1000` random states where `341` rows had two or
+   more pieces and all `341` added to the shown depot. So the risk is a rule question, not a
+   reachable state. In `purchase.test.ts` the fund-level piece cannot move (its own rounding is
+   also `115`), and the part that moves is fund 2030's line, `76` against `77`.
 2. **Tax parts**: the row's tax total is rounded once (`taxFromState` on the same base), and the last part **with a
    figure** in the reading order of the split is derived from it — the Kirchensteuer while its checkbox is on, the
    Solzzuschlag when the church tax is a dash (its own base is the KSt, so it is never derived from a base), and the
@@ -756,18 +780,18 @@ The money rule has one derived part, and the reading order decides which figure 
 
 **Facts on disk (the committed pins, read in this pass)** — these must not move (AC6):
 
-| File                                                  | Pin                                                                                                                                                                |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `flat.test.ts` `70`, `93`                             | `590800` µ€ (the base `2,24 €` at `224` bp, tax `26,375 %`)                                                                                                        |
-| `flat.test.ts` `109`, `110`, `125`                    | `1211140` = `0,5908 €` + `0,62034 €`; `4153278.335913`; `112,80 €`                                                                                                 |
-| `flat.test.ts` `24`, `51`                             | the base `1,12 €` → `295.400` µ€, the cap does not bind                                                                                                            |
-| `purchase.test.ts` `141`–`155`                        | parts `108054` / `103184` / `97774` Cent plus the flat group `77` / `110` / `146` (the depot `309345`), `flatPartsSum` `333`                                       |
-| `purchase.test.ts` `279`–`281`                        | `147,354370` Cent, its own rounding `147`, the rule's value `148`: the derived part differs from its own rounding here, so the rule can move                       |
-| `projection.test.ts` `84`, `93`                       | `45,96 €` for the fixture row 2030 at `25 %`, on the test's own `FLAT_BASE`                                                                                        |
-| `deposit.test.ts` `77`                                | `11,9640625 €`                                                                                                                                                     |
-| `phase.test.ts` `211`–`219`, `224`–`236`, `241`–`252` | `F = 89,089035488581`, `K = 1,206414022241`, `878.826,214663 Cent`; `1.804,98 €`; `76,698488 + 109,693335 + 147,354370 = 333,842117 Cent`, `-1,095384` → `-0,01 €` |
-| `tax.ts` `13`, `16`, `27`–`42`, `45`                  | `KST_MILLIONTHS 250000`, `SOLZ_ON_KST_MILLIONTHS 13750` (5,5 % of the KSt), `8` for Bayern and Baden-Württemberg, `9` elsewhere, `DEFAULT_BUNDESLAND 'bayern'`     |
-| `fieldCopy.ts` `289`                                  | `Steuer nicht angehakt`                                                                                                                                            |
+| File                                                  | Pin                                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `flat.test.ts` `70`, `93`                             | `590800` µ€ (the base `2,24 €` at `224` bp, tax `26,375 %`)                                                                                                                                                                                                                                                                                 |
+| `flat.test.ts` `109`, `110`, `125`                    | `1211140` = `0,5908 €` + `0,62034 €`; `4153278.335913`; `112,80 €`                                                                                                                                                                                                                                                                          |
+| `flat.test.ts` `24`, `51`                             | the base `1,12 €` → `295.400` µ€, the cap does not bind                                                                                                                                                                                                                                                                                     |
+| `purchase.test.ts` `162`–`219`                        | parts `108054` / `103184` / `97774` Cent stay. The flat group in the reading order is `110` + `32` + `115` + `76` = `333` (the depot `309345`), `flatPartsSum` `333` stays. The round-1 pins `77` / `110` / `146` are the reading _before_ this story: `146` never appears and `77` reads as `76`, so they are not oracles after the change |
+| `purchase.test.ts` `211`, `393`–`397`                 | the parts the rule can move: fund 2030's line `76` against its own rounding `77`; at `asOf` 2026-12-31 the fund-level derived piece is `115` against its own rounding `116`                                                                                                                                                                 |
+| `projection.test.ts` `84`, `93`                       | `45,96 €` for the fixture row 2030 at `25 %`, on the test's own `FLAT_BASE`                                                                                                                                                                                                                                                                 |
+| `deposit.test.ts` `77`                                | `11,9640625 €`                                                                                                                                                                                                                                                                                                                              |
+| `phase.test.ts` `211`–`219`, `224`–`236`, `241`–`252` | `F = 89,089035488581`, `K = 1,206414022241`, `878.826,214663 Cent`; `1.804,98 €`; `76,698488 + 109,693335 + 147,354370 = 333,842117 Cent`, `-1,095384` → `-0,01 €`                                                                                                                                                                          |
+| `tax.ts` `13`, `16`, `27`–`42`, `45`                  | `KST_MILLIONTHS 250000`, `SOLZ_ON_KST_MILLIONTHS 13750` (5,5 % of the KSt), `8` for Bayern and Baden-Württemberg, `9` elsewhere, `DEFAULT_BUNDESLAND 'bayern'`                                                                                                                                                                              |
+| `fieldCopy.ts` `289`                                  | `Steuer nicht angehakt`                                                                                                                                                                                                                                                                                                                     |
 
 **What this design reproduces with its own arithmetic.** `flat.test.ts` `109` and `51` come out exact on the
 test's own case (`fund(2027, 100000000, 500)`, `asOf` 2025-01-01, flat `224`, tax `26,375 %`): asOf's own year
@@ -780,14 +804,16 @@ add to `1211140` µ€ ✓, and the base `1,12 €` there is `295.400` µ€ ✓
 `241`. The difference of `0,00259 Cent` is inside the sign-safe cap, so this design does not call its number a
 reproduction: the pin stays the oracle, and every new row figure is the tester's own arithmetic.
 
-AC3's row where the derived part differs from its own rounding is the shape `purchase.test.ts` `279`–`281`
-already pins for the depot (`147,354370` → `147` against the rule's value `148`). For the tax parts the base `B`
-read in Cent gives `0,25 B`, `0,01375 B` and `0,02 B` against the total `0,28375 B`, so `B = 315,53634` gives
-`78,884085` → `79`, `4,333125` → `4` and `6,310727` → `6`: their own roundings add to `89` against the total's
-`89,528745` → `90`, so the Kirchensteuer is the derived part and reads `7` Cent. The Solzzuschlag cannot be the
-derived part, because its base is the KSt, and the tax on the deposit interest is one figure, not a part
-(answer 11). After this story the flat group `77` + `110` + `146` reads across the year table's two flat columns
-and must still add to `333` Cent.
+AC3's row where the derived part differs from its own rounding is the shape `purchase.test.ts` `211` already
+pins for the depot: fund 2030's line is `76` against its own rounding `77`. At `asOf` 2026-12-31
+(`purchase.test.ts` `393`–`397`) fund 2032's own figure rounds to `147` Cent, so its last piece (`115`, column A
+of its own row) is derived from that fund's own part and differs from its own rounding `116`. For the tax parts
+the base `B` read in Cent gives `0,25 B`, `0,01375 B` and `0,02 B` against the total `0,28375 B`, so
+`B = 315,53634` gives `78,884085` → `79`, `4,333125` → `4` and `6,310727` → `6`: their own roundings add to `89`
+against the total's `89,528745` → `90`, so the Kirchensteuer is the derived part and reads `7` Cent. The
+Solzzuschlag cannot be the derived part, because its base is the KSt, and the tax on the deposit interest is one
+figure, not a part (answer 11). After this story the flat figures read across the year table's two flat columns
+and add to `333` Cent as `110 + 32 + 115 + 76`; the pre-change group `77 + 110 + 146` is not an oracle any more.
 
 **What is not a measurement, and cannot be here:** no test was run, and the plan modules cannot be imported
 from `node` because `fund.ts` imports `fund-list.json` without an import attribute, so no row of the new shape
@@ -840,6 +866,11 @@ cancelled run or from assumed inputs are not oracles.
   the sum of the figures shown in that column.
 - The year section's two totals, stated once: `taxTotalLine` and `cashTotalLine`, and the line for a fund whose
   sale year is not a phase year, `flatNoRowLine(fundYear, wert)` with its reason.
+- The reader lines: `readerLine` names which figures the reader adds, and `payoutCheck`
+  (`fieldCopy.ts` `270`) cannot state `payout + tax` as the same money as the cash total, because
+  on the last funded year the two readings can differ by one Cent (the exception named above).
+  `netNote` states the net as the difference of the interest cell and its tax column. Whether
+  `payoutCheck` promises the equality is hak's to say.
 - New reason strings: `Kirchensteuer nicht angehakt`, `kein Gewinn, darauf keine Steuer`,
   `Auflösung in einem Jahr, das kein Phase-Jahr ist`. 032's, 045's and 046's reason strings stay and are read
   through `purchaseReasonText` / `flatReasonText` / `parkReasonText` unchanged.
@@ -853,15 +884,23 @@ cancelled run or from assumed inputs are not oracles.
 
 ### Minimal test set (one test per AC at the cheapest level)
 
-| AC  | Test                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Level          |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| AC1 | one `apps/laz/e2e/laz.spec.ts` spec: the fund table read by header text (no tax cell), the fund row's projection figure read as a hand value (the pre-tax figure, not the taxed payout of 024 AC4), the fund section without a tax sum line; the pinned column list is updated inside the same spec                                                                                                                                                                                                        | e2e            |
-| AC2 | one `laz.spec.ts` spec: one row read column by column by header text, the nine cashflow columns in AC2's order                                                                                                                                                                                                                                                                                                                                                                                             | e2e            |
-| AC3 | one `laz.spec.ts` spec: the row's cells added by hand equal the year section's tax total and cash total, each column sum line equals the figures shown in that column, and one row where the derived part differs from its own rounding (so the rule can move); plus the N = 1 row, where the first row is also the last; and the flat identity, column A of a fund's row plus column B of the earlier rows equals that fund's figure, which is only testable because `flat.ts` exports `flatYearMicroEur` | e2e            |
-| AC4 | one `laz.spec.ts` spec: each dash read as the full line text of its cell, one row that shows a figure in one column and a dash with another reason in another                                                                                                                                                                                                                                                                                                                                              | e2e            |
-| AC5 | one unit test `cashflow.test.ts` for the split on the same base (the base factor and the three parts from one hand oracle, not from the module under test); the copy strings and the reason map in `fieldCopy.test.ts`, which AC5 names as the copy test                                                                                                                                                                                                                                                   | unit           |
-| AC6 | no new test: the existing tests of 024, 032, 033, 035, 045 and 046 re-run as the control case at their existing levels; the equality `proceeds = shares × the fund table's figure` is one added assertion inside AC1's spec                                                                                                                                                                                                                                                                                | e2e (existing) |
-| AC7 | no test of its own; it is satisfied by the rewritten tests below, each figure asserted once where its rule lives and once as what the cell shows                                                                                                                                                                                                                                                                                                                                                           | —              |
+| AC  | Test                                                                                                                                                                                                                                                                                                                     | Level          |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| AC1 | one `apps/laz/e2e/laz.spec.ts` spec: the fund table read by header text (no tax cell), the fund row's projection figure read as a hand value (the pre-tax figure, not the taxed payout of 024 AC4), the fund section without a tax sum line; the pinned column list is updated inside the same spec                      | e2e            |
+| AC2 | one `laz.spec.ts` spec: one row read column by column by header text, the nine cashflow columns in AC2's order                                                                                                                                                                                                           | e2e            |
+| AC3 | unit: `cashflow.test.ts` `259`, `276`, `294` — the flat identity, column A of a fund's row plus column B of the earlier rows equals that fund's figure, read through `flatYearMicroEur` from a hand oracle. No e2e can read this, because `flatYearMicroEur` is not shown in the UI                                      | unit           |
+| AC3 | e2e: `laz.spec.ts` `1354` — the row's cells added by hand equal the year section's tax total and cash total, each column sum line equals the figures shown in that column, one row where the derived part differs from its own rounding (so the rule can move), plus the N = 1 row, where the first row is also the last | e2e            |
+| AC4 | one `laz.spec.ts` spec: each dash read as the full line text of its cell, one row that shows a figure in one column and a dash with another reason in another                                                                                                                                                            | e2e            |
+| AC5 | one unit test `cashflow.test.ts` for the split on the same base (the base factor and the three parts from one hand oracle, not from the module under test); the copy strings and the reason map in `fieldCopy.test.ts`, which AC5 names as the copy test                                                                 | unit           |
+| AC6 | unit: `cashflow.test.ts` `333`, `359` — `proceeds = shares × the fund table's figure`, and the tax parts plus the parked money, read from a hand oracle on unrounded values                                                                                                                                              | unit           |
+| AC6 | e2e: the existing tests of 024, 032, 033, 035, 045 and 046 re-run as the control case at their existing levels, and the same equality read inside AC1's spec as what the cell shows                                                                                                                                      | e2e (existing) |
+| AC7 | no test of its own; it is satisfied by the rewritten tests below, each figure asserted once where its rule lives and once as what the cell shows                                                                                                                                                                         | —              |
+
+AC3 and AC6 are read at two levels, because one of their readings cannot be seen in the UI: the
+flat identity is read at unit level through `flatYearMicroEur`, which the app never shows, while
+the sum lines and the two totals are read in the browser. The tester's mapping already separates
+the two readings (its round 2 records this), so no test change is asked for; the table only states
+the level each reading lives at.
 
 AC4's case "a phase year without phase months" cannot be reached: `phaseYears` only yields years with at least
 one phase month, so `monthsInYear` never returns 0 for a row. No reason string and no test are written for it;
@@ -869,18 +908,18 @@ the tester records it as checked, OK, and the AC is read as the cases the app ca
 
 ### Tests that must be rewritten, not deleted
 
-| Place                                                                                                                            | What it asserts today                                                                                                                                                                                     | What it asserts after                                                                                                                                                                                                                                                                                                                               |
-| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e/laz.spec.ts` 716–728 (036 AC1)                                                                                              | the fund table's pinned column list, flat column included                                                                                                                                                 | the same list without the flat column                                                                                                                                                                                                                                                                                                               |
-| `e2e/laz.spec.ts` 809, 821, 827 (045 AC1)                                                                                        | the flat field and that no flat figure appears outside the tax case                                                                                                                                       | the same field; the figure is read in the year table                                                                                                                                                                                                                                                                                                |
-| `e2e/laz.spec.ts` 846, 851–857 (045 AC4)                                                                                         | the fund table's flat cell and the fund section's sum line                                                                                                                                                | the same figure in the year table's column A and its own sum line                                                                                                                                                                                                                                                                                   |
-| `e2e/laz.spec.ts` 900, 910, 918, 921 (045 AC5)                                                                                   | `flatPartsSum` and the depot parts in one table                                                                                                                                                           | the parts read across two tables, the last part derived                                                                                                                                                                                                                                                                                             |
-| `e2e/laz.spec.ts` 1038–1045, 1059–1064 (046 AC4)                                                                                 | the year table's header list and its sum line                                                                                                                                                             | the extended header list, per-column sum lines                                                                                                                                                                                                                                                                                                      |
-| `fieldCopy.test.ts` 251–258, 265–268                                                                                             | the two parking labels, `parkSumLine`, the reason maps                                                                                                                                                    | the labels stay, `columnSumLine` replaces the one sum line, the reason map gains the new reasons                                                                                                                                                                                                                                                    |
-| `purchase.test.ts` `141`–`155`                                                                                                   | `displayFundParts` with a flat group (`108054`/`103184`/`97774` Cent plus the flat group `77`/`110`/`146`, where `146` is the derived part and its own rounding would be `147`), and `flatPartsSum` `333` | `displayFundParts` without the flat group (purchase parts only, same three values); the flat group moves to `cashflow.ts` and keeps `77`/`110`/`146`, read as the pieces of the fund's figure across the two flat columns, with `146` still the derived part; `flatPartsSum` moves with the same value `333`                                        |
-| `projection.test.ts` `84`/`93`                                                                                                   | the fund table's figure `45,96 €` for the fixture row 2030, tax on at 25 %, read through `payoutPerShareMicroEur` with the test's own `FLAT_BASE`                                                         | the fund table's cell now shows the pre-tax figure (`preTaxPerShareMicroEur`), so this test pins that value as its own hand value; the tax `1,32 €` it shows today is read in the year table's KSt column instead. The `FLAT_BASE` the test assumes is not the base `flat.ts` computes, so the two tests must not be read as oracles for each other |
-| `flat.test.ts`, `deposit.test.ts`, `phase.test.ts`                                                                               | the per-year base, the interest and its tax, F and K                                                                                                                                                      | unchanged; `flat.ts`'s new export is read through `cashflow.test.ts`, not through a second oracle                                                                                                                                                                                                                                                   |
-| `e2e/laz.spec.ts` `106`, `125`, `139`, `392`, `691`, `700` and `phase.test.ts` `171`, `173` (024 AC2, 033 AC1, 035 AC1, 046 AC5) | the year table's `Betrag für das Jahr` cell, read by header text, as the money at the start of the year                                                                                                   | **not rewritten**: the parked cell is that column, so the same header text and the same hand values are asserted; only `1042` (046 AC4's header list) gains the new columns                                                                                                                                                                         |
+| Place                                                                                                                            | What it asserts today                                                                                                                                                                                     | What it asserts after                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e/laz.spec.ts` 716–728 (036 AC1)                                                                                              | the fund table's pinned column list, flat column included                                                                                                                                                 | the same list without the flat column                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `e2e/laz.spec.ts` 809, 821, 827 (045 AC1)                                                                                        | the flat field and that no flat figure appears outside the tax case                                                                                                                                       | the same field; the figure is read in the year table                                                                                                                                                                                                                                                                                                                                                                                         |
+| `e2e/laz.spec.ts` 846, 851–857 (045 AC4)                                                                                         | the fund table's flat cell and the fund section's sum line                                                                                                                                                | the same figure in the year table's column A and its own sum line                                                                                                                                                                                                                                                                                                                                                                            |
+| `e2e/laz.spec.ts` 900, 910, 918, 921 (045 AC5)                                                                                   | `flatPartsSum` and the depot parts in one table                                                                                                                                                           | the parts read across two tables, the last part derived                                                                                                                                                                                                                                                                                                                                                                                      |
+| `e2e/laz.spec.ts` 1038–1045, 1059–1064 (046 AC4)                                                                                 | the year table's header list and its sum line                                                                                                                                                             | the extended header list, per-column sum lines                                                                                                                                                                                                                                                                                                                                                                                               |
+| `fieldCopy.test.ts` 251–258, 265–268                                                                                             | the two parking labels, `parkSumLine`, the reason maps                                                                                                                                                    | the labels stay, `columnSumLine` replaces the one sum line, the reason map gains the new reasons                                                                                                                                                                                                                                                                                                                                             |
+| `purchase.test.ts` `162`–`219`                                                                                                   | `displayFundParts` with a flat group (`108054`/`103184`/`97774` Cent plus the flat group `77`/`110`/`146`, where `146` is the derived part and its own rounding would be `147`), and `flatPartsSum` `333` | `displayFundParts` without the flat group (purchase parts only, same three values); the flat figures move to `cashflow.ts` and read as `110` + `32` + `115` + `76` = `333` in the reading order, the last derived from the shown depot; `146` never appears and `77` reads as `76`; `flatPartsSum` moves with the same value `333`. Asserted at unit level, because `flatYearMicroEur` is not shown in the UI and no e2e can read the pieces |
+| `projection.test.ts` `84`/`93`                                                                                                   | the fund table's figure `45,96 €` for the fixture row 2030, tax on at 25 %, read through `payoutPerShareMicroEur` with the test's own `FLAT_BASE`                                                         | the fund table's cell now shows the pre-tax figure (`preTaxPerShareMicroEur`), so this test pins that value as its own hand value; the tax `1,32 €` it shows today is read in the year table's KSt column instead. The `FLAT_BASE` the test assumes is not the base `flat.ts` computes, so the two tests must not be read as oracles for each other                                                                                          |
+| `flat.test.ts`, `deposit.test.ts`, `phase.test.ts`                                                                               | the per-year base, the interest and its tax, F and K                                                                                                                                                      | unchanged; `flat.ts`'s new export is read through `cashflow.test.ts`, not through a second oracle                                                                                                                                                                                                                                                                                                                                            |
+| `e2e/laz.spec.ts` `106`, `125`, `139`, `392`, `691`, `700` and `phase.test.ts` `171`, `173` (024 AC2, 033 AC1, 035 AC1, 046 AC5) | the year table's `Betrag für das Jahr` cell, read by header text, as the money at the start of the year                                                                                                   | **not rewritten**: the parked cell is that column, so the same header text and the same hand values are asserted; only `1042` (046 AC4's header list) gains the new columns                                                                                                                                                                                                                                                                  |
 
 ### Risks, and what cannot be verified
 
@@ -890,9 +929,16 @@ the tester records it as checked, OK, and the AC is read as the cases the app ca
 2. The row identity holds by construction, so AC3 can only be falsified through the rounding rule. Each shared
    expression needs its own hand value (see P32), otherwise a mutation moves two assertions and the tester
    reports a defect that is really the coupling.
-3. Two derivation levels (the depot part and the row's tax part) can claim the same figure. The design fixes the
-   order; if the developer derives per column instead, the row totals stop matching, and the hand values above
-   change. This must be decided before the code is written.
+3. Two derivation levels can claim the same figure, and the code runs both (`cashflow.ts`
+   `462`–`475` and `476`–`482`). The design names both bases: the fund's own part (its single
+   rounding) owns the last piece inside that fund, and the shown depot owns the last part with a
+   figure in the whole reading order. When a fund's last piece is not also the last part in the
+   order, two figures are derived for one total, which is more than the money rule as 032 AC2
+   words it. The reviewer's runs of the real modules found no case where the two disagreed:
+   `2880` cases (one depot fund), `22000` cases (three depot funds, flat `1`–`500` hundredths,
+   monthly `9000`–`15000` Cent), and `1000` random states where `341` rows had two or more
+   pieces and all `341` added to the shown depot. So this is a rule question, not a reachable
+   state, and it goes to hak as an open point.
 4. The parked money is a balance, not a flow, and it is already the year table's existing amount column
    (`Betrag für das Jahr`, `P·m − net`, 046 AC4 and AC5), so AC2's "its own column" is satisfied by naming that
    column, not by adding a duplicate. Its figure is an addend of the row's cash total through
@@ -932,6 +978,17 @@ the parked column is the money already there at the start of the year is UX's wo
 arithmetic and the derivation order; the two must agree on which cells are addends of the year's cash total and
 which are depot parts, and on the wording of the parked column, which is the year table's `Betrag für das Jahr`
 column today and keeps that label unless hak renames it.
+
+**What the table needs, from the tester's run** (the tester's measurement, not the architect's
+own): a throwaway probe at 320 px and 375 px, the same figures at both widths, non-vacuity held
+there — the scroller scrolls sideways, the page does not, the year column stays sticky at the
+scroller's left edge, and every paragraph including the sum lines stays on screen. Min-content
+`1534 / 2119 / 2743` px and the widest one-line row `2554 / 2824 / 2999` px, with two columns
+visible (the sticky year column `61` px plus one). The table therefore needs `1534` px or more,
+and `2119` px or more whenever a reason string is present. So the design's starting `1.200 px`
+never binds at those widths, and the CSS value is the developer's to set from this measurement,
+not a starting value any more. The one-line widths are not a target, because the reason cells are
+meant to wrap: the row is read through the scroller, which is what AC8 asks for.
 
 ## Implementation notes
 
@@ -1114,6 +1171,28 @@ The correction after the follow-up run, on the two sum lines of `e2e/laz.spec.ts
   and `npm run test:e2e -w @swfactory/laz` on port 5174 gives `2 failed` with `64 passed (8.8s)`,
   the same two assertions as before.
 
+Measured width (round 3, from the tester's probe at 320 px and at 375 px):
+
+- `YearTable.module.css` 22 carried the design's starting value 1200 px, which no run had measured.
+  The probe's content minimum is 1534 px, and 2119 px or more when a reason cell is present, so a
+  floor below the measured minimum never binds at a phone width: the table is never narrower than
+  its content, the scroller scrolls sideways while the page does not, and the year column stays
+  sticky. The honest option I chose is to drop the rule, because a floor below the minimum cannot
+  bind and a floor equal to it only repeats what the columns already force. The width is then
+  carried by the columns themselves: `width: 100%` and the figure columns that stay nowrap. The
+  comment above the rule names the measured number and says that the rule is gone, not a value.
+- No assertion moved: no unit test or e2e spec reads `min-width` or the computed style of this
+  table, so the probe stays a throwaway and `check:dist` compares the built CSS without a value of
+  its own. `npx prettier --check` on the touched file: ok.
+- Counts as this round's runner printed them: `node scripts/verify.mjs --mode=full --no-record`,
+  called directly, -> `verify: ok, 12 step(s), 79.7 s`: build, build:pages, check:structure,
+  check:template, format:check, lint, test, test:e2e, test:scripts, typecheck, check:dist and
+  test:pages all ok. `npm test -w @swfactory/laz` -> `Test Files 12 passed (12)`, `Tests 57 passed
+(57)`. `npm run test:e2e` per project: platform `80 passed (6.9s)`, laz `66 passed (6.0s)`,
+  minesweeper `109 passed (53.1s)` with `1 flaky`, a spec of an earlier story, not edited. Findings
+  1, 2 and 3 are the tester's, 4, 5 and 7 the architect's; `payoutCheck`, the two notes and the
+  parked dash stay pending for hak. Status stays `in-review`, nothing committed.
+
 ## Test report
 
 _tester: AC -> test mapping, results, defects found._
@@ -1250,15 +1329,165 @@ whole-month file was recovered from git and every count below was re-taken on th
   `purchase.test.ts` moved to `76 + 110 + 32 + 115 = 333` (the developer's deviation 1,
   recorded as a conflict for gate 2). The tester's own case confirms the identity from its own
   arithmetic: the pieces of fund 2032 add to 147 Cent and the shown parts add to the depot
-  `309.317` Cent.
+  `309.345` Cent (corrected in round 2, review finding 3: `309.317` was not a figure the run
+  printed; `purchase.test.ts:170` and the assertion at `:218` state `309.345`).
 
 Verdict: PASS - no defect found in this run. The two hand values were the tester's own error
 and are re-derived, the church assertion is rewritten as AC3 states it, and all seven ACs read
 green. Status `in-review`, set in the same run as the index row.
 
+### Round 2 (2026-11-16): the three findings the tester owns
+
+Run in the worktree on the story branch, nothing committed, status stays `in-review`. Findings
+4 and 5 are the architect's. The mapping above already separates the two readings: the flat
+identity is read at unit level (`cashflow.test.ts`, the hand base through `flatYearMicroEur`)
+and the sum lines at e2e level (`e2e/laz.spec.ts:1354`), which is what the design table must
+say; no e2e can read `flatYearMicroEur` because it is not shown in the UI.
+
+**Finding 1 (major), `purchase.test.ts:174`.** Corrected, and the runner agrees with the
+reviewer. The comment now states 115 and names fund 2030's line as the part that moves. My own
+oracle, run outside the workspace and not left in the tree, gives the own roundings 77 / 110 /
+147 Cent for funds 2030, 2031 and 2032, and fund 2032's column A piece as 115,40532835 Cent ->
+115, so there the derived value and its own rounding are the same number and that line cannot
+move. The part that moves is fund 2030's line: 309.345 - 309.269 = 76 against its own rounding 77. The runner shows this: the within-fund mutant moves `cashflow.test.ts:269`, `:282`, `:301`
+and `purchase.test.ts:393` (the case at asOf 2026-12-31, where the own rounding is 116) and
+does not move the hand case here; the depot-level rule moves it, at `purchase.test.ts:207`.
+
+**Finding 2 (major), the battery.** Re-run inside a `finally`, three runs per rule, the file
+written back from the backup taken before the run, backups kept outside the repository
+(`Temp/opencode/mut047/backups`), byte-identity asserted against that backup, and the failing
+assertion's file and line printed. Baseline `Tests 57 passed (57)`. Every run below printed
+byte-identical.
+
+- whole-month rule `flat.ts:62` -> 1 failed, `flat.test.ts:60`.
+- the cap `flat.ts:76` -> 16 failed, first lines `cashflow.test.ts:132/160/187/264`.
+- the sign guard `flat.ts:76` -> 2 failed, `flat.test.ts:74` and the new case `flat.test.ts:112`.
+- monthSum `deposit.ts:31` -> 5 failed, `deposit.test.ts:39/78`, `phase.test.ts:236`,
+  `purchase.test.ts:324`.
+- one rounding per figure `format.ts:20` -> 10 failed, `cashflow.test.ts:133/162/186/269`.
+- derived part within a fund `cashflow.ts:474` -> 4 failed, `cashflow.test.ts:269/282/301`,
+  `purchase.test.ts:393`.
+- derived last part in the order `cashflow.ts:481` -> 5 failed, `cashflow.test.ts:282`,
+  `purchase.test.ts:105/153/207`.
+- the rates of 031 `tax.ts:13` -> 12 failed, `cashflow.test.ts:132/160/187/269`.
+- the copy the cells read `fieldCopy.ts:313` -> 2 failed, `fieldCopy.test.ts:275/296`.
+- monthsInYear `phase.ts:77` -> 12 failed, `phase.test.ts:51/106/149/168`.
+
+Survivor list: none - every rule moved at least one assertion in every run, and nothing stayed
+in the tree (`git status` shows only the two test files and this story).
+
+Two things recorded as they happened:
+
+1. The first shape of the within-fund mutant named `piece` outside its own scope, so that run
+   crashed the file: `Test Files 2 failed | 10 passed (12)`, `Tests 2 failed | 46 passed (48)`.
+   A crash is not a falsifier, so the count above is the corrected shape, written as
+   `derived.cents = derived.cents` (the piece keeps its own rounding), re-run three times.
+2. The guard is not a limit. The reviewer's premise holds for the data the tests read through
+   the `vite.config.ts` alias: the fixture copy (asOf 2026-12-31) has 9 fund rows and the
+   committed file (asOf 2026-11-14) has 9, every `ytmBp` positive, so no counted year has a
+   negative increase and `Math.max(0, increase)` cannot bind on the data. It binds only in a
+   case built inside the test, which is now written: `flat.test.ts:112` reads the guard through
+   `flatYearMicroEur` with YTM -5 % on counted year 2025 at asOf 1.1.2025, hand value 0, plus a
+   control on the same asOf (YTM 5 %, 590.800 micro-euro), so the month rule and the cap cannot
+   reach it. With the guard removed the hand value becomes -131.875 micro-euro, so the guard is
+   falsified. Round 1's count of 1 failed came from the hand case at `flat.test.ts:74`, not from
+   a data row. A scratch copy of `logic/` is not the test environment: the unit tests read the
+   fund list through the alias to `fund-list.fixture.json` (asOf 2026-12-31), and a plain
+   scratch run reads the committed file (asOf 2026-11-14), which moves the hand values.
+
+**Finding 3 (minor), story line 1253.** Corrected above to `309.345` Cent, the figure the run
+prints, as `purchase.test.ts:170` and the assertion at `:218` state it.
+
+**The measurement at 320 px and 375 px** - throwaway probe in `e2e/`, run once on port 5174 and
+then deleted; nothing of it stays in the tree. Non-vacuity, checked in every state: the scroller
+scrolls sideways (`scrollWidth` > `clientWidth`), the page itself never scrolls sideways, the
+year column reads `position: sticky` and still sits at the scroller's left edge after the
+scroller is moved 1500 px, and every paragraph of the section - the sum lines included - stays
+inside the viewport (15 / 17 / 20 paragraphs, of which 7 / 9 / 12 are sum lines, all on screen).
+
+Numbers as the probe printed them; the content width does not depend on the viewport:
+
+- figures state (phase 01.2028-12.2033, KSt and church on, parking on at 2,50, flat 2,24, depot
+  120.000,00 €): scroller client 286 px at 320 and 341 px at 375, table 1534 px, one-line row
+  2554 px, two columns visible inside the scroller (the sticky year column, 61 px, plus one).
+- widest reason cells (phase 01.2036-12.2038, no funding fund): client 286 / 341 px, table
+  2743 px, one-line row 2999 px, two columns visible.
+- one dash row (phase 01.2029-12.2029, tax on, church off, parking off): client 286 / 341 px,
+  table 2119 px, one-line row 2824 px, two columns visible.
+
+What the table actually needs: at least 1534 px, and 2119-2743 px whenever a reason string is
+present. The value that would let one row be read left to right is 2554-2999 px, which is not
+what UX wants, because the reason cells are meant to wrap. At 320 px and at 375 px the design's
+1200 px never binds: the content already forces the table past it, so 1200 px is not the number
+for these widths, and the developer has to set 1534 px or more. UX's line "about two money
+columns" at 320 px reads as the year column plus one money column in these three states. The
+number is reported here; the CSS stays the developer's.
+
+Counts as the round-2 runner printed them: `npm test -w @swfactory/laz` ->
+`Test Files 12 passed (12)`, `Tests 57 passed (57)`; `npm run test:e2e -w @swfactory/laz` ->
+`66 passed (5.8s)`, 0 failed, no `flaky` line, port 5174 free before the run. Test files added:
+none; one hand case added inside `flat.test.ts` and one comment corrected in
+`purchase.test.ts`, so the count moved from 56 to 57.
+
+Verdict for the three findings I own: PASS. The comment is corrected and agrees with the runner,
+the battery re-ran inside a `finally` with its backups outside the repository and no survivor,
+the guard now has a hand case that can be falsified, and the figure is corrected. Status stays
+`in-review`.
+
 ## Review
 
 _reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
+
+**Round 1, reviewer 2026-11-16. Verdict: CHANGES_REQUESTED. Checklist version: 3**
+
+| Item | Result  | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1   | pass    | AC1 `FundTable.tsx:25` + `PlanCalculator.tsx:143,155` (parts read through `cashflow.ts`, `preTaxPerShareMicroEur`) and the spec at 1178; AC2 `cashflow.ts:569-584` + `SUM_COLUMNS` + spec 1254; AC3 `taxSplit` 330-365, the two derivations 462-482, `cashTotalCents` 586-596, tests 113/144/167/193/259/276/294 + spec 1354; AC4 `cellFor` 523-559 + spec 1445; AC5 unit tests 113, 144, 167, 193 + `fieldCopy.test.ts`; AC6 `proceedsCents` 565-568 + tests 333, 359; AC7 by the rewritten tests. One exception, recorded: finding 7. |
+| C2   | n.a.    | no network call or pending state in the diff                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| C3   | pass    | `YearTable.tsx` has one `useId`, no effect, no stored derived value                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| C4   | n.a.    | no render loop or imperative controller                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| C5   | n.a.    | no reducer; the logic modules read `asOf` as an argument                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| C6   | n.a.    | no error handling or I/O in the diff                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| S1   | n.a.    | no input or DOM sink touched; cells render copy strings                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| S2   | n.a.    | no config, env or auth code                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| S3   | n.a.    | `package.json` dependencies unchanged                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| S4   | n.a.    | no dev-only code added                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| S5   | n.a.    | no root, template or app script touched                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| T1   | pass    | my own run: `node scripts/verify.mjs --mode=full --no-record`, 12 of 12 steps ok, 83,3 s                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| T2   | fail    | finding 5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| T3   | pass    | hand oracles are the tester's own arithmetic, not read back from the module; no vacuous fixture. One comment states an oracle the module does not give: finding 1                                                                                                                                                                                                                                                                                                                                                                       |
+| T4   | pass    | specs read cells and lines by header text, no Tab counts or coordinates, named after ACs                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| T5   | pass    | the branches (`firstMatch` per column, the two derivations, `flatFundFor`) have tests; the dead guard is recorded as a limit, not as a gap                                                                                                                                                                                                                                                                                                                                                                                              |
+| K1   | fail    | findings 4 and 6; the seven deviations are recorded in Implementation notes                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| K2   | pass    | no `any`, no `!` without a comment, named exports, tests next to the code                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| K3   | pass    | tokens only; the only colour keyword is `CanvasText` in the forced-colours block                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| K4   | pass    | my own `check-structure`: ok, 3 apps, 39 stories, 67 md, 144 factory files                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| K5   | retired | retired in v2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| K6   | pass    | story `in-review`, `docs/backlog/README.md:48` `in-review`                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| K7   | pass    | the entry list is identical in all six commits that touched the story (`e638bca`, `a6fb7cd`, `92a07d0`, `069b3ec`, `c23d435`, `2e30c79`): append only and order intact                                                                                                                                                                                                                                                                                                                                                                  |
+| K8   | n.a.    | nothing user-visible outside the app's own story and the index row                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| K9   | pass    | prettier green inside my own full run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| K10  | n.a.    | no workspace script or tsconfig changed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| K11  | n.a.    | no env variable                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| A1   | pass    | header cells `scope="col"`, row headers `scope="row"`, the scroller is a named focusable region                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| A2   | pass    | the reason cell is text, not colour; forced colours keep the border; the pair is the one in `tokens.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| A3   | n.a.    | no live region, no animation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| A4   | n.a.    | no canvas or render loop                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+
+Findings:
+
+1. `[major] apps/laz/src/features/plan/logic/purchase.test.ts:174` - the comment says fund 2032's column A piece "own rounding would be `117`". Recomputed with the real `flat.ts` (`flatYearMicroEur` for 2027-2030, asOf 1.1.2027, tax 26,375 %, flat 224): `1.154.117,4662135893` µ€ -> `115` Cent, so the asserted `115` is its own rounding and is not a derived part. The comment claims AC3's "row where the derived part differs from its own rounding" here, and in this case the only part that moves is fund 2030's line (`76` against its own rounding `77`). Suggested fix: correct the comment to `115` and name the line as the moved part.
+2. `[major] Test report, "Mutation checks", story lines 1211-1212` - the first run crashed before it restored `flat.ts` and the file was recovered from git, which P34 forbids; the counts below are re-taken on the clean file. I could not reproduce any of them: as a reviewer I may not mutate a tracked file, and a scratch copy of `logic/` is not the test environment, because the unit tests read the fund list through the `vite.config.ts` alias to `fund-list.fixture.json` (asOf 2026-12-31) and a plain scratch run reads the committed file (asOf 2026-11-14), which moves the hand values in `purchase.test.ts`. The mutation table therefore stands on the tester's word, not on my run. One count contradicts my own analysis: the sign guard at `flat.ts:76` is recorded as 1 failed, but on the data the tests read no counted year has a negative increase - 45 rows on the fixture copy and 45 on the committed file, every `ytmBp` positive - so `Math.max(0, increase)` cannot bind anywhere and that mutant prints the baseline, which is the same conclusion the story reaches for `cashflow.ts:491`. Suggested fix: re-run the battery inside a `finally` (P34), record the survivor list next to the counts, and add a hand case with a negative YTM so the guard can be falsified.
+3. `[minor] story line 1253` - "the shown parts add to the depot `309.317` Cent". The parts add to `309.345` Cent, as line 170 and the assertion at `purchase.test.ts:216` state. `309.317` is not a figure the run prints. Suggested fix: correct the number.
+4. `[minor] story line 880` - the design claims the flat group keeps `77`/`110`/`146`, with `146` derived. Under the design's own reading order the group is `110` + `32` + `115` + `76` = `333`, so `146` never appears and `77` becomes `76` (deviation 1 records the same conflict, and my own run of the real modules prints `110, 32, 115, 76`). The design's own line 738 says the money rule has one derived part, but lines 742-743 name two derivations, and the code runs both (`cashflow.ts:462-482`): the last piece of a fund from that fund's part, then the last part in the order from the shown depot. The design row must be corrected, and hak must say which base owns the derived part when a fund's last piece is not the last part in the order. I tested this with the real modules: 2880 cases (one depot fund) and 22000 cases (three depot funds, flat 1-500 hundredths, monthly 9000-15000 Cent) - no case where the two derivations disagree, so the risk is not reachable in the states I could build; the design's risk 3 stays a rule question, not a defect. A second run of 1000 random states on the real modules (one to three depot funds, flat 100-400 hundredths, monthly 8500-21500 Cent) left 341 cases with two or more pieces, and in 341 of them the parts added to the shown depot.
+5. `[minor] T2` - AC3 is asserted at unit level (`cashflow.test.ts:259, 276, 294`) and at e2e level (`laz.spec.ts:1354`), and AC6 at unit level (333, 359) and inside AC1's spec. The design's own table names one level per AC, and its AC3 row asks for the flat identity, which no e2e can read because `flatYearMicroEur` is not shown in the UI. Suggested fix: keep the flat identity as the unit-level case, say so in the design table, and drop the duplicate level.
+6. `[minor] apps/laz/src/features/plan/YearTable.module.css:22` - `min-width: 1200px` is the design's starting value and was never measured: the CSS comment says so, and the implementation notes ask for a measurement at 320 and 375 px. No run measured it, and the reviewer cannot measure it either without a dev server. This is the one checklist item that stays open at gate 2, not a defect.
+7. `[nit] apps/laz/src/features/plan/fieldCopy.ts:270` - `payoutCheck` states `payout + tax` as the same money. That holds only while `parked` is its own rounding: `cashflow.ts:586-596` adds the tax parts plus `parked` plus the gross interest, and `phase.ts:287-292` derives the last funded year's `parked` from `plan.totalCents`, so on that row the two readings can differ by one Cent. The tester's own row 2033 (118.837 against its own rounding 118.836) is the case; my own run gives row 2033 as tax `116`, payout `3755`, parked `3754`, cash `3870`. The design's line 658 ("no derived part") needs the exception named, and hak must say whether the reader line promises the equality. Over the 1000 random states my own run of the real modules read, `taxTotal + payout` is not `cashTotalCents` on 67 of the 470 rows that have a cash total, and every difference is exactly one Cent, which is the case the copy line cannot state as an equality.
+
+The dash rule (AC4) reads correct everywhere else: `cashflow.ts:523-559` returns no reason only for the parked cell of a phase year without a fund, which is deviation 6 and UX item 3, open for hak; a flat cell that reads no fund names `kein Fonds für dieses Jahr` (`cashflow.ts:534-536`), no number is invented for an empty sum (`YearTable.tsx:82-89`), and the thirteen labels are one per element (twelve in `fieldCopy.ts:237-243, 255-256` plus `columnLabel`), with `Vorabpauschale` on the field label only. The copy's `Kapitalsteuer in Euro` is the decision of 2026-11-16, `Pauschalsteuer` is the shorthand the decision allows, the two notes (`flatNote`, `parkedNote`) are pending hak's confirmation, and the German number format is `formatEuro` throughout.
+
+My own counts: `npm test -w @swfactory/laz` -> `Test Files 12 passed (12)`, `Tests 56 passed (56)`.
+`npm run test:e2e -w @swfactory/laz` -> `66 passed (6.3 s)`, 0 failed; port 5174 was busy before my run; no flaky line, so story 034 rule B was not needed (the known flakes did not occur in my run).
 
 ## Explanation
 
