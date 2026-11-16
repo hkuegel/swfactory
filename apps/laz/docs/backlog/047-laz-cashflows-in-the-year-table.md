@@ -1663,11 +1663,149 @@ run was green. The tree was clean at `454746b` before this section, and I change
 
 ## Explanation
 
-_orchestrator: plain-language explanation shown at gate 2, at most 15 lines of at most 120 characters. No code, no
-file names._
+_the section hak reads at gate 2, at most 15 lines of at most 120 characters. No code, no file
+names._
+
+A phase year's money reads as one figure per cashflow, each in its own column, so a row can be read by hand.
+The tax figures leave the fund table; it keeps the pre-tax proceeds per share, and the tax reads in the year table.
+The sale tax is three figures: the capital tax, the surcharge on it, and the church tax on the capital tax.
+The flat rate has two columns, the years before the phase and the phase year; a fund's payment reads on its sale year.
+The monthly payout is the gross amount, the parked money is its own column, the interest is gross, its tax one figure.
+Each column keeps its own sum line, and the year section states the tax total and the cash total once.
+A tax that exists as a rate but does not apply is a dash with its reason, not a zero, and each column names its own.
+Hand example, the tester's own arithmetic: tax total 133,13 €, cash total 7.333,14 €, on the six rows of the fixture.
+The row identity: the pre-tax proceeds minus the tax parts equal the shares times the figure in the fund table.
+With the tax or the parking option off, the control figures of stories 024, 032, 035, 045 and 046 do not move.
+The width floor is gone: the measured content minimum is 1534 px, so a floor below it never binds at a phone width.
+Review round 2 approved; the three nits about hand figures were settled by the tester's own arithmetic, nothing moved.
+Open for hak at gate 2: the copy statements, the derived part across two tables, the reader line, the parked dash.
+The Definition of Done still needs the CI run of the branch, and the branch is not pushed without hak's decision.
+Gate 2 is not granted yet.
 
 ## Retrospective
 
-_orchestrator: what went wrong (review rounds, defects, corrections at the gates), proposed changes to
-agents/CLAUDE.md/templates, and which ones hak approved. Include a `### Cost` table (see the retro step of
-`/feature`)._
+_orchestrator: what went wrong (review rounds, defects, corrections at the gates), proposed
+changes to agents/CLAUDE.md/templates, and which ones hak approved. Include a `### Cost` table
+(see the retro step of `/feature`)._
+
+The runs were one at a time, in the order product-owner, ux-designer, architect, developer,
+tester, reviewer, tech writer. The model of every role run is `inherit (strata/iq2_xs)`. Gate 1
+(the story as written and hak's answers at the gate) is recorded above and committed as `e638bca`.
+Review round 1 is CHANGES_REQUESTED, round 2 APPROVED. Gate 2 is not granted yet, so nothing is
+pushed or merged.
+
+### What went wrong
+
+1. The design claimed the flat group keeps `77`/`110`/`146`, while its own reading order gives
+   `110` + `32` + `115` + `76` = `333`, so `146` never appears and `77` reads as `76`. The developer
+   implemented the order and recorded the conflict rather than bending the order to keep a pin; the
+   architect corrected the design row and named the old pins as no longer oracles (`721dea3`). Which
+   base owns the derived part is a rule question for hak: no case disagreed in 2880, 22000 and 1000
+   states, so it is not a reachable state.
+
+2. The developer's first defect-fix run ended with an error before its reply, so nothing it
+   printed after that is a result; the same work was done in a second run of the role.
+
+3. The developer credited two red assertions to the tester's hand values. For the cash total that
+   claim was wrong: the derived part already keeps the interest tax out of the cash total, so the
+   identity holds and nothing was changed. For the tax sum line it was right, and the tester's own
+   re-derivation settled both numbers in the code's favour (`133,13 €`, `7.333,14 €`); its first
+   numbers (`105,47 €`, `7.333,13 €`) were its own error.
+
+4. The tester's first mutation run crashed before restoring `flat.ts` and recovered the pre-run
+   state from git, which P34 forbids. The battery was re-run inside a `finally`, with the backup
+   outside the repository and the byte-identity asserted against the pre-run backup; the counts stand
+   from that run and the crashed shape is recorded as an incident, not as a pass.
+
+5. One shape of the within-fund mutant named a variable outside its scope and crashed the test
+   file, which is not a falsifier; the count in the report is the corrected shape, re-run three
+   times.
+
+6. The reviewer could not reproduce the mutation battery or the width measurement: as a reviewer
+   it may not mutate a tracked file, and no browser was connected to it. Both stand as the tester's
+   word, recorded as limits. The log prints four refs per run, so the composition of a count cannot
+   be read from it, and a `finally` in a scratch script left no code to read.
+
+7. Three nits were the tester's own hand figures: a Cent digit string quoted as micro-euro, ten
+   times short (`-131,875` against `-1.318.750`); a hand base that does not add to the total its own
+   comment names; and a header that says a rule cannot bind on a number that rule caps. All three
+   were settled by its own arithmetic in round 3 and no assertion moved (`238a1ed`). The guard case
+   is a falsifier of the guard through its hand value and of the cap through its control, so it
+   cannot be called a falsifier of one rule alone.
+
+8. Prettier does not reflow markdown prose with this repo's config, so it only re-pads tables. The
+   100-character habit is a writing convention and not a check: this story has 379 prose lines over
+   100 characters, and stories 045 and 046 have more. It is reported, not fixed retroactively, and
+   whether it becomes a rule is hak's to say.
+
+9. Three commit messages of this story (`c23d435`, `460c4fe`, `2e30c79`) lost their paragraph
+   breaks because an early rewrap script dropped blank lines. History was not rewritten; it stands as
+   recorded.
+
+10. The question tool is denied in this session, because hak does not answer questions during a
+    run, so the gate 2 questions could not be asked in the run. They are recorded in the story as open
+    items and put to hak in one message at the gate.
+
+11. The tech writer has no shell tool, so it cannot run prettier; its two files were formatted by
+    the orchestrator. One sentence it wrote said the fund table's per-share figure and the year
+    table's proceeds are the same number, which is wrong, because the year table's cell is that figure
+    times the shares; it is corrected in `81e296a`.
+
+12. Review item K8 is open for the Definition of Done: `CHANGELOG.md` and the app README now have
+    their 047 entries (`81e296a`), and the CI run of the story branch with its run id is still
+    missing, because the branch is not pushed without hak's decision.
+
+### Proposed rules, pending hak's approval
+
+P32 to P42 are approved as of story 046; P37 was rejected and its number is not given to another
+rule. P43 and P44 are open as the ux-designer's suggestions from this story, recorded at gate 1,
+and no other rule takes these numbers.
+
+- **P43 (for `CLAUDE.md`):** the sums of a table wider than the viewport live as paragraphs
+  outside the scrolling wrapper, not inside it.
+- **P44 (for `CLAUDE.md`):** a table with more than about ten columns needs one line below it that
+  names the columns the reader adds.
+
+The suggestions below are candidates after P43 and P44, and they are not numbered until hak
+decides.
+
+- Tester: a hand value for a sum line must sum the figures the app shows, because the last part of
+  a reading order is derived from its total and can differ from its own rounding.
+- Tester: the mutation runner restores in a `finally`, so an interrupted run cannot leave a
+  mutation in the tree. P38 already covers the backup, so this may belong inside P38 rather than as
+  a new number.
+- Developer: a reading order that crosses two tables needs one module that owns the derived part.
+- Question, not a rule: whether the 100-character habit for prose becomes a rule, given that
+  prettier does not reflow it.
+
+### Cost
+
+_The OpenCode harness prints no per-run tokens, tool uses or duration for a role run, and no
+running list was kept for this story, so every figure cell says `not measured` with its reason;
+the rows are the runs that happened, in chronological order._
+
+| Role                                        | Round | Model                   | Tokens                                      | Tool uses                                   | Duration                                    |
+| ------------------------------------------- | ----- | ----------------------- | ------------------------------------------- | ------------------------------------------- | ------------------------------------------- |
+| product-owner                               | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| ux-designer                                 | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| architect                                   | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| developer                                   | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| tester                                      | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| developer, run ended with an error          | 2     | inherit (strata/iq2_xs) | not measured (a failed run reports nothing) | not measured (a failed run reports nothing) | not measured (a failed run reports nothing) |
+| developer                                   | 2     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| tester                                      | 2     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| reviewer                                    | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| tester, findings 1 to 3 and the measurement | 2     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| architect, findings 4, 5 and 7              | 2     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| developer, the measured width               | 3     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| reviewer                                    | 2     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| tester, the three nits                      | 3     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| tech writer                                 | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)          | not measured (harness prints none)          | not measured (harness prints none)          |
+| total (measured)                            |       |                         | n/a                                         | n/a                                         | n/a                                         |
+| orchestrator (main session)                 |       | strata/iq2_xs           | not measured                                | not measured (no running list)              | not measured (no running list)              |
+
+Nothing here was measured, so no role stands out in cost. What is measured, and is not a cost
+figure, is the wall clock of the checks: the reviewer's own full gate printed 12 steps in 85,9 s,
+the developer's printed 12 steps in 79,7 s, the tester's round-3 runs printed 57 unit tests and 66
+e2e specs, and its mutation battery printed 30 runs of a single vitest file with the baseline on
+the clean file.
