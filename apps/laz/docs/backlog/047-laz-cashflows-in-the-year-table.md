@@ -229,11 +229,284 @@ Append only._
 - 2026-11-16 — Status set to `ready`; the story is committed at gate 1 on the story branch, which was the tip
   of main at that moment.
 
+- 2026-11-16 — Decision (orchestrator, on the ux-designer's four flags): the first tax column reads
+  `Kapitalsteuer in Euro`, AC2's word, not `Kapitalertragsteuer`. The two flat columns read
+  `Pauschalsteuer für die Jahre vor der Phase in Euro` and `Pauschalsteuer für das Phase-Jahr in Euro`,
+  because 045 AC1 keeps the word `Vorabpauschale` on exactly one element, the field label, so the
+  columns use the shorthand. `Betrag für das Jahr` keeps its label and its plain dash, with its reason in
+  the existing missing-year line as 024 AC4 has it, so the reads of 024 AC2 stay; the new columns read the
+  dash with its reason in the cell, as 045 AC4 and 046 AC4 do.
+- 2026-11-16 — Decision (orchestrator): the flat facts paragraph stays in the fund section, where 045 put it;
+  the year section's flat note is the sentence a reader of the year table reads. Nothing is moved, so the
+  reads of 045 stay and no `changes:` entry is added for the facts paragraph.
+- 2026-11-16 — Recorded for gate 2, not decided: the two copy statements the design marks for hak's
+  confirmation are the ux-designer's strings. The first says the flat columns are depot parts from
+  other years and are not added to the year's money; the second says `Betrag für das Jahr` is the money
+  that was there at the start of the year, not a flow. These are wordings, and the arithmetic does not
+  depend on them. The reader line, the payout check and the net note are not pending, because they state
+  what the row adds up to.
+- 2026-11-16 — The ux-designer's two suggestions for CLAUDE.md are open as P43 and P44 for gate 2: sums of a
+  table wider than the viewport live as paragraphs outside the scrolling wrapper, and a table with more than
+  about ten columns needs one line below it that names the columns the reader adds. P43 to P44 are open, so
+  no other rule takes these numbers.
+
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
 ## UX design
 
 _ux-designer: component tree, states (loading/empty/error/success), interactions, accessibility notes._
+
+The tree of 044, 045 and 046 stays. The fund table loses one column and its sum paragraph, the year
+table gains the cashflow columns, and the year section gains one sum line per money column, the two
+totals, one line that names the figures a reader adds, and two notes. No new field, no new control,
+no new component, no new colour, no new live region and no new tab stop.
+
+```text
+PlanCalculator
+  intro paragraph                      unchanged (044)
+  section.inputs                       unchanged (031, 045, 046)
+  section.result                       unchanged, the one debounced live region keeps its wording
+  section.years                        <section aria-labelledby=h2 "Jahresübersicht">
+    scroller region                    unchanged role and name, thirteen columns wide
+      caption                          unchanged, names the phase period
+      year table                       `th scope="col"` per column, the year stays `th scope="row"`
+    reader line <p>                    new, names the columns whose figures add to the year
+    one sum line <p> per money column  new, in the column order
+    tax total <p>                      new, stated once
+    cash total <p>                     new, stated once
+    flat note <p>                      new, the statement marked for hak's confirmation
+    parked note <p>                    new, the statement marked for hak's confirmation
+    facts <p> and footnote <p>         unchanged (046, 024), still the last paragraphs
+  section.funds
+    projection label <p>               unchanged, still the description of the row's figures
+    FundTable                          eight columns, the flat column is gone
+    flat facts <p>, depot note <p>, footnote <p>    unchanged, no sum line any more
+```
+
+The new paragraphs are paragraph text below the table and outside the scroller, so they stay on
+screen while the table scrolls sideways: the reader line, then the sum lines in the column order,
+then the two totals, then the two notes, then the existing facts and footnote. The caption is not
+used for the reader line, because a caption inside the scroller scrolls away with the table.
+
+### The fund table
+
+The fund table keeps the columns 036 AC1 pins, without the flat one: `Jahr`, `Fondsname`, `ISIN`,
+`Kurs`, `YTM in Prozent`, `Hochrechnung je Anteil in Euro`, `Anteile jetzt kaufen`, `Kaufpreis heute
+in Euro`. Its projection cell now shows the pre-tax proceeds per share and keeps the projection
+label as its accessible description (024 AC5), because the figure is still a projection from YTM and
+NAV; the input cells, their hidden labels, the marker and the shared rule stay.
+
+After the column leaves, the fund section states once: the projection label, the three flat facts,
+the depot note and the rule of the input cells. It states no sum line and shows no tax figure. The
+flat facts stay in the fund section as the design says, while the flat figures are read in the year
+table; the year section's flat note is the sentence a reader of the year table reads, and moving the
+facts paragraph with the figures is the orchestrator's call.
+
+### The year table, the columns in the order the design names
+
+One row stays one phase year. Every cell is read by its header text, never by position (CLAUDE.md),
+so the order is a reading order, not a test order:
+
+1. `Jahr` (row header), `Monate`, `Finanzierung durch Fonds` — unchanged
+2. `Erlös aus der Fondsauflösung in Euro`
+3. `Kapitalsteuer in Euro`
+4. `Solzzuschlag in Euro`
+5. `Kirchensteuer in Euro`
+6. `Pauschalsteuer für die Jahre vor der Phase in Euro`
+7. `Pauschalsteuer für das Phase-Jahr in Euro`
+8. `Auszahlung in Euro`
+9. `Betrag für das Jahr` (`COPY.amountColumn`, line `200`, unchanged)
+10. `Zinsen über das Phase-Jahr in Euro`
+11. `Steuer auf die Zinsen in Euro`
+
+The four tax columns stay together, the two flat columns sit between the tax columns and the money
+of the year, and `Betrag für das Jahr` keeps its label so the reads of 024 AC2, 033 AC1, 035 AC1 and
+046 AC5 do not move. The column group is not a heading: see the width section.
+
+### Copy (exact strings)
+
+`COPY.columnSumLine` — one base string, `{label}` is the column's header text as the copy names it
+and `{wert}` is `formatEuro` of the figures shown in that column, so a reader adding a column gets
+the figure the section states. The sum lines exist for the ten money columns only, `Monate` and
+`Finanzierung durch Fonds` have none, and a line is shown only when that column has a figure:
+
+`Summe {label}: {wert}.`
+
+`COPY.taxTotalLine` (one paragraph, stated once, over the tax columns):
+
+`Summe der Steuer über die Phase-Jahre: {wert}.`
+
+`COPY.cashTotalLine` (one paragraph, stated once, over the columns that are money of the year):
+
+`Summe des Gelds der Phase-Jahre: {wert}.`
+
+`COPY.readerLine` (the line below the table that names which figures a reader adds, no number
+invented):
+
+`Das Geld eines Jahres: die Steuer-Spalten der Auflösung, Betrag für das Jahr und die Zinsen.`
+
+The reader line names three groups: the three tax columns of the sale, the amount column and the
+interest column. The interest's own tax column is not named there, because its figure is an addend of
+the tax total while the cash total counts the gross interest.
+
+`COPY.payoutCheck` (the same money, so the payout column is not added twice):
+
+`Dasselbe Geld: die Auszahlung plus die Steuer. Die Auszahlung wird nicht noch einmal addiert.`
+
+`COPY.flatNote` — **the first of the two statements the design marks for hak's confirmation**:
+
+`Die Pauschalsteuer-Spalten sind Depotteile aus anderen Jahren und zählen nicht zum Geld des Jahres.`
+
+`COPY.parkedNote` — **the second of the two statements the design marks for hak's confirmation**:
+
+`Der Betrag für das Jahr ist das Geld, das am Anfang des Jahres da war, kein Zufluss.`
+
+`COPY.netNote` (the net as the difference of the two interest columns):
+
+`Das Netto der Zinsen ist die Differenz aus der Zinsenspalte und ihrer Steuerspalte.`
+
+`COPY.flatNoRowLine(fundYear, wert)` (the year section's line for a fund whose sale year is not a
+phase year, stated once with its reason):
+
+`Fonds {jahr}: {wert} (Auflösung in einem Jahr, das kein Phase-Jahr ist).`
+
+The reason strings, each written once and read as the full line text of its cell:
+
+- stay from 032, 045 and 046: `Steuer nicht angehakt`, `kein Jahr zählt (nur das Auflösungsjahr)`,
+  `kein Jahr zahlt Steuer`, `kein Fonds für dieses Jahr`, `Geld wird nicht geparkt (Option aus)`,
+  `kein Geld zum Parken (Wert nicht positiv)`, `kein Zinssatz`, `Auflösung nach Phasenende`,
+  `Auflösung vor Phasenbeginn`, `keine Hochrechnung je Anteil`
+- new here: `Kirchensteuer nicht angehakt`, `kein Gewinn, darauf keine Steuer`,
+  `Auflösung in einem Jahr, das kein Phase-Jahr ist`
+
+Per column, first match wins, because one row can show a figure in one column and a dash with
+another reason in another:
+
+- `Erlös aus der Fondsauflösung in Euro`: `kein Fonds für dieses Jahr`, then the three strings of 032. No tax reason, because the proceeds exist outside the tax case.
+- `Kapitalsteuer in Euro`, `Solzzuschlag in Euro`: `Steuer nicht angehakt`, then
+  `kein Gewinn, darauf keine Steuer`, then the strings of 032. The Solzzuschlag has no reason of its
+  own, its base is the Kapitalsteuer, so while that is off it reads `Steuer nicht angehakt`.
+- `Kirchensteuer in Euro`: `Steuer nicht angehakt`, then `Kirchensteuer nicht angehakt`, then
+  `kein Gewinn, darauf keine Steuer`, then the strings of 032.
+- the two flat columns: `Steuer nicht angehakt`, `kein Jahr zählt (nur das Auflösungsjahr)`,
+  `kein Jahr zahlt Steuer`, then the strings of 032. `Auflösung in einem Jahr, das kein Phase-Jahr
+ist` never reads in a cell, it reads in `flatNoRowLine`.
+- `Auszahlung in Euro`: `kein Fonds für dieses Jahr`, no other reason: `P · m` does not depend on
+  the tax or on the option.
+- `Betrag für das Jahr`: `kein Fonds für dieses Jahr`, then `kein Geld zum Parken (Wert nicht
+positiv)`, and never `Geld wird nicht geparkt (Option aus)` or `kein Zinssatz`, because its figure
+  stays while the option is off (046 AC5).
+- `Zinsen über das Phase-Jahr in Euro` and `Steuer auf die Zinsen in Euro`: the orders 046 gives
+  them, unchanged.
+
+### States
+
+- Loading: none, the app has no request and no storage write (024 AC6).
+- Empty, first render: nothing typed, the result area shows the empty string and the year table is
+  not rendered; the fund table shows its dash alone, with no flat column.
+- Success: the money columns show their figures, a cashflow that does not exist shows its dash with
+  its reason, a column with at least one figure shows its sum line, and the year section states the
+  tax total and the cash total once. Nothing is invented for an empty column or an empty sum, no
+  `0,00 €` (the display rule 045 records), because no percent figure is printed in the table.
+- Error: the field errors of the existing rules (030, 033, 045 AC1, 046 AC1, and the override cells
+  of 036 and 044); nothing here is a new error. While a field is invalid the year table is not
+  rendered, so no sum line, no total, no reader line and no note is shown; the fund table stays with
+  its dash alone. A negative figure reads as `formatEuro` prints it (045), no clamp and no new
+  wording.
+- Tax off: every tax cell shows its dash, the tax total is not stated while the cash total is, and the
+  fund table's per-share figure and the proceeds column are the same number (AC6). Parking off or
+  rate `0`: the interest cells show their dash, so the cash total is the tax columns plus the amount
+  column, and `Betrag für das Jahr` keeps its figure, which is then `P · m` (046 AC5). A column with
+  no figure shows no sum line, and the reader line still names its three groups, because it names the
+  columns and not a number.
+
+### Interactions
+
+Nothing new is operated: no control, no validation, no focus movement. The figures recompute on
+every keystroke, focus stays in the field being edited, the checkboxes announce their own state
+change (046), no control is ever disabled (024 AC3), and the new paragraphs add no tab stop. The
+scroller keeps its `tabIndex="0"`, its name `Jahresübersicht, horizontal scrollbar` and its inset
+focus ring. No new state change is announced, so the live region gains nothing: the sums, the totals
+and the notes stay paragraph text, which the design and the out-of-scope list both confirm.
+
+### Accessibility
+
+- One label per element: the thirteen column headers name what each figure is, the year stays the row
+  header, and the caption names the phase period. No header is a substring of another header except
+  the single word `Jahr`, which is inside `Betrag für das Jahr` and the two `Phase-Jahr` headers, so
+  tests read it as the `columnheader` role or with `exact: true`.
+- Dash cells are plain text with no control, so they need no label of their own; they stay reachable
+  through table navigation and read as `–` plus their reason together with the column header and the
+  year. The fund table's input cells keep their visually hidden labels (044).
+- The projection label stays the accessible description of the fund table's figures only; the year
+  table's cells have no description (046), and the field hints and errors keep their
+  `aria-describedby` with `aria-invalid`, no `role="alert"`.
+- Sum lines, totals, the reader line and the notes are paragraph text, never a `dd` and never part of
+  the live region, so `valueOf` is not used for them.
+- Number formats stay `formatEuro` (`1.188,04 €`, no-break space before `€`) with `tabular-nums`;
+  percent is named as whole hundredths in the field copy (`0,00 bis 100,00 %`), and no percent figure
+  is printed in either table; shares keep `55,06`.
+- Contrast, hand computed, the tester re-checks with a tool: no new colour, so the values 045 and 046
+  record hold in both schemes — headers `--color-text` on `--color-surface-subtle` 14,62 light /
+  11,96 dark, figures `--color-text` on `--color-surface` 17,16 / 14,10, the reason cells, the sum
+  lines, the totals, the reader line and the notes `--color-text-muted` on `--color-surface`
+  7,78 / 7,64. Nothing new carries a state by colour; forced colours keep the 1 px CanvasText border
+  of the invalid field and of the scroller, and focus stays `outline`.
+
+### Below 600 px
+
+- Only the year section's own wrapper scrolls sideways, the page never does; the `Jahr` column stays
+  sticky at the left, so a row can still be identified while its figures are off screen.
+- No column group heading. The pinned header lists of 036 AC1 and 046 AC4 are read as one flat list
+  of `columnheader` elements, so a group row would add elements to a list the tests pin, and a group
+  heading cannot name a cell. The grouping is one line of text below the table instead, the reader
+  line.
+- `min-width` has to grow with the thirteen columns, and the widest cells are the reason cells, which
+  already wrap (`white-space: normal`, `overflow-wrap: anywhere`) while the money cells stay
+  `nowrap`. The developer measures the value; starting value 1.200 px, and the tester reports what the
+  table needs. At 320 px the reader sees the sticky year column plus about two money columns.
+- What a reader can still compare on one screen: the reader line, the sum lines, the two totals and
+  the two notes never scroll away, so a reader compares one column against its own sum line and the
+  year's money against the cash total, and reads the row's arithmetic through the reader line rather
+  than through a row that fits. This is the answer to hak's "Die Anzeige der Steuer verstehe ich
+  nicht": the row is not readable as a whole at 320 px, so the section says what the reader adds and
+  states each total once.
+- The paragraphs stack below the table like the footnote, as in 045 and 046.
+
+### Substring notes for the tester
+
+`Kapitalsteuer` occurs once, in its header, and it is not a substring of `Kapitalertragsteuer`, which
+reads in the KSt label and in the KSt hint. `Vorabpauschale` stays on the flat field's label
+(045 AC1), and `Pauschalsteuer` reads in the two headers, the flat note, the facts paragraph and the
+depot sentence. `Solzzuschlag` reads in the hint and in its header, `Kirchensteuer` in the checkbox
+label, the Bundesland label and its header. `Zinsen` reads in the control label, the control hint,
+the net note, its header, the cash total and the reader line; `Steuer` in the tax legend, the tax
+headers, the reason strings, the tax total, the reader line, the net note and the payout check.
+`Betrag für das Jahr` reads in its header and in the reader line, and `Jahr` in the row header, the
+reader line, the cash total, the flat header and 046's facts. All of these are read as the full line
+text of their own element or as the `columnheader`, never as a bare word. Every sum line repeats its
+column's header text, so a sum line is read as its own full line text, and `Summe` is the word that
+tells it apart from the header. `Erlös` and `Netto` occur
+once each, `Zufluss` twice (046's facts paragraph and this story's parked note), and `Haltedauer`
+occurs no more, because its header leaves with the column.
+
+### For the orchestrator to resolve
+
+1. The design names the first tax column `Kapitalertragsteuer in Euro`, AC2 names it `Kapitalsteuer`;
+   I read AC2's word as the header, because AC7 reads cells by header text, so the copy and the
+   pinned list need one of the two. The other two tax names agree with the design.
+2. The design names the two flat columns with the word `Vorabpauschale`; 045 AC1 keeps that word on
+   the field label as exactly one element, so my strings use the shorthand `Pauschalsteuer` that 045
+   established for the column that shows this money. This supersedes 045's note that the word occurs
+   once; the field is still read by its label, so nothing existing breaks.
+3. AC4 names "a year without a funding fund" as a dash with its reason, while `laz.spec.ts` `126` and
+   `392` read the `Betrag für das Jahr` cell as `–` alone and the design says those tests are not
+   rewritten. I read the parked cell as the plain dash, because its rule is the year table's footnote
+   and the row already names the reason in the funding cell. If AC4 is read as every cashflow column
+   including the parked one, the parked cell gains `kein Fonds für dieses Jahr` and those two
+   assertions move; that is the orchestrator's call, not mine.
+4. The two statements marked in the copy section (`flatNote` and `parkedNote`) are the two the design
+   takes to gate 2; the arithmetic does not depend on either.
 
 ## Technical design
 
