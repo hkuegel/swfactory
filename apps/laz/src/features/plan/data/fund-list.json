@@ -1,5 +1,5 @@
 {
-  "asOf": "2026-11-14",
+  "asOf": "2026-11-16",
   "funds": [
     {
       "year": 2027,
@@ -24,7 +24,7 @@
       "isin": "IE000SNLFDR7",
       "name": "iBonds EUR Corporate UCITS 2029",
       "navMicroEur": 5288501,
-      "ytmBp": 388,
+      "ytmBp": 389,
       "avgMaturityHundredths": 263,
       "sharesOutstanding": 103103284
     },
@@ -33,7 +33,7 @@
       "isin": "IE000Y2BJVK9",
       "name": "iBonds EUR Corporate UCITS 2030",
       "navMicroEur": 5266332,
-      "ytmBp": 402,
+      "ytmBp": 404,
       "avgMaturityHundredths": 358,
       "sharesOutstanding": 115340514
     },
@@ -42,7 +42,7 @@
       "isin": "IE000D9WMGF0",
       "name": "iBonds EUR Corporate UCITS 2031",
       "navMicroEur": 5193001,
-      "ytmBp": 415,
+      "ytmBp": 418,
       "avgMaturityHundredths": 465,
       "sharesOutstanding": 69533953
     },
@@ -51,7 +51,7 @@
       "isin": "IE000I660ZF8",
       "name": "iBonds EUR Corporate UCITS 2032",
       "navMicroEur": 5148184,
-      "ytmBp": 421,
+      "ytmBp": 425,
       "avgMaturityHundredths": 562,
       "sharesOutstanding": 37633425
     },
@@ -60,7 +60,7 @@
       "isin": "IE000ZBGZQM8",
       "name": "iBonds EUR Corporate UCITS 2033",
       "navMicroEur": 5107316,
-      "ytmBp": 433,
+      "ytmBp": 437,
       "avgMaturityHundredths": 662,
       "sharesOutstanding": 9681372
     },
@@ -69,7 +69,7 @@
       "isin": "IE000UY6XF65",
       "name": "iBonds EUR Corporate UCITS 2034",
       "navMicroEur": 5088002,
-      "ytmBp": 438,
+      "ytmBp": 443,
       "avgMaturityHundredths": 763,
       "sharesOutstanding": 14561449
     },
@@ -78,8 +78,8 @@
       "isin": "IE000O1FWAW6",
       "name": "iBonds EUR Corporate UCITS 2035",
       "navMicroEur": 4917561,
-      "ytmBp": 443,
-      "avgMaturityHundredths": 867,
+      "ytmBp": 449,
+      "avgMaturityHundredths": 866,
       "sharesOutstanding": 8999331
     }
   ]
