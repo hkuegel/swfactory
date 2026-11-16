@@ -1434,6 +1434,68 @@ the battery re-ran inside a `finally` with its backups outside the repository an
 the guard now has a hand case that can be falsified, and the figure is corrected. Status stays
 `in-review`.
 
+### Round 3 (2026-11-16): the three nits the tester owns
+
+Run in the worktree on the story branch, nothing committed, status stays `in-review`. Only comment
+text in the two test files I own changed, no assertion was weakened and none moved. The figures
+below are my own arithmetic, not a run of `flat.ts`.
+
+**Nit 8 (settled), `flat.test.ts:109` and story 1392.** Base: fund NAV 100.000.000 micro-euro =
+100 € = 10.000 Cent, asOf 1.1.2025 is the year start, so the year factor is 1 and the cap value is
+0,0224 per euro = 2,24 € = 224 Cent. Hand value: YTM -5 % gives the increase 0,95 - 1 = -0,05 per
+euro, the guard makes it 0, so the tax is 0. With the guard removed the base is -0,05 per euro =
+-5,00 € = -500 Cent and the tax is 100.000.000 × -0,05 × 26,375 % = -1.318.750 micro-euro, which
+is not 0. My round-2 figure -131,875 was the digit string of the Cent value: -131,875 Cent, and 1
+Cent = 10.000 micro-euro. The slip is named: a Cent number was printed as micro-euro, so as
+micro-euro the value is -1.318.750 and the digit string was ten times short. The conclusion does
+not change. The control is exact in my arithmetic: 224 Cent × 26,375 % = 59,08 Cent = 590.800
+micro-euro.
+
+**Nit 9 (settled), `purchase.test.ts:173`.** My own arithmetic on fund 2032 (NAV 46.000.000
+micro-euro = 4.600 Cent, YTM 4 %, asOf 1.1.2027, counted years 2027-2031, the cap binds every year
+because the increase is above 2,24 %): the factor at the start of 2031 is 1,04^(1461/365) =
+1,1699842727, so the base is 0,0262076477 per euro × 4.600 Cent = 120,5551795 Cent and the tax is
+31,7964286 Cent -> 32. The pre-phase part is 0,0951261048 per euro × 4.600 Cent = 437,580082 Cent
+= 115,4117466 Cent -> 115. The two hand figures add to 147,208175 Cent, the total the same comment
+names at line 168, so the comment now adds to the total it names. Round 2's 120,542226 Cent does
+not add to it, and its own product is 31,793, as the reviewer read. The reviewer's base 120,5574
+Cent is not reproduced by my arithmetic, because that base gives 31,7970; its product 31,7964
+matches mine, so the two readings differ only at the fourth decimal. Both round to 32, and
+115,4117466 rounds to 115, so no assertion moves. The fourth decimal is the one figure here that
+arithmetic cannot settle without running the module.
+
+**Nit 10 (settled as wording, with a limit), `flat.test.ts:106`.** "The cap cannot bind either" is
+true for the negative hand value only, because there the min takes the guard's 0 whatever the
+positive cap is. The positive control inside the same test is a capped figure: its increase is
+0,05 per euro = 5,00 €, above the cap 0,0224 per euro = 2,24 €. So the case is a falsifier of the
+guard through the hand value and of the cap through its control, not of the guard alone, and the
+test title now says so. The same fact made the file's header claim "YTM 5 % (the cap never binds)"
+wrong, because the hand sum in that test is capped too; that comment is corrected as well. The cap
+count 16 fits the reviewer's reading, 15 plus the control line, but the log prints only four refs
+per run (the four it shows are `cashflow.test.ts:132/160/187/264`), so the composition of the count
+is not readable there and stays the tester's word, as the reviewer recorded.
+
+The cross-check the nits suggest does not give one number: `purchase.test.ts:173` reads fund 2032
+(4.600 Cent, factor 1,1699842727 -> base 120,5551795 Cent), while the guard case reads fund 2026 at
+10.000 Cent with factor 1 -> base 224 Cent. Both places use the same `yearBase` rule and its cap,
+not the same base, so they cannot pin the same figure.
+
+My comment grew, so the line numbers moved: in `purchase.test.ts` the flat figures assertion is now
+213 and the money-rule sum 224 (round 2 named 207 and 218); in `flat.test.ts` the guard case is now
+122 and its control 123 (round 2 named 112 and 113).
+
+Counts as this round's runner printed them: `npm test -w @swfactory/laz` -> `Test Files 12 passed
+(12)`, `Tests 57 passed (57)`, under the `> @swfactory/laz@0.1.0 test` header. `npm run test:e2e -w
+@swfactory/laz` -> `Running 66 tests using 16 workers`, `66 passed (5.9s)`, no `flaky` line in the
+log, port 5174 free before the run (0 connections). The per-project split `chromium` 25 and
+`platform` 41 is my reading of the 66 `ok` lines, not a number the reporter printed. Nothing was
+mutated in this round, so no mutation count is printed here. Prettier on the two files: unchanged.
+Test files added: none, so the counts stayed 57 and 66.
+
+Verdict for the three nits: PASS. Nits 8 and 9 are comment figures corrected by my own arithmetic
+and no assertion moved; nit 10 is the wording, and the composition of its count stays a limit.
+Status stays `in-review`.
+
 ## Review
 
 _reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._

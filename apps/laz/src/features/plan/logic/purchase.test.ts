@@ -168,11 +168,17 @@ describe('purchase (story 032, AC2)', () => {
     // 2032; their flat taxes are 76,698488 + 109,573624 + 147,208175 = 333,480288 Cent (`cash`), and
     // ρ′ = 1,1106674062 · 1,1630871390 · 1,2274430132, so F = 30,8981055149 and the shown depot is
     // 10.001 × F + cash = 309.345,433542 Cent -> 309.345 Cent.
-    // Parts in the order the two tables read them (story 047 AC3): the purchase parts 108.054, 103.184 and
-    // 97.774 Cent, then row 2031 (fund 2031 whole in column A = 110, the year-2031 piece of fund 2032 in
-    // column B = 120,542226 Cent × 26,375 % = 31,7926 -> 32), then column A of row 2032 = fund 2032's own
-    // part 147 − 32 = 115. Its own rounding is 115 too (hand: base 0,0951207936 × 46.000.000 µ€ × 26,375 %
-    // = 115,41174662135893 Cent), so this part is the derived value only by coincidence and cannot move.
+    // Parts in the reading order of the two tables (story 047 AC3): the purchase parts 108.054,
+    // 103.184 and 97.774 Cent, then row 2031 (fund 2031 whole in column A = 110, the year-2031
+    // piece of fund 2032 in column B): base 0,0262076477 per euro × its 4.600 Cent (46.000.000
+    // micro-euro) = 120,5551795 Cent, × 26,375 % = 31,7964286 Cent -> 32. Column A of row 2032 is
+    // fund 2032's own part 147 − 32 = 115, whose own rounding is also 115: base 0,0951261048 per
+    // euro × 4.600 Cent = 437,580082 Cent, × 26,375 % = 115,4117466 Cent. So that part is the
+    // derived value only by coincidence and cannot move. The two hand figures add to the total the
+    // same comment names: 31,7964286 + 115,4117466 = 147,208175 Cent. Round 3, nit 9: round 2 wrote
+    // the base as 120,542226 Cent and the piece as 31,7926, which does not add to 147,208175 and
+    // whose own product is 31,793. Both readings round to 32, and 115,4117466 rounds to 115, so no
+    // assertion moves here.
     // The part the derivation moves here is the year section's line for fund 2030, the last part in the
     // order: 309.345 − 309.269 = 76 Cent, one Cent less than its own rounding (77).
     // The sum line is the sum of the shown flat figures: 110 + 32 + 115 + 76 = 333 Cent.

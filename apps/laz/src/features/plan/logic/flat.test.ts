@@ -23,9 +23,10 @@ import type { TaxState } from './tax.ts';
  * The order of the assertions is the order P32 needs: each rule can only move the assertion that pins
  * it, because a failing assertion ends the test and the later lines do not run. So the case that pins
  * a rule must be insensitive to the rules pinned below it: the hand sum has asOf on a year start (no
- * month fraction), YTM 5 % (the cap never binds) and a positive gain; the month case has a cap that
- * does not bind (the year's increase is 2,476357 € against the base 1,12 €); the cap case has a
- * positive gain.
+ * month fraction) and a positive gain; the month case has a cap that does not bind, because its
+ * increase is 2,476357 € against the base 1,12 €); the cap case has a positive gain.
+ * Nit 10 (round 3): the hand sum is a capped figure, because YTM 5 % gives 5,00 € against the base
+ * 2,24 €, so a cap mutant moves it here too, as does the capped control of the guard test below.
  */
 const FLAT = { hundredths: 224 };
 const TAX: Tax = { on: true, rateMillionths: 263750 };
@@ -98,15 +99,24 @@ describe('flat (story 045, AC2: the base of a calendar year)', () => {
     expect(flatTaxMicroEur(pair[1] as Fund, FLAT, TAX, asOfInside)).toBeCloseTo(590800, 6);
   });
 
-  it('AC2, the sign guard on its own: a negative YTM built inside this test, not in a data file', () => {
+  it('AC2, the sign guard through its hand case and the cap through its control', () => {
     // Round 2, review finding 2. On the fund list the tests read through the `vite.config.ts` alias
     // (`fund-list.fixture.json`, asOf 2026-12-31) every `ytmBp` is positive, so no counted year has a
-    // negative increase and the guard cannot bind there: this case is the only shape that reads it. The
-    // guard is read by itself: asOf is on a year start, so the whole-month rule cannot bind, and a
-    // negative increase is below any positive cap, so the cap cannot bind either. Hand: YTM -5 % on
-    // counted year 2025 gives increase 0,95 - 1 = -0,05, the guard makes it 0, so the year's tax is 0.
-    // Control that carries a value on the same asOf: YTM 5 % -> base 2,24 € -> 590.800 micro-euro.
-    // Removing the guard turns the first hand value into -131,875 micro-euro, which is not 0.
+    // negative increase and the guard cannot bind there: this case is the only shape that reads it.
+    // Round 3, nit 10: asOf is on a year start, so the whole-month rule cannot bind. The cap cannot
+    // bind on the negative hand value: a negative increase is below any positive cap, so the min
+    // takes the guard's 0 whatever the cap is. The positive control is a capped figure, so this
+    // test pins the guard through the hand value and the cap through the control: it is not the
+    // guard on its own. The composition of the round-2 cap count 16 is not readable there, because
+    // the log prints four refs per run, so the added line stays the tester's word (nit 10).
+    // Hand, in the fund's own units (NAV 100.000.000 micro-euro = 100 € = 10.000 Cent): YTM -5 % on
+    // counted year 2025 gives the increase 0,95 - 1 = -0,05 per euro, the guard makes it 0, so the
+    // year's tax is 0. With the guard removed the base is -0,05 per euro = -5,00 € = -500 Cent and
+    // the tax is -1.318.750 micro-euro, which is not 0. Round 2 wrote the Cent value -131,875 Cent
+    // (1 Cent = 10.000 micro-euro) as micro-euro, so its digit string was ten times short.
+    // Control on the same asOf: YTM 5 % gives the increase 0,05 per euro = 5,00 €, above the cap
+    // 0,0224 per euro = 2,24 € = 224 Cent, so the cap binds: 224 Cent x 26,375 % = 59,08 Cent =
+    // 590.800 micro-euro, the figure the assertion pins.
     const negative = fund(2026, 100000000, -500);
     const positive = fund(2026, 100000000, 500);
     expect(flatYearMicroEur(negative, 2025, FLAT, TAX, '2025-01-01')).toBe(0);
