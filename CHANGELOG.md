@@ -52,6 +52,17 @@ Euro`: the base of each counted year is the value at the start of that year time
   payments once. The searched depot includes them, because the payments are paid from the settlement account and
   the fund's own value is not reduced. The tax at liquidation reads the gain minus the bases already taxed, so no
   base is taxed twice (#045).
+- `laz`: the monthly payout can be parked on a deposit account for the months of one phase year. The option is
+  its own block in the form, not inside the tax block, with a checkbox and a rate field prefilled with 2,50 %,
+  and the rate is one number for the whole term. A year's interest is the monthly target times the rate times
+  the average of the balances that wait at the start of each month, `m(m + 1) / 24` year units, so a full year
+  is 6,5 units. In the tax case that interest is taxed at the Zufluss with the existing tax parameters, and the
+  net interest is what the plan keeps and what reduces the money the plan needs. The year table gains the
+  columns `Zinsen über das Phase-Jahr in Euro` and `Steuer auf die Zinsen in Euro`, the year section states both
+  sums once, and each dash names its reason. The shares follow the money that must be at the start of the phase
+  year, the payout of its months minus the net interest; the parked money is not a part of the depot, so the
+  parts that add up to the shown depot are unchanged. With the option off, or with the rate 0, nothing is
+  calculated anywhere and the figures of stories 024, 032 and 045 do not move (#046).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).

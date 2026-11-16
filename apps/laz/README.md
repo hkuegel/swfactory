@@ -53,3 +53,16 @@ fund's payment, the fund section states the sum once, and the searched depot inc
 come from the settlement account and the fund's own value is not reduced. The tax at liquidation reads the gain
 minus the bases already taxed, so no base is taxed twice (ADR 0015). Every dash in the new column names its
 reason; the strings are in `src/features/plan/fieldCopy.ts` as the rest of the copy is.
+
+Story 046 adds the option to park the monthly payout on a deposit account for the months of one phase year.
+It is its own block in the form, not inside the tax block, with a checkbox and the rate as a field prefilled
+with `2,50` %, and the rate stays the same over the whole term. A year's interest is the monthly target times
+the rate times the average of the balances that wait at the start of each month, `m(m + 1) / 24` year units, so
+a full year is 6,5 units. In the tax case that interest is taxed at the Zufluss with the existing tax
+parameters, and the net interest is what the plan keeps and what reduces the money the plan needs.
+The year table shows the interest in the column `Zinsen über das Phase-Jahr in Euro` and the tax on it in
+`Steuer auf die Zinsen in Euro`, the year section states both sums once, and each dash names its reason.
+The money that waits is the year table's existing amount column: the payout of the months of that year minus
+the net interest, and the shares follow that money (ADR 0016). The parked money is not a part of the depot, so
+story 032's money rule and its parts are unchanged. With the option off, or with the rate 0, nothing is
+calculated anywhere and the figures of stories 024, 032 and 045 are the same as before.
