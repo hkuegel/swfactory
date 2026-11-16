@@ -48,11 +48,12 @@ Story 045 adds the flat rate for accumulating funds (Vorabpauschale, § 18 InvSt
 in the tax block, prefilled with `2,24` % (70 % × the Basiszins of 2026) and counted only when capital gains tax
 is checked. The base of a calendar year is the value at the start of that year times the rate, capped by the
 year's actual increase and floored at 0; asOf's own year counts with the whole months before its month; the year
-of liquidation does not count. The fund table's column `Pauschalsteuer über die Haltedauer in Euro` shows each
-fund's payment, the fund section states the sum once, and the searched depot includes the payments, because they
-come from the settlement account and the fund's own value is not reduced. The tax at liquidation reads the gain
-minus the bases already taxed, so no base is taxed twice (ADR 0015). Every dash in the new column names its
-reason; the strings are in `src/features/plan/fieldCopy.ts` as the rest of the copy is.
+of liquidation does not count. Story 047 takes the tax column out of the fund table: each fund's
+payment reads in the year table, the fund section states no sum line any more, and the depot still
+includes the payments, because they come from the settlement account and the fund's own value is not
+reduced. The tax at liquidation reads the gain minus the bases already taxed, so a base is not taxed
+twice (ADR 0015). Every dash names its reason; the strings are in
+`src/features/plan/fieldCopy.ts` as the rest of the copy is.
 
 Story 046 adds the option to park the monthly payout on a deposit account for the months of one phase year.
 It is its own block in the form, not inside the tax block, with a checkbox and the rate as a field prefilled
@@ -66,3 +67,23 @@ The money that waits is the year table's existing amount column: the payout of t
 the net interest, and the shares follow that money (ADR 0016). The parked money is not a part of the depot, so
 story 032's money rule and its parts are unchanged. With the option off, or with the rate 0, nothing is
 calculated anywhere and the figures of stories 024, 032 and 045 are the same as before.
+
+Story 047 moves the tax figures out of the fund table and into the year table, so a row can be
+read by hand. The fund table shows no tax cell: the column story 045 added for each fund's payment
+is gone, its figures read in the year table, the fund section states no sum line, and the
+per-share column shows the pre-tax proceeds, so the tax of a fund reads in the year table. The
+year table has one column per cashflow of a phase year: the sale proceeds, the Kapitalsteuer, the
+Solzzuschlag, the Kirchensteuer, the flat rate for the years before the phase, the flat rate for
+the phase year, the payout, the parked money, the interest and the tax on the interest. Each
+column keeps its own sum line, and the year section states the tax total and the cash total once.
+The line below the table names the figures a reader adds, and the section says the flat columns
+are depot parts from other years, so they are not added to the year's money. The payout is the
+gross monthly amount times the months of that year. The parked money keeps its own column, `Betrag
+für das Jahr`: the money that was there at the start of the year. The tax on the interest is one
+figure, not split into parts. A cashflow that does not exist shows the dash with its reason, and a
+tax that exists as a rate but does not apply is a dash with its reason too, not a 0: the church
+tax while its checkbox is off, the Solzzuschlag while the Kapitalsteuer is off. Each column reads
+its own reason, because one row can show a figure in one column and a dash with another reason in
+another. With the tax off, the fund table's per-share figure is the same number as the taxed
+payout per share of story 024, because the tax is 0 there. With the tax or the parking option off
+the figures of stories 024, 032, 035, 045 and 046 stay.

@@ -14,9 +14,14 @@
   outline-offset: -2px;
 }
 
+/* Story 047: thirteen columns, the widest cells are the reason cells, so the table cannot read as
+   one grid inside the viewport. The tester's probe measured at 320 px and at 375 px: the content
+   minimum is 1534 px, 2119 px or more with a reason cell. A floor below that cannot bind, so the
+   rule is dropped and the columns carry the width: the table is never narrower than its content,
+   the scroller scrolls sideways while the page does not, and the year column stays sticky. The
+   design's starting value 1200 px was never a measured number, so it is not kept here. */
 .table {
   width: 100%;
-  min-width: 480px;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }

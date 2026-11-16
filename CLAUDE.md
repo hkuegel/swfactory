@@ -220,7 +220,14 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   not values the code under test computes. A test that asserts a network request must name the
   mode it is measured in (dev server or built site); against the built site, assert the values,
   not the request. A test comment that says a wording is not asserted must not assert it, and a
-  formatter must not print a value the user did not enter (a day inside a month-only label).
+  formatter must not print a value the user did not enter (a day inside a month-only label). The
+  mutation runner restores inside a `finally`, so an interrupted run cannot leave a mutation in the
+  tree, and it says where the composition of a count cannot be read from the printed refs instead
+  of claiming it (story 047, P46, hak's approval of 2026-11-16; the second half of P38, which
+  covers the backup, so hak may fold it into P38). A case that says a rule cannot bind on an
+  asserted number is checked against that number first, because a control the rule caps is a
+  falsifier of that rule; the case is named as what it pins, not as a falsifier of one rule
+  alone (story 047, nit 10, the tester's lesson, not a numbered rule).
 - **Independent tests:** tests of one feature don't depend on another feature's layout or
   tab order — e.g. an auth test asserts that focus left the auth controls, not which game
   control it landed on. No counted Tab sequences and no raw coordinates of elements that
@@ -239,9 +246,19 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   it as DOM/text; computed styles are read only after transitions ended (`getAnimations()`
   empty); software-GL specs run with one worker on CI. Playwright `testIgnore`/`testMatch` globs
   are matched against absolute paths and are anchored (e.g. `**/e2e/pages/**`).
+- **Sum lines stay readable on a small screen:** the sum lines of a table wider than the
+  viewport are paragraphs outside the scrolling wrapper, not cells inside it; a test that reads
+  them as a table row fails at 320 px (story 047, P43, hak's approval of 2026-11-16).
+- **A wide table names its addends:** a table with more than about ten columns needs one line
+  below it that names the columns the reader adds to reach the printed total, so the total can
+  be checked without counting columns by hand (story 047, P44, hak's approval of 2026-11-16).
 - **Hand oracle:** the expected number is written by hand in the test, never read from the same table,
   parser or fixture the code uses to answer; a fix of a parser is tested through its caller, not only
-  through the exported function (story 026, R3 and nit 6).
+  through the exported function (story 026, R3 and nit 6). A hand value for a sum line adds up the
+  figures the app shows, because the last part of a reading order is derived from its total and may
+  differ from its own rounding (story 047, P45, hak's approval of 2026-11-16). Every product and
+  every sum inside a hand comment adds to the total that comment names, and the comment names its
+  unit, Cent or micro-euro, next to the figures it counts (story 047, P45, nits 8 and 9).
 - **Which checks run:** `npm run verify` runs the checks a change can affect; durations are reported,
   never asserted. A run that publishes to `main` is always a full run, and the gate 2 full run is the
   oracle for what the mapping could have missed (story 026, R4). Call the full run as
@@ -250,6 +267,10 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   (story 045, P36, hak's approval of 2026-11-15).
 - **No live request, no repository read** in a test, and the mode is named in every call; a script that
   a test imports runs its scan only when it is executed directly (story 026).
+- **Markdown prose lines:** written within 100 characters by the writer. Prettier with
+  `proseWrap: preserve` (this repo's config) only re-pads tables, it does not reflow prose, so
+  a long prose line is a writing miss, not a formatting miss (story 047, P48, hak's approval
+  of 2026-11-16).
 - **Cost table carries data:** a row is measured or says `not measured` with the reason; a table that
   is `n/a` in every row is ceremony (story 026, R5).
 - **No-script pages:** a page that must work without scripts is checked on the built site
@@ -274,7 +295,11 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   `inputMode="text"`; iOS numeric/decimal keypads have no minus key.
 - **Money:** integer cents at module boundaries and string-based parsing of user input (no
   `parseFloat`); round only where the story's convention says, and derive the last part of a
-  "parts sum to total" breakdown instead of rounding it separately.
+  "parts sum to total" breakdown instead of rounding it separately. When the reading order that
+  gives that derived part crosses two tables, one module owns it, so the per-table rounding
+  functions do not derive their own last part (story 047, P47, hak's approval of 2026-11-16).
+  The base that owns the derived part is the shown total of the whole order, not the per-part
+  base of one table (story 047, gate 2).
 - **Network timeouts:** every network call that keeps the UI in a progress state needs a
   timeout (AbortController + named constant) that ends in the error state — no UI state
   may stay pending forever. Only interactive steps (e.g. a provider popup) are exempt.

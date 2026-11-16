@@ -1,17 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cashflowReasonText,
+  columnLabel,
   COPY,
   DEPOSIT_COPY,
   amountCopy,
   errorMessage,
   FIELD_COPY,
   firstInvalidField,
+  flatReasonText,
   overrideCopy,
   parkReasonText,
   parkTaxReasonText,
   projectionLabel,
+  purchaseReasonText,
   TAX_COPY,
 } from './fieldCopy.ts';
+import type { CashflowColumn } from './logic/cashflow.ts';
 import { MAX_EXACT_UNITS, OVERRIDE_SPECS, fieldSpec } from './logic/fields.ts';
 
 /**
@@ -250,11 +255,12 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     // text, and the tax sentence is part of it only when a row has a tax figure (the developer's deviation 4).
     expect(COPY.parkColumn).toBe('Zinsen über das Phase-Jahr in Euro');
     expect(COPY.parkTaxColumn).toBe('Steuer auf die Zinsen in Euro');
-    expect(COPY.parkSumLine('32,50\u00a0€')).toBe(
-      'Summe der Zinsen über die Phase-Jahre: 32,50\u00a0€.',
+    // Story 047 AC3: the two lines are one base string applied to the two hand labels.
+    expect(COPY.columnSumLine('Zinsen über das Phase-Jahr in Euro', '32,50\u00a0€')).toBe(
+      'Summe Zinsen über das Phase-Jahr in Euro: 32,50\u00a0€.',
     );
-    expect(COPY.parkSumLine('32,50\u00a0€', '8,58\u00a0€')).toBe(
-      'Summe der Zinsen über die Phase-Jahre: 32,50\u00a0€. Steuer auf die Zinsen: 8,58\u00a0€.',
+    expect(COPY.columnSumLine('Steuer auf die Zinsen in Euro', '8,58\u00a0€')).toBe(
+      'Summe Steuer auf die Zinsen in Euro: 8,58\u00a0€.',
     );
     expect(COPY.parkFacts).toBe(
       'Die Zinsen werden einfach gerechnet, auf dem Geld, das bis zur Auszahlung wartet; innerhalb eines ' +
@@ -279,5 +285,76 @@ describe('fieldCopy (story 030, AC3: the rule, not an invented maximum)', () => 
     expect(
       firstInvalidField({ depositRate: { kind: 'range' }, flatRate: { kind: 'format' } }),
     ).toBe('flatRate');
+  });
+});
+
+describe('fieldCopy (story 047, AC4): the year table reads one reason map and states the rules once', () => {
+  it('AC4 the three new strings are written once, in the map the cells read', () => {
+    // Hand strings of the AC and of UX §2. The tax-off answer is the same string in every tax column
+    // (hak's gate 1 answer of 2026-11-16), so each map is read against the hand string here.
+    const taxOff = 'Steuer nicht angehakt';
+    expect(cashflowReasonText('outside-tax-case')).toBe(taxOff);
+    expect(flatReasonText('outside-tax-case')).toBe(taxOff);
+    expect(parkTaxReasonText('outside-tax-case')).toBe(taxOff);
+    expect(cashflowReasonText('kist-off')).toBe('Kirchensteuer nicht angehakt');
+    expect(cashflowReasonText('no-positive-gain')).toBe('kein Gewinn, darauf keine Steuer');
+    // The string of the year section's line: it never reads in a cell, so it is stated once here, and
+    // `COPY.flatNoRowLine` reads the same string through this map.
+    const noPhaseYear = 'Auflösung in einem Jahr, das kein Phase-Jahr ist';
+    expect(cashflowReasonText('sale-year-not-a-phase-year')).toBe(noPhaseYear);
+    expect(COPY.flatNoRowLine(2029, '0,48\u00a0€')).toBe(
+      `Fonds 2029: 0,48\u00a0€ (${noPhaseYear}).`,
+    );
+    // A cell with no figure of its own still names its reason, and each column reads its own map.
+    expect(cashflowReasonText('no-year-counts')).toBe('kein Jahr zählt (nur das Auflösungsjahr)');
+    expect(cashflowReasonText('no-year-pays')).toBe('kein Jahr zahlt Steuer');
+    expect(cashflowReasonText('no-funding-fund')).toBe('kein Fonds für dieses Jahr');
+    expect(cashflowReasonText('after-phase-end')).toBe('Auflösung nach Phasenende');
+    expect(purchaseReasonText('after-phase-end')).toBe('Auflösung nach Phasenende');
+    expect(flatReasonText('before-phase-start')).toBe('Auflösung vor Phasenbeginn');
+    expect(cashflowReasonText('no-rate')).toBe('kein Zinssatz');
+  });
+
+  it('AC4 the thirteen column labels in the order of the table, and the five lines below it', () => {
+    // Hand strings of the AC, each read against the label the copy gives that column.
+    const hand: [CashflowColumn, string][] = [
+      ['proceeds', 'Erlös aus der Fondsauflösung in Euro'],
+      ['kst', 'Kapitalsteuer in Euro'],
+      ['solz', 'Solzzuschlag in Euro'],
+      ['kist', 'Kirchensteuer in Euro'],
+      ['flatBeforePhase', 'Pauschalsteuer für die Jahre vor der Phase in Euro'],
+      ['flatForYear', 'Pauschalsteuer für das Phase-Jahr in Euro'],
+      ['payout', 'Auszahlung in Euro'],
+      ['parked', 'Betrag für das Jahr'],
+      ['interest', 'Zinsen über das Phase-Jahr in Euro'],
+      ['interestTax', 'Steuer auf die Zinsen in Euro'],
+    ];
+    for (const [column, label] of hand) {
+      expect(columnLabel(column), `column ${column}`).toBe(label);
+    }
+    // The five sentences AC4 names, read as the full line.
+    expect(COPY.readerLine).toBe(
+      'Das Geld eines Jahres: die Steuer-Spalten der Auflösung, Betrag für das Jahr und die Zinsen.',
+    );
+    expect(COPY.payoutCheck).toBe(
+      'Dasselbe Geld: die Auszahlung plus die Steuer. Die Auszahlung wird nicht noch einmal addiert.',
+    );
+    expect(COPY.netNote).toBe(
+      'Das Netto der Zinsen ist die Differenz aus der Zinsenspalte und ihrer Steuerspalte.',
+    );
+    expect(COPY.flatNote).toBe(
+      'Die Pauschalsteuer-Spalten sind Depotteile aus anderen Jahren und zählen nicht zum Geld ' +
+        'des Jahres.',
+    );
+    expect(COPY.parkedNote).toBe(
+      'Der Betrag für das Jahr ist das Geld, das am Anfang des Jahres da war, kein Zufluss.',
+    );
+    // The two totals the section states once, one line each, never a `dd`.
+    expect(COPY.taxTotalLine('78,59\u00a0€')).toBe(
+      'Summe der Steuer über die Phase-Jahre: 78,59\u00a0€.',
+    );
+    expect(COPY.cashTotalLine('3.678,95\u00a0€')).toBe(
+      'Summe des Gelds der Phase-Jahre: 3.678,95\u00a0€.',
+    );
   });
 });

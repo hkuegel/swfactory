@@ -13,12 +13,13 @@ import {
   type RawInputs,
 } from './logic/fields.ts';
 import { FUND_LIST, FUND_LIST_AS_OF, effectiveFund, type FundOverride } from './logic/fund.ts';
+import { cashflowRows, type CashflowTable } from './logic/cashflow.ts';
 import { DEPOSIT_OFF, type DepositOption } from './logic/deposit.ts';
 import { formatEuro } from './logic/format.ts';
-import { FLAT_OFF, flatBaseFactor, type FlatRate } from './logic/flat.ts';
+import { FLAT_OFF, type FlatRate } from './logic/flat.ts';
 import { parseField, parseInputs, type FieldError, type FieldErrors } from './logic/parseInputs.ts';
 import { buildPlan, type Phase, type Plan } from './logic/phase.ts';
-import { payoutPerShareMicroEur, type Tax } from './logic/projection.ts';
+import { preTaxPerShareMicroEur, type Tax } from './logic/projection.ts';
 import { purchaseRows, type PurchaseRow } from './logic/purchase.ts';
 import { DEFAULT_BUNDESLAND, taxFromState, type TaxState } from './logic/tax.ts';
 import styles from './PlanCalculator.module.css';
@@ -64,8 +65,9 @@ interface Derived {
   readonly deposit: DepositOption;
   /** Story 032: one purchase row per fund, in the order of the fund table, or null while no result is possible. */
   readonly purchases: readonly PurchaseRow[] | null;
-  /** The depot that is shown, in cents, so the last purchase part comes from the total (032 AC2). */
-  readonly totalCents: number | null;
+  /** Story 047: the rows, the parts and the sums as the money rule reads them, or null while no result is
+   * possible. The two tables read the same table, so no figure can disagree between them. */
+  readonly cashflow: CashflowTable | null;
 }
 
 /**
@@ -136,15 +138,9 @@ export function PlanCalculator() {
         : null;
 
     for (const fund of funds) {
-      projections.set(
-        fund.year,
-        payoutPerShareMicroEur(
-          fund,
-          tax,
-          flatBaseFactor(fund, flat, FUND_LIST_AS_OF),
-          FUND_LIST_AS_OF,
-        ),
-      );
+      // Story 047 AC1: the fund table's per-share figure is the pre-tax proceeds; the tax of this fund is the
+      // year table's three columns, so no tax figure is read here.
+      projections.set(fund.year, preTaxPerShareMicroEur(fund, FUND_LIST_AS_OF));
     }
 
     // Story 032: the purchase side of the same model, on the same effective funds and tax state. The
@@ -153,6 +149,13 @@ export function PlanCalculator() {
       plan === null || phase === null
         ? null
         : purchaseRows(funds, phase, plan.monthlyCents, tax, flat, deposit);
+
+    // Story 047: one table for both sections, so the parts, the sums and the two totals are read from the
+    // same figures, and the money rule can name its last part in the reading order.
+    const cashflow =
+      plan === null || phase === null || purchases === null
+        ? null
+        : cashflowRows(plan, phase, taxState, flat, purchases, funds, FUND_LIST_AS_OF);
 
     return {
       errors,
@@ -165,7 +168,7 @@ export function PlanCalculator() {
       tax,
       deposit,
       purchases,
-      totalCents: plan === null ? null : plan.depotCents,
+      cashflow,
     };
   }, [raw, direction, taxState, parkOn, overrides]);
 
@@ -242,8 +245,8 @@ export function PlanCalculator() {
       />
       {/* The year table is removed while any field is invalid (UX §3), and a phase year without a
          funding fund keeps its row with the missing-year line (AC2). */}
-      {derived.plan !== null && derived.phase !== null && (
-        <YearTable plan={derived.plan} phase={derived.phase} />
+      {derived.plan !== null && derived.phase !== null && derived.cashflow !== null && (
+        <YearTable cashflow={derived.cashflow} phase={derived.phase} />
       )}
       {/* The Fondsplan stays while a field is invalid (UX §3). */}
       <FundTable
@@ -254,7 +257,7 @@ export function PlanCalculator() {
         markers={derived.markers}
         asOf={FUND_LIST_AS_OF}
         purchases={derived.purchases}
-        totalCents={derived.totalCents}
+        parts={derived.cashflow?.fundParts ?? null}
         onOverrideChange={handleOverride}
       />
     </div>

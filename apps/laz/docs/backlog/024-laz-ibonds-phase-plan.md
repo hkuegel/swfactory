@@ -104,6 +104,8 @@ only the boundaries that hold under any convention (AC1), not the design values.
   equals the NAV, no gain remains) and r = 25 % on a fund whose pre-tax projection is
   4,00 EUR above its NAV (taxed payout = NAV + 3,00 EUR); turning tax off again gives the
   same numbers as before.
+  (changed by [047](047-laz-cashflows-in-the-year-table.md): per-share figure is the pre-tax
+  proceeds, so the taxed figure this AC measures reads in the year table; its rule stays.)
 - **AC5:** Given a result is shown, when a payout-per-share figure is displayed, then the
   text next to that figure states that it is a projection from YTM and NAV, not a published
   market value, and states the asOf date; measured as: that label text is present and

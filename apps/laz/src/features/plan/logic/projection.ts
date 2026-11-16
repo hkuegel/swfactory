@@ -45,9 +45,27 @@ export function payoutFactor(
   flatBaseFactor: number,
   asOf: string = FUND_LIST_AS_OF,
 ): number {
-  const rho = Math.pow(1 + fund.ytmBp / 10000, dayCount(asOf, liquidationDate(fund)) / 365);
+  const rho = rhoFactor(fund, asOf);
   if (!tax.on) return rho;
   return rho - (tax.rateMillionths / RATE_UNIT) * Math.max(0, rho - 1 - flatBaseFactor);
+}
+
+/**
+ * ρ = (1 + ytm)^(d/365), the pre-tax factor per euro invested (ADR 0012). Exported because the tax parts
+ * of story 047 read the same base `max(0, ρ − 1 − flatBaseFactor)` that `payoutFactor` subtracts, and a
+ * shared expression must be read through one exported caller (story 026 R3).
+ */
+export function rhoFactor(fund: Fund, asOf: string = FUND_LIST_AS_OF): number {
+  return Math.pow(1 + fund.ytmBp / 10000, dayCount(asOf, liquidationDate(fund)) / 365);
+}
+
+/**
+ * Story 047 AC1: the fund table's per-share figure is the pre-tax proceeds `navMicroEur · ρ`, not the taxed
+ * payout of 024 AC4, because the tax of that fund is read in the year table. With the tax off this is the
+ * same number `payoutPerShareMicroEur` gives, which is what AC6 states.
+ */
+export function preTaxPerShareMicroEur(fund: Fund, asOf: string = FUND_LIST_AS_OF): number {
+  return fund.navMicroEur * rhoFactor(fund, asOf);
 }
 
 /** Payout per share in micro-euro, unrounded: `navMicroEur · ρ′` (AC1, AC4 of 024, AC3 of 045). */

@@ -63,6 +63,17 @@ Euro`: the base of each counted year is the value at the start of that year time
   year, the payout of its months minus the net interest; the parked money is not a part of the depot, so the
   parts that add up to the shown depot are unchanged. With the option off, or with the rate 0, nothing is
   calculated anywhere and the figures of stories 024, 032 and 045 do not move (#046).
+- `laz`: the tax figures move from the fund table to the year table. The fund table shows no tax
+  cell, its per-share column shows the pre-tax proceeds, so a fund's tax reads in the year table,
+  and the fund section states no tax sum line any more. The year table has one column per cashflow
+  of a phase year, so a row can be read by hand: the sale proceeds, the Kapitalsteuer, the
+  Solzzuschlag, the Kirchensteuer, the flat rate for the years before the phase, the flat rate for
+  the phase year, the payout, the parked money, the interest and the tax on the interest. Each
+  column keeps its own sum line, and the year section states the tax total and the cash total once.
+  A cashflow that does not exist, and a tax that exists as a rate but does not apply, shows a dash
+  with its reason, not a 0. The monthly payout is gross, the parked money is its own column, and the
+  tax on the interest is one figure, and the figures of stories 024, 032, 035, 045 and 046 stay
+  when the tax or the parking option is off (#047).
 - The site root `hkuegel.github.io/swfactory/` is a factory page, with no sign-in. It explains
   the factory's roles, pipeline and quality checks, and links to every published app and to
   the repository (#021).

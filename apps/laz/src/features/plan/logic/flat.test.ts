@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 // Story 046: `purchaseRows` gained `deposit` after `flat`, so this call site passes the control case.
 import { DEPOSIT_OFF } from './deposit.ts';
-import { flatBaseFactor, flatTaxMicroEur } from './flat.ts';
+import { flatReasonFor } from './cashflow.ts';
+import { flatReasonText } from '../fieldCopy.ts';
+import { flatBaseFactor, flatTaxMicroEur, flatYearMicroEur } from './flat.ts';
 import type { Fund } from './fund.ts';
 import { formatEuroMicroEur } from './format.ts';
 import type { Phase } from './phase.ts';
 import { payoutFactor, payoutPerShareMicroEur, type Tax } from './projection.ts';
 import { purchaseRows } from './purchase.ts';
+import type { TaxState } from './tax.ts';
 
 /**
  * Story 045, AC2 and AC3. The hand oracle of the story: fund NAV 100 € = 100.000.000 micro-euro,
@@ -20,12 +23,16 @@ import { purchaseRows } from './purchase.ts';
  * The order of the assertions is the order P32 needs: each rule can only move the assertion that pins
  * it, because a failing assertion ends the test and the later lines do not run. So the case that pins
  * a rule must be insensitive to the rules pinned below it: the hand sum has asOf on a year start (no
- * month fraction), YTM 5 % (the cap never binds) and a positive gain; the month case has a cap that
- * does not bind (the year's increase is 2,476357 € against the base 1,12 €); the cap case has a
- * positive gain.
+ * month fraction) and a positive gain; the month case has a cap that does not bind, because its
+ * increase is 2,476357 € against the base 1,12 €); the cap case has a positive gain.
+ * Nit 10 (round 3): the hand sum is a capped figure, because YTM 5 % gives 5,00 € against the base
+ * 2,24 €, so a cap mutant moves it here too, as does the capped control of the guard test below.
  */
 const FLAT = { hundredths: 224 };
 const TAX: Tax = { on: true, rateMillionths: 263750 };
+// The same rate as the state the year table reads (story 047 AC5): the Kapitalertragsteuer on, the
+// Kirchensteuer off, so `taxFromState` gives 26,375 %, the rate the hand values below use.
+const STATE_ON: TaxState = { kstOn: true, kistOn: false, bundesland: 'bayern' };
 
 function fund(year: number, navMicroEur: number, ytmBp: number): Fund {
   return {
@@ -76,21 +83,44 @@ describe('flat (story 045, AC2: the base of a calendar year)', () => {
     //    same asOf, the fund one year later: the counted year is 2027, base 2,24 € -> 590.800.
     const asOfInside = '2027-01-01';
     const phase: Phase = { startMonth: '2027-01', endMonth: '2029-12' };
-    const rows = purchaseRows(
-      [fund(2027, 100000000, 500), fund(2028, 100000000, 500)],
-      phase,
-      100000,
-      TAX,
-      FLAT,
-      DEPOSIT_OFF,
-      asOfInside,
-    );
-    expect(rows.map((row) => `${String(row.fundYear)} ${row.flatReason ?? 'figure'}`)).toEqual([
-      '2027 no-year-counts',
-      '2028 figure',
-    ]);
-    expect(rows[0]?.flatMicroEur).toBeNull();
-    expect(rows[1]?.flatMicroEur).toBeCloseTo(590800, 6);
+    const pair = [fund(2027, 100000000, 500), fund(2028, 100000000, 500)];
+    const rows = purchaseRows(pair, phase, 100000, TAX, FLAT, DEPOSIT_OFF, asOfInside);
+    // AC4: the fund table shows no flat figure any more, so the flat column's reason is read through the
+    // year table's map. Hand: fund 2027 has no counted year (asOf is inside its own year), so its cell
+    // shows the dash with the string UX §2 gives that case; the fund one year later has a figure.
+    const shown = rows.map((row, index) => {
+      const reason = flatReasonFor(row, pair[index] as Fund, FLAT, STATE_ON, asOfInside);
+      return reason === null ? 'figure' : flatReasonText(reason);
+    });
+    expect(shown).toEqual(['kein Jahr zählt (nur das Auflösungsjahr)', 'figure']);
+    // The hand bases behind the two cells: no counted year is no figure, and the counted year 2027 has
+    // the base 2,24 € -> 590.800 micro-euro.
+    expect(flatTaxMicroEur(pair[0] as Fund, FLAT, TAX, asOfInside)).toBe(0);
+    expect(flatTaxMicroEur(pair[1] as Fund, FLAT, TAX, asOfInside)).toBeCloseTo(590800, 6);
+  });
+
+  it('AC2, the sign guard through its hand case and the cap through its control', () => {
+    // Round 2, review finding 2. On the fund list the tests read through the `vite.config.ts` alias
+    // (`fund-list.fixture.json`, asOf 2026-12-31) every `ytmBp` is positive, so no counted year has a
+    // negative increase and the guard cannot bind there: this case is the only shape that reads it.
+    // Round 3, nit 10: asOf is on a year start, so the whole-month rule cannot bind. The cap cannot
+    // bind on the negative hand value: a negative increase is below any positive cap, so the min
+    // takes the guard's 0 whatever the cap is. The positive control is a capped figure, so this
+    // test pins the guard through the hand value and the cap through the control: it is not the
+    // guard on its own. The composition of the round-2 cap count 16 is not readable there, because
+    // the log prints four refs per run, so the added line stays the tester's word (nit 10).
+    // Hand, in the fund's own units (NAV 100.000.000 micro-euro = 100 € = 10.000 Cent): YTM -5 % on
+    // counted year 2025 gives the increase 0,95 - 1 = -0,05 per euro, the guard makes it 0, so the
+    // year's tax is 0. With the guard removed the base is -0,05 per euro = -5,00 € = -500 Cent and
+    // the tax is -1.318.750 micro-euro, which is not 0. Round 2 wrote the Cent value -131,875 Cent
+    // (1 Cent = 10.000 micro-euro) as micro-euro, so its digit string was ten times short.
+    // Control on the same asOf: YTM 5 % gives the increase 0,05 per euro = 5,00 €, above the cap
+    // 0,0224 per euro = 2,24 € = 224 Cent, so the cap binds: 224 Cent x 26,375 % = 59,08 Cent =
+    // 590.800 micro-euro, the figure the assertion pins.
+    const negative = fund(2026, 100000000, -500);
+    const positive = fund(2026, 100000000, 500);
+    expect(flatYearMicroEur(negative, 2025, FLAT, TAX, '2025-01-01')).toBe(0);
+    expect(flatYearMicroEur(positive, 2025, FLAT, TAX, '2025-01-01')).toBeCloseTo(590800, 6);
   });
 });
 

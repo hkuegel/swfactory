@@ -16,7 +16,6 @@ import {
   parkTerm,
   type DepositOption,
 } from './deposit.ts';
-import { roundEuroCents } from './format.ts';
 import { FUND_LIST_AS_OF, type Fund } from './fund.ts';
 import { flatBaseFactor, flatTaxMicroEur, type FlatRate } from './flat.ts';
 import { payoutFactor, type Tax } from './projection.ts';
@@ -292,39 +291,4 @@ export function displayYearCents(plan: Plan): readonly (number | null)[] {
     if (row.fundingFund === null) return null;
     return row === last ? total - others : Math.round(row.yearAmountCents);
   });
-}
-
-/** Story 046 AC4: the two parked figures of a row as they are shown, one rounding each (`roundEuroCents`),
- * `null` for a dash — so the sum line is the sum of the SHOWN figures, not of the unrounded ones. */
-export interface ParkCents {
-  readonly interestCents: number | null;
-  readonly taxCents: number | null;
-}
-
-export function displayParkCents(plan: Plan): readonly ParkCents[] {
-  return plan.years.map((row) => ({
-    interestCents:
-      row.parkInterestMicroEur === null ? null : roundEuroCents(row.parkInterestMicroEur),
-    taxCents: row.parkTaxMicroEur === null ? null : roundEuroCents(row.parkTaxMicroEur),
-  }));
-}
-
-/**
- * The sums the year section states once (AC4): the sum of the SHOWN cents, `null` when no row has an
- * interest figure — nothing is invented for an empty sum (the display rule story 045 recorded). `taxCents`
- * is `null` when no row shows a tax figure, so the second sentence of the sum line is not shown either.
- */
-export interface ParkSums {
-  readonly interestCents: number;
-  readonly taxCents: number | null;
-}
-
-export function parkSumsCents(shown: readonly ParkCents[]): ParkSums | null {
-  const interest = shown.filter((row) => row.interestCents !== null);
-  if (interest.length === 0) return null;
-  const tax = shown.filter((row) => row.taxCents !== null);
-  return {
-    interestCents: interest.reduce((sum, row) => sum + (row.interestCents ?? 0), 0),
-    taxCents: tax.length === 0 ? null : tax.reduce((sum, row) => sum + (row.taxCents ?? 0), 0),
-  };
 }

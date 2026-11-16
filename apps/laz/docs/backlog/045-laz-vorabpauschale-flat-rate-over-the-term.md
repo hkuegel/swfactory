@@ -98,11 +98,16 @@ not taxed twice.
   reason strings of story 032. The copy says once that the payment for a year falls on the first business day
   of the next year, that the year of liquidation does not count, and that the money comes from the
   Verrechnungskonto.
+  (changed by [047](047-laz-cashflows-in-the-year-table.md): the fund table shows no tax, so this
+  figure reads in the year table and the fund section states no sum line; the three facts stay in
+  the fund section.)
 - **AC5 (the depot):** The yearly payments belong to the depot the plan searches for (hak's answer of
   2026-11-15), so `D = P · F + cash` and `P = (D − cash) / F`, where `cash` is the flat tax of the funds that
   fund a phase year, undiscounted. The round trip of story 024 AC3 holds while the flat rate is 0, and in the
   tax case the parts shown in the fund table — the purchase parts and the flat parts — add up to the shown
   depot (story 032 AC2, extended: the last part is derived from the total).
+  (changed by [047](047-laz-cashflows-in-the-year-table.md): the flat parts add to the depot
+  through the year table, not through the fund table; `cash` and its hand values stay.)
 
 ## Out of scope
 

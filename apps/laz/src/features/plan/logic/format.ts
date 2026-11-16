@@ -13,7 +13,7 @@ export function formatEuro(cents: number): string {
 
 /**
  * The single rounding of a micro-euro money figure (ADR 0012), read by the fund table's money rule
- * (`displayFundParts`) and by the year table's parked columns (`displayParkCents`), so both paths round with
+ * (`displayFundParts`) and by the year table's cashflow columns (`cashflow.ts`), so both paths round with
  * one expression. Moved here from `purchase.ts` by story 046; the body is unchanged.
  */
 export function roundEuroCents(microEur: number): number {
