@@ -115,7 +115,7 @@ _tester: AC → test mapping, results, defects found._
 - Limit: `reserveOf` is not exported and the reserve follows from the shares, so the story's oracle (1.000 EUR, 2,40 %, November) cannot be set. The unit AC1 test still takes the shown reserve as input; the independent hand value is the e2e pin of 2027 (hand figures from displayed cells). Not changed.
 - Checked, OK: purchase on 31.12. gives no interest in row 2026; no defects.
 
-Gate 2 full run (orchestrator, 2026-11-16, `verify --mode=full`, local): 12 of 12 steps ok. Real data in the dev server (640.000 €, KapESt + KiSt Bayern, flat 2,24 %, parking 2,50 %): reserve 10.706,81 €, December 2026 interest 22,31 € (10.706,81 × 2,5 % / 12), 2027 interest 251,73 € ((10.722,91 − 653,56) × 2,5 %), statement ends at 0,00 €.
+Gate 2 full run (orchestrator, 2026-11-16, `verify --mode=full`, local): 12 of 12 steps ok. Real data in the dev server (640.000 €, KapESt + KiSt Bayern, flat 2,24 %, parking 2,50 %): reserve 10.706,81 €, December 2026 interest 22,31 € (10.706,81 × 2,5 % / 12), 2027 interest 251,73 € ((10.722,91 − 653,56) × 2,5 %), statement ends at 0,00 €. CI run of the branch: 43931686902 (verify success).
 
 ## Explanation
 
