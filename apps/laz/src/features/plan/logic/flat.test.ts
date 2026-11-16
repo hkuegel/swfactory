@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEPOSIT_OFF } from './deposit.ts';
 import { flatReasonFor } from './cashflow.ts';
 import { flatReasonText } from '../fieldCopy.ts';
-import { flatBaseFactor, flatTaxMicroEur } from './flat.ts';
+import { flatBaseFactor, flatTaxMicroEur, flatYearMicroEur } from './flat.ts';
 import type { Fund } from './fund.ts';
 import { formatEuroMicroEur } from './format.ts';
 import type { Phase } from './phase.ts';
@@ -96,6 +96,21 @@ describe('flat (story 045, AC2: the base of a calendar year)', () => {
     // the base 2,24 € -> 590.800 micro-euro.
     expect(flatTaxMicroEur(pair[0] as Fund, FLAT, TAX, asOfInside)).toBe(0);
     expect(flatTaxMicroEur(pair[1] as Fund, FLAT, TAX, asOfInside)).toBeCloseTo(590800, 6);
+  });
+
+  it('AC2, the sign guard on its own: a negative YTM built inside this test, not in a data file', () => {
+    // Round 2, review finding 2. On the fund list the tests read through the `vite.config.ts` alias
+    // (`fund-list.fixture.json`, asOf 2026-12-31) every `ytmBp` is positive, so no counted year has a
+    // negative increase and the guard cannot bind there: this case is the only shape that reads it. The
+    // guard is read by itself: asOf is on a year start, so the whole-month rule cannot bind, and a
+    // negative increase is below any positive cap, so the cap cannot bind either. Hand: YTM -5 % on
+    // counted year 2025 gives increase 0,95 - 1 = -0,05, the guard makes it 0, so the year's tax is 0.
+    // Control that carries a value on the same asOf: YTM 5 % -> base 2,24 € -> 590.800 micro-euro.
+    // Removing the guard turns the first hand value into -131,875 micro-euro, which is not 0.
+    const negative = fund(2026, 100000000, -500);
+    const positive = fund(2026, 100000000, 500);
+    expect(flatYearMicroEur(negative, 2025, FLAT, TAX, '2025-01-01')).toBe(0);
+    expect(flatYearMicroEur(positive, 2025, FLAT, TAX, '2025-01-01')).toBeCloseTo(590800, 6);
   });
 });
 

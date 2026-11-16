@@ -171,8 +171,10 @@ describe('purchase (story 032, AC2)', () => {
     // Parts in the order the two tables read them (story 047 AC3): the purchase parts 108.054, 103.184 and
     // 97.774 Cent, then row 2031 (fund 2031 whole in column A = 110, the year-2031 piece of fund 2032 in
     // column B = 120,542226 Cent × 26,375 % = 31,7926 -> 32), then column A of row 2032 = fund 2032's own
-    // part 147 − 32 = 115 (its own rounding would be 117), then the year section's line for fund 2030, the
-    // last part in the order: 309.345 − 309.269 = 76 Cent, one Cent less than its own rounding (77).
+    // part 147 − 32 = 115. Its own rounding is 115 too (hand: base 0,0951207936 × 46.000.000 µ€ × 26,375 %
+    // = 115,41174662135893 Cent), so this part is the derived value only by coincidence and cannot move.
+    // The part the derivation moves here is the year section's line for fund 2030, the last part in the
+    // order: 309.345 − 309.269 = 76 Cent, one Cent less than its own rounding (77).
     // The sum line is the sum of the shown flat figures: 110 + 32 + 115 + 76 = 333 Cent.
     const phase: Phase = { startMonth: '2031-01', endMonth: '2033-12' };
     const tax: Tax = { on: true, rateMillionths: 263750 };
@@ -205,8 +207,8 @@ describe('purchase (story 032, AC2)', () => {
     ).toEqual([
       ['flatBeforePhase', 2031, 110],
       ['flatForYear', 2031, 32],
-      ['flatBeforePhase', 2032, 115], // derived from fund 2032's own part, not its own rounding
-      ['flatNoRowLine', null, 76], // derived from the shown depot, one Cent under its own rounding
+      ['flatBeforePhase', 2032, 115], // its own rounding is also 115 here, so this line cannot move
+      ['flatNoRowLine', null, 76], // the part that does move: 76 against its own rounding 77
     ]);
     const shownFlatParts = flatPartsSum(parts.flatFigures);
     expect(
