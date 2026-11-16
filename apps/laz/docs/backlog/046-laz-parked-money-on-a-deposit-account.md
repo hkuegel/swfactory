@@ -1,7 +1,7 @@
-﻿---
+---
 id: 046
 title: The payout falls monthly, and money that is not yet needed can be parked on a deposit account for a rate that is a parameter
-status: in-test # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size: M # S | M | L (story 026). S = at most three ACs: needs only the Explanation, no Review section and no Cost table.
@@ -253,6 +253,15 @@ Append only._
 - 2026-11-16 — the option-guard rule cannot be moved by `DEPOSIT_OFF`, because that control's rate is 0; the
   shape that isolates it is an off state that still carries a typed rate (`OFF_RATE` in `deposit.test.ts`, the
   prefilled `2,50 %` with the control off in the browser). Recorded as the shape, not as a defect.
+- 2026-11-16 — gate 2, hak's answers: the three review nits are accepted as limits and not as defects, so the
+  code is not changed by them and the printed counts still describe the committed files; the order fault (K7) is
+  fixed as a move, with the duplicate entry removed. P38, P39, P40, P41 and P42 approved, recorded in
+  `.claude/agents/tester.md` and in item K7 of the reviewer checklist, which becomes version 3 with a Changes
+  line saying that this story was reviewed against version 2. Push and merge granted for this branch, as a
+  separate step. Status set to `done` here and in the backlog index row in the same run, and prettier re-run on
+  the index. What hak did not decide: the tech-writer memory rule that the CHANGELOG "Added" list is newest
+  first does not match the file, where the `laz` entries read oldest first; this story's entry was placed after
+  story 045's, following the file, and the rule stays as it is until hak changes it.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -1178,6 +1187,13 @@ values are the control, not an accident of a zero rate.
   the file; `monthSum` was put back by hand (`(months * (months + 1)) / 24`) and the runner was changed to run
   with `python -X utf8` and to restore in a `finally`. That run is recorded as an incident, not as a pass; the
   numbers above come from the runs that restored inside the runner.
+- The gate 2 run of 2026-11-16, `test:pages`: 1 failed, `landing\e2e\pages\landing.pages.spec.ts:511` (AC8, the
+  figure `stories done`), Expected 35 against the page's 36. The count was not the problem: the story file began
+  with a UTF-8 BOM, so the oracle's frontmatter regex `^---\n([\s\S]*?)\n---` found no frontmatter and did not see
+  story 046 as done, while the landing build reads the index row and counted it. The BOM was removed and the run
+  printed `24 passed`. `check:structure` had been green on the file with the BOM, because it reads the row against
+  the frontmatter with a parser that tolerates the BOM; the figure test is what caught the file shape. Recorded as
+  an incident of that run, and the count of 36 is what both readers print now.
 
 ## Review
 
@@ -1307,9 +1323,9 @@ _The section hak reads at gate 2, at most 15 lines of at most 120 characters._
 
 The app can park the monthly money on a deposit account for the months of one phase year, at a rate that is a parameter.
 The rate is one number for the whole term, prefilled with 2,50 %, and the option is its own block in the form.
-A year's interest is the monthly target times the rate times the average balance that waits: 6,5 year units for 12 months.
-In the tax case that interest is taxed at the Zufluss, and the net is what the plan keeps and what reduces the money it needs.
-The year table shows the interest and its tax as two columns, the sum line states them once, and each dash names its reason.
+A year's interest is the monthly target times the rate times the average balance that waits: 6,5 units for 12 months.
+In the tax case the interest is taxed at the Zufluss; the net is what the plan keeps and what it still needs.
+The year table shows the interest and its tax as two columns, the sum line states them once, each dash names its reason.
 The fund table's money for a year is the payout minus the net interest, and the shares follow that money.
 Hand example, 100,00 € monthly at 2,50 % for a full year: 16,25 € interest, 4,29 € tax, 11,96 € net, 1.188,04 € needed.
 With the option off the figures of stories 024, 032 and 045 are unchanged, and the test set asserts that.
@@ -1317,7 +1333,7 @@ The term enters the phase factor as K, and K/F cannot exceed 13/24, so the round
 The reviewer approved in round 1; three nits are recorded as limits and the fourth, the log order, is fixed in the file.
 The tester's run ended with an error, so its counts are not reported as a result of that run.
 The ten mutation counts here are what the orchestrator's own runner printed, on the test files the tester left.
-Nothing is pushed or merged: the branch is committed, status `in-test`, gate 2 needs hak's go.
+Gate 2 is granted by hak on 2026-11-16: the nits stay as limits, the branch is pushed and merged, status `done`.
 
 ## Retrospective
 
@@ -1327,8 +1343,8 @@ agents/CLAUDE.md/templates, and which ones hak approved. Include a `### Cost` ta
 
 The runs were one at a time, in the order product-owner, ux-designer, architect, developer, tester, reviewer; the
 model of every role run is `inherit (strata/iq2_xs)`. Gate 1 (the story as written, the five open questions and
-hak's answers) is recorded above and committed as `51d3411`. Gate 2 is not granted: nothing is pushed, the branch
-is committed, the status is `in-test`. Hak's approval of the three limits below is what gate 2 has to answer.
+hak's answers) is recorded above and committed as `51d3411`. Gate 2 is granted by hak on 2026-11-16: the three
+limits are accepted, the log order is fixed, P38 to P42 are approved, and the branch is pushed and merged.
 
 ### What went wrong
 
