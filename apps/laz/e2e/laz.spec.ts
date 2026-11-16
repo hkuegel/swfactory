@@ -1243,12 +1243,14 @@ test('047 AC1, AC6: no tax figure in the fund table, the tax read in the year ta
 // arithmetic on the fixture copy (asOf 31.12.2026): phase 01.2028-12.2033, monthly 100,00 € = 10.000 Cent,
 // flat 2,24 %, parking on at 2,50 %, KSt on, church tax on at 8 % (Bayern, the prefilled select). Row
 // 2028 is funded by fund 2027: rho = 1,015, the flat base of asOf's own year (one whole month, December)
-// is min(max(0, 0,0000684), 1 x 0,0224 x 1/12) = 0,0000684 per euro invested, so the row's base is
-// 1.759,10 Cent -> KSt 440 Cent, Solz 24 Cent, Kist 35 Cent, the row's tax total 960 Cent. The interest of
-// a full phase year is 10.000 Cent x 0,025 x monthSum(12) = 1.625 Cent, its tax 1.625 x 28,375 % =
-// 461 Cent, and the money that had to be at the start of the year is 120.000 - 1.196,40625 =
-// 118.804 Cent. Column A reads the fund sold in this year (fund 2028, whose counted years 2026 and 2027
-// are both before the phase: 22 Cent), column B the funds still held in it (26 + 27 + 29 + 30 = 112 Cent).
+// is min(max(0, 0,0000411), 1 x 0,0224 x 1/12) = 0,0000411 per euro invested, so the row's base is
+// 1.758,78 Cent -> KSt 440 Cent, Solz 24 Cent, Kist 35 Cent: their own roundings add to 499 Cent, and the
+// row's tax total is one rounding on the same base (499 Cent) plus the interest tax 461 Cent = 960 Cent,
+// so the derived last part reads 35 = 960 - 461 - 440 - 24. The interest of a full phase year is 10.000
+// Cent x 0,025 x monthSum(12) = 1.625 Cent, its tax 1.625 x 28,375 % = 461 Cent, and the money at the
+// start of the year is 120.000 - (1.625 - 4,6103125) = 118.836 Cent. Column A reads the fund sold in this
+// year (fund 2028, whose counted years 2026 and 2027 are both before the phase: 22 Cent), column B the
+// funds still held in it (26 + 27 + 29 + 30 = 112 Cent).
 test('047 AC2: one row read column by column in the AC2 order, thirteen headers pinned', async ({
   page,
 }) => {
@@ -1298,13 +1300,43 @@ test('047 AC2: one row read column by column in the AC2 order, thirteen headers 
   await expect(await cell('Betrag für das Jahr')).toHaveText(euro('1.188,36'));
   await expect(await cell('Zinsen über das Phase-Jahr in Euro')).toHaveText(euro('16,25'));
   await expect(await cell('Steuer auf die Zinsen in Euro')).toHaveText(euro('4,61'));
-  // The row's own totals: 960 Cent of tax, and 960 + 118.804 + 1.625 = 1.209,60 Cent of money.
+  // The row's own totals: 499 Cent of parts plus the interest tax 461 Cent = 960 Cent of tax, and
+  // 499 + 118.836,09375 + 1.625 = 120.960,09375 Cent of money, i.e. 960 + 1.200,00 Cent.
   const section = yearRegion(page);
-  await expect(section.getByText(/^Summe der Steuer über die Phase-Jahre:/)).toHaveText(
-    'Summe der Steuer über die Phase-Jahre: 105,47\u00a0€.',
+  // AC3, read as the figures shown in their own columns. The tax total has the tax on the interest inside
+  // it, as AC5 states it: KSt 440 + 586 + 877 + 1507 + 2386 + 3497 = 9.293 Cent, Solz 24 + 32 + 48 + 83 +
+  // 131 + 192 = 510, Kist 35 + 47 + 71 + 120 + 191 + 280 = 744, so the parts shown are 10.547 Cent, and the
+  // six interest taxes 6 x 461 = 2.766 Cent give 13.313 Cent = 133,13 €. The church figures of rows 2030 and
+  // 2031 are the derived ones: 71 against its own rounding 70, 120 against 121. That is what makes the
+  // church column falsifiable here, and its line is the sum of the figures shown: 744 Cent = 7,44 €. On these
+  // six rows the own roundings also add to 744, because the two shifts cancel, so the line alone cannot tell
+  // the two readings apart; the two cells above are what pins the derived part.
+  const derived: [string, string][] = [
+    ['2030', '0,71'],
+    ['2031', '1,20'],
+  ];
+  for (const [year, hand] of derived) {
+    await expect(
+      await cellByHeader(years, rowByHeader(years, year), 'Kirchensteuer in Euro'),
+    ).toHaveText(euro(hand));
+  }
+  await expect(section.getByText(/^Summe Kirchensteuer in Euro:/)).toHaveText(
+    'Summe Kirchensteuer in Euro: 7,44\u00a0€.',
   );
+  await expect(section.getByText(/^Summe der Steuer über die Phase-Jahre:/)).toHaveText(
+    'Summe der Steuer über die Phase-Jahre: 133,13\u00a0€.',
+  );
+  // The money line counts the gross interest, so the interest tax is not added twice: per row the figures
+  // shown are parts + parked + interest. The parked column is the money at the START of the year,
+  // 120.000 - (1.625 - 4,6109375) = 118.836,09375 Cent each: five rows read their own rounding 118.836, and
+  // the last row (2033) is the derived part, 713.017 - 5 x 118.836 = 118.837, one Cent above its own
+  // rounding, because the column's total 713.016,5625 rounds to 713.017. So the money line is the sum of the
+  // figures shown: 10.547 + 713.017 + 9.750 = 733.314 Cent = 7.333,14 €. The total from the unrounded
+  // values, 13.313 + 6 x 1.200,00 = 733.313 Cent, is one Cent less: that is the number my earlier hand value
+  // asserted, and it is the row identity tax total + P x m, not the sum of the figures shown. AC3 states the
+  // sums as the figures shown, so the money line reads 7.333,14 €.
   await expect(section.getByText(/^Summe des Gelds der Phase-Jahre:/)).toHaveText(
-    'Summe des Gelds der Phase-Jahre: 7.333,13\u00a0€.',
+    'Summe des Gelds der Phase-Jahre: 7.333,14\u00a0€.',
   );
 });
 
@@ -1386,7 +1418,13 @@ test('047 AC3: the flat identity, the derived last part, and each sum line as th
       `Summe ${label}: ${wert}\u00a0€.`,
     );
   }
-  await expect(section.getByText(/Kirchensteuer/)).toHaveCount(0);
+  // The church tax is off, so this column has no figure and the section states no sum line for it. Counting
+  // the word would count the header and the three cells that read `Kirchensteuer nicht angehakt`, which AC4
+  // requires and its own spec reads cell by cell: four elements, not AC3's rule. Read as AC3, the church
+  // column's line is the sum of the figures shown in that column; when a row's own rounding differs from the
+  // derived part the line takes the shown figure, as AC2's case does (71 against its own rounding 70, 120
+  // against 121), where the shown figures add to 744 Cent = 7,44 €.
+  await expect(section.getByText(/^Summe Kirchensteuer in Euro:/)).toHaveCount(0);
   // The two totals the section states once: 7.449 + 410 = 7.859 Cent, and 7.859 + 360.036 = 367.895.
   await expect(section.getByText(/^Summe der Steuer über die Phase-Jahre:/)).toHaveText(
     'Summe der Steuer über die Phase-Jahre: 78,59\u00a0€.',
