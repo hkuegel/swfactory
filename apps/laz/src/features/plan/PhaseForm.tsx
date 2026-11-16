@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { CheckboxOption } from './CheckboxOption.tsx';
-import { amountCopy, COPY, FIELD_COPY, TAX_COPY } from './fieldCopy.ts';
+import { DEPOSIT_COPY, amountCopy, COPY, FIELD_COPY, TAX_COPY } from './fieldCopy.ts';
 import { FIELD_IDS, type Direction, type FieldId, type RawInputs } from './logic/fields.ts';
 import type { FieldErrors } from './logic/parseInputs.ts';
 import { BUNDESLAENDER, type TaxState } from './logic/tax.ts';
@@ -14,9 +14,13 @@ export interface PhaseFormProps {
   readonly errors: FieldErrors;
   /** The tax checkboxes and the Bundesland (story 031); nothing here can be invalid. */
   readonly tax: TaxState;
+  /** Story 046 AC1: the parking option is a checkbox, so it cannot hold a value outside its own options and
+   * names no error; nothing in this block is ever disabled (024 AC3). */
+  readonly parkOn: boolean;
   readonly onDirection: (direction: Direction) => void;
   readonly onField: (field: FieldId, value: string) => void;
   readonly onTax: (next: TaxState) => void;
+  readonly onPark: (checked: boolean) => void;
 }
 
 /** The form whose accessible name is the visible `h2` "Eingaben", the sign-in probe (UX §1). */
@@ -25,9 +29,11 @@ export function PhaseForm({
   raw,
   errors,
   tax,
+  parkOn,
   onDirection,
   onField,
   onTax,
+  onPark,
 }: PhaseFormProps) {
   const headingId = useId();
   const selectId = `${headingId}-bundesland`;
@@ -74,9 +80,10 @@ export function PhaseForm({
         </label>
       </fieldset>
 
-      {/* Story 045: the flat field is not rendered here but inside the tax block below, so the Tab order
-          follows the form order of `FIELD_IDS`, where `flatRate` is last (UX §1). */}
-      {FIELD_IDS.filter((field) => field !== 'flatRate').map((field) => (
+      {/* Story 045: the flat field is not rendered here but inside the tax block below, and story 046's rate
+          field is rendered inside the parking block after it, so the Tab order follows the form order of
+          `FIELD_IDS`, where the two percent fields are last (UX §1). */}
+      {FIELD_IDS.filter((field) => field !== 'flatRate' && field !== 'depositRate').map((field) => (
         <TextField
           key={field}
           copy={field === 'amount' ? amountCopy(direction) : FIELD_COPY[field]}
@@ -137,6 +144,34 @@ export function PhaseForm({
           error={errors.flatRate}
           onChange={(value) => {
             onField('flatRate', value);
+          }}
+        />
+      </fieldset>
+
+      {/* Story 046 AC1 (hak's answer to Q5): the parking option is its own block, the last fieldset of the
+          form, because it works outside the tax case too. The legend names the group and the label names what
+          the control does, so they are two different strings; the whole row is one 44 px target and the hint
+          is the control's description. The native checkbox is kept, not `role="switch"`: the platform has no
+          switch component and the state change happens on a focused control that announces itself (UX §2). The
+          rate field is never disabled, like every control of the form (024 AC3), and it is the last control of
+          the block, which is what keeps the Tab order and the form order of `FIELD_IDS` one order. */}
+      <fieldset className={styles.fieldset}>
+        <legend>{DEPOSIT_COPY.legend}</legend>
+        <CheckboxOption
+          checked={parkOn}
+          label={DEPOSIT_COPY.controlLabel}
+          hint={DEPOSIT_COPY.controlHint}
+          onChange={(checked) => {
+            onPark(checked);
+          }}
+        />
+        <TextField
+          copy={FIELD_COPY.depositRate}
+          inputId="field-depositRate"
+          value={raw.depositRate}
+          error={errors.depositRate}
+          onChange={(value) => {
+            onField('depositRate', value);
           }}
         />
       </fieldset>

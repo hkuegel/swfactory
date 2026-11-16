@@ -73,6 +73,16 @@
   line-height: var(--leading-sm);
 }
 
+/* A dash with its reason in the two parked columns (story 046 AC4). The reason is copy text, longer than a
+   figure, so these cells wrap while the figure columns stay nowrap; the muted colour is the one the footnote
+   and the paragraphs of the section already use (the same pair in tokens.test.ts's PAIRS). The cell keeps the
+   column's alignment, so a row can be read left to right. */
+.reason {
+  color: var(--color-text-muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Narrow: the year column stays in view while the rest scrolls (UX §5). */
 @media (max-width: 599.98px) {
   .table th:first-child {

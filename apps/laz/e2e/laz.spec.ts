@@ -4,6 +4,8 @@ import { expect, test, type Locator } from '@playwright/test';
 import {
   amountInput,
   cellByHeader,
+  depositInput,
+  depositSwitch,
   fixtureAsOf,
   fixtureFunds,
   flatInput,
@@ -19,6 +21,7 @@ import {
   result,
   resultText,
   rowByHeader,
+  yearRegion,
   yearTable,
 } from './laz.helpers.ts';
 
@@ -415,13 +418,17 @@ test('033 AC3: the phase fields start with the example phase hak gave, are reach
     page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }),
     page.getByRole('checkbox', { name: 'Kirchensteuer auf die Kapitalertragsteuer', exact: true }),
     page.getByLabel('Bundesland für die Kirchensteuer', { exact: true }),
+    // Story 046 adds the parking switch and its field after the tax controls, in the order of `FIELD_IDS`.
+    depositSwitch(page),
+    depositInput(page),
   ];
   for (const field of fields) {
     await expect(field, `field ${field}`).not.toBeDisabled();
   }
 
   // The form order of `FIELD_IDS` (Beginn, Ende, Betrag), then the tax controls in the order the form
-  // renders them (story 031 replaced the typed rate).
+  // renders them (story 031 replaced the typed rate). The order stops here: story 046's own test reads the
+  // parking controls by their names, so this test does not assume where they sit in the tab chain.
   await phaseStartInput(page).focus();
   await expect(phaseStartInput(page)).toBeFocused();
   await page.keyboard.press('Tab');
@@ -920,4 +927,177 @@ test('045 AC5: the depot includes the yearly payments, the parts of both columns
   );
   await expect(await flatCell('2029')).toHaveText('– Auflösung vor Phasenbeginn');
   await expect(await flatCell('2035')).toHaveText('– Auflösung nach Phasenende');
+});
+
+// Story 046, AC1: the parking block is its own group (Q5), its switch and its field read by the names UX §2
+// gives them, and the effect of the option asserted as a pair on one figure. Hand case: the prefilled phase
+// 01.2028–03.2034, depot 10.000,00 €, tax off, so story 045's cash line is 0 and the figure is the plain
+// model. F = 66,947895916081 gives 149,37 €, the figure the app shows today. With the switch on, the term of
+// a full phase year is 6,5 × 0,025 = 0,1625 (2028 to 2033) and 0,5 × 0,025 = 0,0125 for the three-month year
+// 2034; over the funding funds K = 0,1625 × (1/1,015 + 1/1,0404564 + 1/1,0769635 + 1/1,1256 + 1/1,1877983 +
+// 1/1,265591) + 0,0125/1,3611901 = 0,885924024210, so P = 10.000 Cent / (66,947895916081 − 0,885924024210) =
+// 151,372446 € -> 151,37 €. Off and on are one pair; a single figure is not an assertion.
+test('046 AC1: the parking block as its own group, its switch and its field by the names UX §2 gives, and the hand figure for the option off against the option on', async ({
+  page,
+}) => {
+  const block = page.getByRole('group', {
+    name: 'Geld auf dem Tagesgeldkonto parken',
+    exact: true,
+  });
+  await expect(block).toHaveCount(1);
+  await expect(block).toBeVisible();
+
+  // Q5: the block is its own fieldset, so it reads as a group named by its legend, and it is the last group
+  // of the form - the order `fieldCopy.test.ts` pins for the key list. The field is inside it, so the group
+  // is not named after the control it holds.
+  await expect(page.getByRole('group').last()).toHaveAccessibleName(
+    'Geld auf dem Tagesgeldkonto parken',
+  );
+  await expect(block.getByLabel('Zinssatz in Prozent', { exact: true })).toHaveCount(1);
+
+  // The switch is named by what it does, which is a different string from the legend (UX §2).
+  const control = depositSwitch(page);
+  await expect(control).toBeVisible();
+  await expect(control).not.toBeChecked();
+  await expect(control).not.toBeDisabled();
+
+  // AC1: prefilled with the value Q1 names, read as whole hundredths of a percent, never disabled.
+  const field = depositInput(page);
+  await expect(field).toHaveValue('2,50');
+  await expect(field).toHaveAttribute('inputmode', 'decimal');
+  await expect(field).not.toBeDisabled();
+
+  // The two phrases AC4 says the copy states once, read as the accessible descriptions: the switch's hint
+  // names the day the payout falls, the field's hint names the rate as constant over the term. The full
+  // strings live in `fieldCopy.test.ts`, so this test does not read its oracle from the module it checks.
+  await expect(control).toHaveAccessibleDescription(/letzten Tag jedes Phase-Monats/);
+  await expect(field).toHaveAccessibleDescription(/über die Laufzeit gleich/);
+
+  // UX §2: before the first edit nothing is marked, and the live region is still empty.
+  await expect(field).not.toHaveAttribute('aria-invalid');
+  await expect(block.getByText(/Zinssatz in Prozent: /)).toHaveCount(0);
+  await expect(liveRegion(page)).toHaveText('');
+
+  // AC1, the off half: the figures are the ones the app shows today. Hand case, tax off.
+  await amountInput(page).fill('10000,00');
+  await expect(figure(page, 'Maximale monatliche Auszahlung')).toHaveText(euro('149,37'));
+
+  // The positive half of the same pair: the switch on moves the figure to the hand value above.
+  await control.check();
+  await expect(figure(page, 'Maximale monatliche Auszahlung')).toHaveText(euro('151,37'));
+
+  // And the rate-0 half of AC1: with the option on but the rate 0, the figure is the off figure again, and
+  // the year row names the reason AC4 gives for it (the copy string is in `fieldCopy.test.ts`, the cell with
+  // its dash is asserted here, which is what the mutation of that branch can move).
+  await field.fill('0');
+  await expect(figure(page, 'Maximale monatliche Auszahlung')).toHaveText(euro('149,37'));
+  const table = yearTable(page);
+  const cell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Zinsen über das Phase-Jahr in Euro');
+  await expect(await cell('2028')).toHaveText('– kein Zinssatz');
+
+  // P27: once the value is edited, an invalid one is announced with the label UX §2 gives the field, and the
+  // field is marked without being disabled. The pair is the empty error before the first edit above.
+  await field.fill('101,00');
+  await expect(field).toHaveAttribute('aria-invalid', 'true');
+  await expect(field).not.toBeDisabled();
+  await expect(block.getByText(/Zinssatz in Prozent: /)).toHaveCount(1);
+  await expect(liveRegion(page)).toHaveText('Kein Ergebnis: Zinssatz in Prozent ist ungültig.');
+});
+
+// Story 046, AC4: the two columns of the year table, the sum the year section states once, and one dash per
+// reason. Hand case in the payout direction: monthly target 100,00 € = 10.000 Cent, tax 26,375 % (the
+// Kapitalertragsteuer alone), flat typed 0 so the cash line is 0 and the year amount is the parked rule
+// alone. Phase 01.2033–12.2034: both rows are full phase years, so the interest of each is 6,5 × 100 × 0,025
+// = 16,25 € and its tax 4,2859375 € -> 4,29 €. The figures themselves are asserted at logic level in
+// `deposit.test.ts` (P32); what AC4 asserts here is the sum line, and the sum of the SHOWN parts is
+// 1.625 + 1.625 = 3.250 Cent and 429 + 429 = 858 Cent. Adding the unrounded figures once would give 857 Cent
+// (8,57 €), so this is the assertion the shown-cents rule can move.
+test('046 AC4: the two parked columns, the sum line the year section states once, and the dash with its reason for each case', async ({
+  page,
+}) => {
+  await page
+    .getByRole('radio', { name: 'Die monatliche Auszahlung ist gegeben, gesucht wird das Depot' })
+    .check();
+  const target = page.getByLabel('Monatliche Auszahlung als Ziel (EUR)', { exact: true });
+  await target.fill('100,00');
+  await flatInput(page).fill('0');
+  await phaseStartInput(page).fill('01.2033');
+  await phaseEndInput(page).fill('12.2034');
+  await depositSwitch(page).check();
+
+  const section = yearRegion(page);
+  const table = yearTable(page);
+  const interestCell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Zinsen über das Phase-Jahr in Euro');
+  const taxCell = (year: string): Promise<Locator> =>
+    cellByHeader(table, rowByHeader(table, year), 'Steuer auf die Zinsen in Euro');
+
+  // AC4: the columns are their own, and the header list is pinned, so no column is renamed for them and the
+  // year table shows no balance column. Hand strings of UX §2, in the order the table reads them.
+  await expect(await table.getByRole('columnheader').allInnerTexts()).toEqual([
+    'Jahr',
+    'Monate',
+    'Finanzierung durch Fonds',
+    'Betrag für das Jahr',
+    'Zinsen über das Phase-Jahr in Euro',
+    'Steuer auf die Zinsen in Euro',
+  ]);
+
+  // The paragraph that states the rule inside this section, and the two phrases AC4 says are stated once:
+  // each of them appears exactly once on the page, in its own block.
+  await expect(section.getByText(/Zinsen werden einfach gerechnet/)).toHaveCount(1);
+  const form = page.getByRole('form', { name: 'Eingaben' });
+  await expect(form.getByText(/letzten Tag jedes Phase-Monats/)).toHaveCount(1);
+  await expect(form.getByText(/über die Laufzeit gleich/)).toHaveCount(1);
+
+  // The sum line, in the tax case, inside the year section and as paragraph text.
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).check();
+  // The hand figures of the story, read as the single rounding of the cell: the money that waits is the
+  // shown row, and the column that shows it is the existing amount column (deviation 1). The sum line is the
+  // sum of these two shown figures, so the two assertions are one pair, not a repeat of the same figure.
+  await expect(await interestCell('2033')).toHaveText(euro('16,25'));
+  await expect(await interestCell('2034')).toHaveText(euro('16,25'));
+  await expect(await taxCell('2033')).toHaveText(euro('4,29'));
+  await expect(await taxCell('2034')).toHaveText(euro('4,29'));
+  await expect(section.getByText('Summe der Zinsen über die Phase-Jahre')).toHaveText(
+    'Summe der Zinsen über die Phase-Jahre: 32,50\u00a0€. Steuer auf die Zinsen: 8,58\u00a0€.',
+  );
+
+  // The pair of the second sentence: with the tax off no tax figure is shown, so the tax column reads its
+  // reason and the sum line keeps only its first sentence.
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).uncheck();
+  await expect(await taxCell('2033')).toHaveText('– Steuer nicht angehakt');
+  await expect(section.getByText('Summe der Zinsen über die Phase-Jahre')).toHaveText(
+    'Summe der Zinsen über die Phase-Jahre: 32,50\u00a0€.',
+  );
+
+  // The option-off reason, and no sum line at all: nothing is invented for an empty sum (the display rule
+  // story 045 records), so this is the pair of the two lines above.
+  await depositSwitch(page).uncheck();
+  await expect(await interestCell('2033')).toHaveText('– Geld wird nicht geparkt (Option aus)');
+  await expect(section.getByText('Summe der Zinsen über die Phase-Jahre')).toHaveCount(0);
+
+  // `no-money-to-park`: hand case, flat 100 % and the tax on, so the cash line (1.532,10 Cent) is bigger
+  // than the depot (1.000 Cent) and the monthly amount is negative (-6,462890 Cent). The interest stays 0,
+  // so the row shows the dash with its reason rather than a negative figure (AC2).
+  await depositSwitch(page).check();
+  await page
+    .getByRole('radio', { name: 'Das Depot ist gegeben, gesucht wird die monatliche Auszahlung' })
+    .check();
+  await amountInput(page).fill('10,00');
+  await flatInput(page).fill('100,00');
+  await page.getByRole('checkbox', { name: 'Kapitalertragsteuer (25 %)', exact: true }).check();
+  await phaseStartInput(page).fill('01.2028');
+  await phaseEndInput(page).fill('12.2035');
+  await expect(await interestCell('2028')).toHaveText(
+    '– kein Geld zum Parken (Wert nicht positiv)',
+  );
+
+  // `no-funding-fund`, reachable in the UI: a phase year the fund list does not fund. Hand: the phase
+  // 01.2026–12.2026 is the only year of the phase and the fixture copy starts at 2027, so no money is
+  // parked for it and the row names the reason the funding cell already reads.
+  await phaseStartInput(page).fill('01.2026');
+  await phaseEndInput(page).fill('12.2026');
+  await expect(await interestCell('2026')).toHaveText('– kein Fonds für dieses Jahr');
 });

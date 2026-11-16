@@ -70,3 +70,4 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Print a check rule that only fires for `status: done` stories as "a done story" in the README bullets: read the script's condition, not the story's AC wording (story 026).
 - Don't split an inline code span across two lines: prettier re-wraps it and the continuation line loses the list indent (story 026).
 - When a story replaces the skeleton's placeholder content, the app README must describe the app's actual feature, never `src/Content.tsx`, which the story deletes (story 024).
+- Check the order the CHANGELOG "Added" section really uses before inserting a line: the recent `laz` entries are oldest first, so the new line goes after them, and the "newest story first" rule was not what the file showed (story 046).

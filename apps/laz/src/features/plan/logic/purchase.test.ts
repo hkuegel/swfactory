@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+// Story 046 AC5: `purchaseRows` gained `deposit` after `flat`; these hand values are the control case, so the
+// call site passes `DEPOSIT_OFF` and the values do not move.
+import { DEPOSIT_OFF, type DepositOption } from './deposit.ts';
 import { FLAT_OFF } from './flat.ts';
 import type { Fund } from './fund.ts';
-import { formatEuro, formatShares } from './format.ts';
+import { formatEuro, formatShares, roundEuroCents } from './format.ts';
 import type { Phase } from './phase.ts';
 import type { Tax } from './projection.ts';
-import { displayFundParts, flatPartsSum, purchaseRows } from './purchase.ts';
+import { displayFundParts, flatPartsSum, fundPhaseYear, purchaseRows } from './purchase.ts';
 
 /**
  * Story 032, AC2 and the branch of AC3 that the UI cannot reach by hand (a payout per share of 0). The
@@ -133,7 +136,7 @@ describe('purchase (story 032, AC2)', () => {
     const tax: Tax = { on: true, rateMillionths: 263750 };
     const flat = { hundredths: 224 };
     const asOf = '2027-01-01';
-    const rows = purchaseRows(HAND_FUNDS, phase, 10001, tax, flat, asOf);
+    const rows = purchaseRows(HAND_FUNDS, phase, 10001, tax, flat, DEPOSIT_OFF, asOf);
     const parts = displayFundParts(rows, 309345);
     expect(parts.map((part) => [part.purchaseCents, part.flatCents])).toEqual([
       [null, null], // 2027 funds 2028, which is before the phase
@@ -198,5 +201,116 @@ describe('purchase (story 032, AC3: no number invented)', () => {
     expect(displayFundParts(rows, 100000)).toEqual([{ purchaseCents: null, flatCents: null }]);
     // asOf is the fixture copy's date, which the projection label reads (024 AC5).
     expect(AS_OF).toBe('2026-12-31');
+  });
+});
+
+/**
+ * Story 046, AC5: `shares` follows the money that must be there at the START of the phase year, so the fund
+ * row and the year row cannot show two numbers for one year. Hand oracles, the tester's own arithmetic on the
+ * fixture copy (asOf 2026-12-31), never read back from `deposit.ts` or `purchase.ts` (P16). Case B: phase
+ * 01.2031–12.2033, tax 26,375 %, flat 2,24 %, monthly target 100,00 € = 10.000 Cent. The interest of one full
+ * phase year is `100,00 € × 2,50 % × 6,5 = 16,25 €` and its tax `16,25 € × 26,375 % = 4,2859375 €`, so the
+ * money at the start of each of the three phase years is `1.200.000.000 µ€ − 11.964.062,5 µ€ =
+ * 1.188.035.937,5 µ€`. `ON_250` is the option on at `2,50 %`; `DEPOSIT_OFF` is the control (risk 1).
+ */
+const ON_250: DepositOption = { on: true, hundredths: 250 };
+const CASE_B: Phase = { startMonth: '2031-01', endMonth: '2033-12' };
+const TAX_26375: Tax = { on: true, rateMillionths: 263750 };
+const FLAT_224 = { hundredths: 224 };
+
+describe('purchase (story 046, AC5: shares follow the money at the start of the phase year)', () => {
+  it('AC5: the identity on the unrounded values, and the shares follow the net money', () => {
+    // Hand payout per share of the three funding funds, flat base 2,24 % (045's rule, unchanged):
+    // 46.651.808,910458 · 51.180.657,688553 · 56.468.446,040517 µ€. The identity is
+    // `P·m − (interest − tax) = shares × payout per share`, read on the unrounded values: the left side is
+    // hand (1.188.035.937,5 µ€), the right side is the row's shares times that hand share value.
+    const rows = purchaseRows(HAND_FUNDS, CASE_B, 10000, TAX_26375, FLAT_224, ON_250, AS_OF);
+    const hand: [number, number, number, number][] = [
+      [2030, 46651808.910458, 1188035937.5, 25.4660208306],
+      [2031, 51180657.688553, 1188035937.5, 23.2125961477],
+      [2032, 56468446.040517, 1188035937.5, 21.0389344989],
+    ];
+    for (const [fundYear, pps, amount, shares] of hand) {
+      const row = rows.find((entry) => entry.fundYear === fundYear);
+      expect(row, `fund ${fundYear}`).toBeDefined();
+      // Hand shares: 25,4660208306 · 23,2125961477 · 21,0389344989. The identity is asserted on the
+      // unrounded values, so the rounding of the shown figure cannot hide a moved rule.
+      expect(row?.shares, `shares of fund ${fundYear}`).toBeCloseTo(shares, 6);
+      expect(
+        Math.abs((row?.shares ?? 0) * pps - amount),
+        `shares x payout per share for fund ${fundYear}`,
+      ).toBeLessThan(1);
+    }
+    // Control, the same phase with the option off: the money at the start is `P·m` exactly, so 032's and
+    // 045's hand shares stay (risk 1). This is the pair that makes the assertion above positive: with the
+    // option off the same rows read 25,72 · 23,45 · 21,25.
+    const off = purchaseRows(HAND_FUNDS, CASE_B, 10000, TAX_26375, FLAT_224, DEPOSIT_OFF, AS_OF);
+    expect(off.map((row) => (row.shares === null ? null : formatShares(row.shares)))).toEqual([
+      null,
+      null,
+      null,
+      '25,72',
+      '23,45',
+      '21,25',
+      null,
+      null,
+      null,
+    ]);
+    expect(rows.map((row) => (row.shares === null ? null : formatShares(row.shares)))).toEqual([
+      null,
+      null,
+      null,
+      '25,47',
+      '23,21',
+      '21,04',
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it('AC5: the shown parts still add up to the shown depot, the last one derived from the total', () => {
+    const rows = purchaseRows(HAND_FUNDS, CASE_B, 10000, TAX_26375, FLAT_224, ON_250, AS_OF);
+    // Hand depot: F = 30,895207753782 and K = 0,308026830431 over the three funding funds, cash
+    // 333,842117 Cent -> 306.205,651351 Cent -> shown 306.206 Cent = 3.062,06 €.
+    const shown = displayFundParts(rows, 306206);
+    // Hand parts in the order the table reads them: the purchase part is shares × NAV at the file's NAV
+    // (106.957,287489 · 102.135,423050 · 96.779,098695 Cent) and the flat part is 76,794412 · 109,693335 ·
+    // 147,354370 Cent. The last part with a figure is the rule's value 306.206 − 306.058 = 148 Cent, one
+    // Cent more than its own rounding of 147,354370 would give, so the rule moves this figure; the distance
+    // to the .5 boundary is 0,354370 Cent (risk 5). The control case (option off) rounds to 147 here, so the
+    // two cases differ by this one Cent.
+    expect(shown.map((part) => [part.purchaseCents, part.flatCents])).toEqual([
+      [null, null], // 2027 funds 2028, before the phase
+      [null, null],
+      [null, null],
+      [106957, 77],
+      [102135, 110],
+      [96779, 148], // 148 is derived from the depot; its own rounding would be 147
+      [null, null], // 2033 funds 2034, after the phase end
+      [null, null], // 2034 funds 2035, after the phase end
+      [null, null],
+    ]);
+    expect(
+      shown.reduce((sum, part) => sum + (part.purchaseCents ?? 0) + (part.flatCents ?? 0), 0),
+      'the shown parts, in whole Cent',
+    ).toBe(306206);
+    // Fund 2034 is inside the fund list but outside the phase, so its money is never parked: the phase sum
+    // is 3 × 16,25 = 48,75 € against the whole-list reading of 9 × 16,25 = 146,25 € (difference 113,75 €),
+    // and this row shows the dash because its phase year 2035 is outside the phase.
+    expect(fundPhaseYear(CASE_B, 2034)).toBeNull();
+    expect(rows[7]?.reason).toBe('after-phase-end');
+    expect(fundPhaseYear(CASE_B, 2032)).toBe(2033);
+    expect(flatPartsSum(shown)).toBe(335);
+  });
+
+  it('AC5, the negative branch: a negative monthly target parks nothing, so the year amount is P·m alone', () => {
+    // Hand: `P = -100 Cent` (the sign is the money's, not the rate's, because the term `k_y` cannot see `P`).
+    // The interest guard gives 0, so the money at the start of phase year 2031 is
+    // `-100 Cent × 12 = -1.200.000 µ€` -> shown `-12,00 €`. Without the `max(0, monthlyMicroEur)` guard the
+    // same row would subtract a negative interest: `-1.200.000 + 119.640,625 = -11.880.359,375 µ€`, which
+    // shows `-11,88 €` - the distance the mutation moves, and the only assertion this rule can move.
+    const rows = purchaseRows(HAND_FUNDS, CASE_B, -100, TAX_26375, FLAT_224, ON_250, AS_OF);
+    expect(formatEuro(roundEuroCents(rows[3]?.yearAmountMicroEur ?? 0))).toBe('-12,00\u00a0€');
   });
 });
