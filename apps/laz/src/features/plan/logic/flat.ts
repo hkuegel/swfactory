@@ -83,6 +83,23 @@ export function flatBaseFactor(fund: Fund, flat: FlatRate, asOf: string): number
   return factor;
 }
 
+/**
+ * The flat tax of one counted year, micro-euro, unrounded: the internal `yearBase` of that year times the
+ * rate (story 047 AC5). This is the exported caller of `yearBase`, so the year table can read one figure
+ * per year, and the pieces of one fund are the same expression as the fund's whole figure below (risk 8):
+ * they cannot disagree with the money rule, which is why AC5 pins the base itself from a hand value.
+ */
+export function flatYearMicroEur(
+  fund: Fund,
+  year: number,
+  flat: FlatRate,
+  tax: Tax,
+  asOf: string,
+): number {
+  if (!tax.on) return 0;
+  return fund.navMicroEur * yearBase(fund, year, flat, asOf) * (tax.rateMillionths / RATE_UNIT);
+}
+
 /** The flat tax of the counted years of one fund, micro-euro, unrounded; 0 outside the tax case (AC1). */
 export function flatTaxMicroEur(fund: Fund, flat: FlatRate, tax: Tax, asOf: string): number {
   if (!tax.on) return 0;

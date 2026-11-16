@@ -1,7 +1,7 @@
 ---
 id: 047
 title: The cashflows of a phase year, one figure each, in the year table
-status: designed # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: in-progress # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size:
@@ -21,7 +21,7 @@ superseded-by: # set on the OLD story when a newer one replaces it
 
 id: 047
 title: The cashflows of a phase year, one figure each, in the year table
-status: designed # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: in-test # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size:
@@ -936,6 +936,103 @@ column today and keeps that label unless hak renames it.
 ## Implementation notes
 
 _developer: what was built, deviations from the design and why._
+
+Run of 2026-11-16 in the worktree, on the story branch, nothing committed. The gate was run there:
+`npm run typecheck`, `npm test -w @swfactory/laz`, `npm run format:check` (prettier from the repo root
+reads the root `.prettierignore`, which is what excludes `scripts/fixtures`; the `--ignore-path` form is
+for a workspace cwd), `node scripts/verify.mjs --mode=full --no-record`,
+`npm run test:e2e -w @swfactory/laz`. No dev server was started, so `min-width` was not measured; the
+value is the design's starting 1.200 px. `verify` failed on build, test, test:e2e, typecheck and
+check:dist; lint, format, structure, template and pages were green, so the code I changed passes those.
+Every failed step is a tester-owned test file that reads a figure this story moved.
+
+### What was built
+
+- `projection.ts`: `rhoFactor` (one fund's ρ, exported) and `preTaxPerShareMicroEur` (AC1).
+  `payoutFactor` and `payoutPerShareMicroEur` keep the tax, so no figure of 031 moves.
+- `flat.ts`: `flatYearMicroEur` is the exported caller of the internal `yearBase` (AC5, risk 8), so the
+  pieces of one fund are the same expression as that fund's whole figure. `flatTaxMicroEur` is unchanged.
+- `cashflow.ts` (new): the column union, the per-column first-match reason order, `cashflowRows`,
+  `columnSumsCents`, `flatPartsSum` (moved from `purchase.ts`), the two totals, and the money rule read
+  across both tables, with the derived part named in the reading order the design gives.
+- `purchase.ts`: `PurchaseRow` loses `flatMicroEur` and `flatReason`, `FundParts` loses `flatCents`, and
+  `displayFundParts` is rounding-only with one argument, because the derived part is chosen in
+  `cashflow.ts` (the reading order now runs across two tables).
+- `phase.ts`: `displayParkCents`, `ParkCents`, `ParkSums` and `parkSumsCents` are gone; the rows are read
+  through `cashflow.ts`, which does the single rounding and the derivation.
+- `fieldCopy.ts`: the thirteen labels (AC2's word `Kapitalsteuer`, decision line 232), `columnSumLine`,
+  `taxTotalLine`, `cashTotalLine`, `readerLine`, `payoutCheck`, `flatNote`, `parkedNote`, `netNote`,
+  `flatNoRowLine`, `cashflowReasonText`, `columnLabel`. `COPY.flatColumn`, `COPY.flatSumLine` and
+  `COPY.parkSumLine` are gone. `TAX_OFF_TEXT` is the one string the three reason maps read (P32).
+- `YearTable.tsx` reads `CashflowTable` and renders the thirteen columns plus the paragraph block;
+  `FundTable.tsx` loses the flat column and its sum paragraph and reads `parts`; `PlanCalculator.tsx`
+  passes `TaxState` to `cashflowRows` and shows the pre-tax projection, once for both sections.
+- Year section paragraph order: reader line, payout check, the ten sum lines in the column order, the tax
+  total, the cash total, the `flatNoRowLine` lines, flat note, net note, parked note, then 046's facts
+  and the footnote. No new live region, no new tab stop, no new colour.
+
+### Deviations from the design
+
+1. The flat reading order is read literally (interpretation B): column A of row Y shows the fund sold in
+   year Y, for the counted years that have no row of their own; column B shows the pieces for year Y of a
+   fund still held in that year; a depot fund whose own year is not a phase year has no row, so the year
+   section states its money once with `Auflösung in einem Jahr, das kein Phase-Jahr ist`, and that line is
+   the last part of the reading order. Consequence: the flat group `77` / `110` / `146` of
+   `purchase.test.ts` 141-155 moves, and `flatPartsSum` 333 stays. On the tester's own case the run gives
+   76 (year section line, the derived part) + 110 (column A of row 2031) + 32 (column B of row 2031) +
+   115 (column A of row 2032) = 333, so the design's claim that `77` / `110` / `146` stay cannot hold
+   under its own reading order. Recorded as a conflict, not fixed.
+2. `rhoFactor` is exported from `projection.ts`, because `cashflow.ts` must read the base
+   `max(0, ρ − 1 − flatBaseFactor)` per AC5; the design names no export for it.
+3. `cashflowRows` takes `funds` (and `asOf`), because the flat column needs the fund's NAV and YTM, which
+   `PurchaseRow` does not carry. The design's signature names `purchases` only.
+4. `CashflowReason` reuses `PurchaseReason` and `ParkReason`; `park-year-not-a-phase-year` is not part of
+   it, because the copy names no string for it and no cell can read it.
+5. `FlatFigure` carries the `years` each piece covers, so the pieces of one fund are the same expression
+   as that fund's whole figure (risk 8) and AC3's identity can be read. A fund with a dash has no part,
+   because `flatPartsSum` sums the figures that are shown.
+6. The parked column keeps its plain dash for a phase year without a funding fund (UX item 3 of "For the
+   orchestrator to resolve"), because its reason is the funding cell's line as 024 AC4 has it: that keeps
+   `laz.spec.ts` 126 and 392 green. AC4's per-column order lists `kein Fonds für dieses Jahr` for that
+   column, so this is a conflict for hak, not a decision of mine. A flat cell that reads no fund names
+   `kein Fonds für dieses Jahr`, because no flat reason can apply without a fund and AC4 says a dash must
+   name its reason.
+7. `flat.test.ts` 1211140 / 295400 / 263750 / 590800 and `4153278.335913` stay, because `flatTaxMicroEur`
+   was not rewritten as a sum of `flatYearMicroEur`; the two are the same expression by construction.
+
+### Red tests, for the tester
+
+Unit: `Test Files 3 failed | 8 passed (11)`, `Tests 7 failed | 38 passed (45)`; every failure is in a
+tester-owned file. `tsc` reports the same files, so `npm run build -w @swfactory/laz` and `check:dist` fail
+on them too. E2e: 56 passed, 6 failed.
+
+- `fieldCopy.test.ts` 253, 256: `COPY.parkSumLine` is gone, `columnSumLine` replaces it; 251-268 gains the
+  new reasons.
+- `flat.test.ts` 88, 92, 93: reads `PurchaseRow.flatReason` and `flatMicroEur`, which the row no longer
+  carries; these call sites must read through `cashflow.ts` (`flatReasonFor`, `flatYearMicroEur`,
+  `FlatFigure`, `flatPartsSum`). The hand values themselves did not move.
+- `purchase.test.ts` 70, 107, 140, 183, 201, 276: `displayFundParts` takes one argument now; 141, 153, 283,
+  295 read `part.flatCents` and `flatPartsSum(parts)`, which left `FundParts` and `purchase.ts`. The values
+  move at 73 (`329,21` -> `329,20`), 113 (`11.142,56` -> `11.142,55`) and 283 (`148` -> `147`) when the
+  parts are read from `purchase.ts` alone: the derived part lives in `cashflow.ts` now. I did not change a
+  hand value (P16), only the call sites moved.
+- `projection.test.ts` 84, 93: still green, because `payoutPerShareMicroEur` stayed; the fund table's cell
+  now shows the pre-tax figure, so the tester pins `preTaxPerShareMicroEur` as its own hand value and reads
+  the `1,32 €` in the year table's KSt column.
+- e2e, the six failing specs: 446 (assertion at 484, the fund table's projection cell with the tax on),
+  716 (036 AC1's pinned column list), 819, 851, 910 (045 AC1, AC4, AC5: the flat column and the fund
+  section's sum line), 1038 (046 AC4's header list and the per-column sum lines). All six are the places the
+  design's rewrite table names. 106, 125, 126, 139, 392, 691, 700 stayed green as controls, which is what
+  deviation 6 protects.
+
+### Follow-ups
+
+- The two copy statements (`flatNote`, `parkedNote`) and the parked column's dash-with-reason are the three
+  open points for gate 2; the arithmetic does not depend on any of them.
+- `min-width` needs a measurement by the tester at 320 and 375 px (the value here is the starting one).
+- AC3's row where the derived part differs from its own rounding needs one e2e case: on the tester's own
+  flat case the derived part is the year section's line (76 against its own rounding 77), so the rule can
+  move there.
 
 ## Test report
 

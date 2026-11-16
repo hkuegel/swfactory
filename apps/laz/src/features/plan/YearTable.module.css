@@ -14,9 +14,12 @@
   outline-offset: -2px;
 }
 
+/* Story 047: thirteen columns now, and the widest cells are the reason cells, so the table cannot read as
+   one grid inside the viewport. The value is the design's starting value, not a measurement: no dev server
+   may be started here, so the width is the tester's to read. */
 .table {
   width: 100%;
-  min-width: 480px;
+  min-width: 1200px;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
