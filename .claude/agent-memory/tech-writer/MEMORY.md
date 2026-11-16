@@ -71,3 +71,5 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Don't split an inline code span across two lines: prettier re-wraps it and the continuation line loses the list indent (story 026).
 - When a story replaces the skeleton's placeholder content, the app README must describe the app's actual feature, never `src/Content.tsx`, which the story deletes (story 024).
 - Check the order the CHANGELOG "Added" section really uses before inserting a line: the recent `laz` entries are oldest first, so the new line goes after them, and the "newest story first" rule was not what the file showed (story 046).
+- In a README with one paragraph per story, a later story that moves a figure makes the older paragraph's present-tense claim false: fix it with one clause naming where the figure reads now, and say in the report that this fix was beyond the brief (story 047).
+- Check prose line length with Grep `^(?:.{101,})$` before reporting: word counting underestimates by about ten characters, and prettier cannot be run in this harness (story 047).
