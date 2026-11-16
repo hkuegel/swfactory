@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 // Story 046: `purchaseRows` gained `deposit` after `flat`, so this call site passes the control case.
 import { DEPOSIT_OFF } from './deposit.ts';
+import { flatReasonFor } from './cashflow.ts';
+import { flatReasonText } from '../fieldCopy.ts';
 import { flatBaseFactor, flatTaxMicroEur } from './flat.ts';
 import type { Fund } from './fund.ts';
 import { formatEuroMicroEur } from './format.ts';
 import type { Phase } from './phase.ts';
 import { payoutFactor, payoutPerShareMicroEur, type Tax } from './projection.ts';
 import { purchaseRows } from './purchase.ts';
+import type { TaxState } from './tax.ts';
 
 /**
  * Story 045, AC2 and AC3. The hand oracle of the story: fund NAV 100 € = 100.000.000 micro-euro,
@@ -26,6 +29,9 @@ import { purchaseRows } from './purchase.ts';
  */
 const FLAT = { hundredths: 224 };
 const TAX: Tax = { on: true, rateMillionths: 263750 };
+// The same rate as the state the year table reads (story 047 AC5): the Kapitalertragsteuer on, the
+// Kirchensteuer off, so `taxFromState` gives 26,375 %, the rate the hand values below use.
+const STATE_ON: TaxState = { kstOn: true, kistOn: false, bundesland: 'bayern' };
 
 function fund(year: number, navMicroEur: number, ytmBp: number): Fund {
   return {
@@ -76,21 +82,20 @@ describe('flat (story 045, AC2: the base of a calendar year)', () => {
     //    same asOf, the fund one year later: the counted year is 2027, base 2,24 € -> 590.800.
     const asOfInside = '2027-01-01';
     const phase: Phase = { startMonth: '2027-01', endMonth: '2029-12' };
-    const rows = purchaseRows(
-      [fund(2027, 100000000, 500), fund(2028, 100000000, 500)],
-      phase,
-      100000,
-      TAX,
-      FLAT,
-      DEPOSIT_OFF,
-      asOfInside,
-    );
-    expect(rows.map((row) => `${String(row.fundYear)} ${row.flatReason ?? 'figure'}`)).toEqual([
-      '2027 no-year-counts',
-      '2028 figure',
-    ]);
-    expect(rows[0]?.flatMicroEur).toBeNull();
-    expect(rows[1]?.flatMicroEur).toBeCloseTo(590800, 6);
+    const pair = [fund(2027, 100000000, 500), fund(2028, 100000000, 500)];
+    const rows = purchaseRows(pair, phase, 100000, TAX, FLAT, DEPOSIT_OFF, asOfInside);
+    // AC4: the fund table shows no flat figure any more, so the flat column's reason is read through the
+    // year table's map. Hand: fund 2027 has no counted year (asOf is inside its own year), so its cell
+    // shows the dash with the string UX §2 gives that case; the fund one year later has a figure.
+    const shown = rows.map((row, index) => {
+      const reason = flatReasonFor(row, pair[index] as Fund, FLAT, STATE_ON, asOfInside);
+      return reason === null ? 'figure' : flatReasonText(reason);
+    });
+    expect(shown).toEqual(['kein Jahr zählt (nur das Auflösungsjahr)', 'figure']);
+    // The hand bases behind the two cells: no counted year is no figure, and the counted year 2027 has
+    // the base 2,24 € -> 590.800 micro-euro.
+    expect(flatTaxMicroEur(pair[0] as Fund, FLAT, TAX, asOfInside)).toBe(0);
+    expect(flatTaxMicroEur(pair[1] as Fund, FLAT, TAX, asOfInside)).toBeCloseTo(590800, 6);
   });
 });
 

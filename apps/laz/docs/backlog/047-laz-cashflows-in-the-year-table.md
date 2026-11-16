@@ -1,7 +1,7 @@
 ---
 id: 047
 title: The cashflows of a phase year, one figure each, in the year table
-status: in-progress # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: in-test # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size:
@@ -1038,8 +1038,72 @@ on them too. E2e: 56 passed, 6 failed.
 
 _tester: AC → test mapping, results, defects found._
 
-| AC  | Test(s) | Result |
-| --- | ------- | ------ |
+| AC  | Test(s)                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Result                                                              |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| AC1 | `apps/laz/e2e/laz.spec.ts:1180` `047 AC1, AC6: no tax figure in the fund table, the tax read in the year table, and the proceeds cell is shares x the figure`; the fund-table half (no flat column, no tax sum line, per-share figure = pre-tax proceeds) reads green, the year-table half does not                                                                                                                                                        | FAIL, defect 2                                                      |
+| AC2 | `apps/laz/e2e/laz.spec.ts:1254` `047 AC2: one row read column by column in the AC2 order, thirteen headers pinned`; `apps/laz/src/features/plan/fieldCopy.test.ts:316` `AC4 the thirteen column labels in the order of the table, and the five lines below it`                                                                                                                                                                                             | FAIL, defect 2                                                      |
+| AC3 | `apps/laz/e2e/laz.spec.ts:1324` `047 AC3: the flat identity, the derived last part, and each sum line as the figures shown in its column`; `cashflow.test.ts:263` `AC3 the pieces of one fund are the same expression as that fund's own part` (green), `cashflow.test.ts:277` `AC3 the last part in the reading order is derived from the shown depot` (green), `cashflow.test.ts:295` `AC3 each sum line is the sum of the figures shown in that column` | FAIL, defects 1 and 2                                               |
+| AC4 | `apps/laz/e2e/laz.spec.ts:1396` `047 AC4: the dashes name their own reason, one column at a time`; `cashflow.test.ts:193` `AC5 outside the tax case the split shows no figure anywhere (AC4 names the reason)`; `fieldCopy.test.ts:292` `AC4 the three new strings are written once, in the map the cells read` (green); the phase year without phase months: checked, OK, `phaseYears` never yields one, so no test                                       | FAIL, defects 3 and 4                                               |
+| AC5 | `cashflow.test.ts:113` `AC5 the parts are the rates of 031 on the same base, and the last part is derived`, `cashflow.test.ts:144` `AC5 the church tax is a whole hundredths rate on the Kapitalsteuer, 9 % for Brandenburg`, `cashflow.test.ts:167` `AC5 the tax on the parked interest is one figure added to the row total, not split`; `purchase.test.ts:305` `AC5: the identity on the unrounded values, and the shares follow the net money` (green) | FAIL, defect 1                                                      |
+| AC6 | `cashflow.test.ts:334` `AC6 the proceeds cell is shares x the figure, and the tax parts plus the parked money`, `cashflow.test.ts:360` `AC6, the tax-off pair: no tax figure, so the proceeds cell is the year's money alone`; the controls that must not move read green in the new place: `flat.test.ts:49/114`, `purchase.test.ts:80/131/162/221/261`, `deposit.test.ts`, `phase.test.ts`, e2e `046 AC1` at `laz.spec.ts:995`                           | FAIL, defect 2 (031 AC1/AC2 and 045 AC1 also carry defects 1 and 4) |
+| AC7 | The replaced tests assert the same figure in its new place: e2e `036 AC1, AC2, AC3` (`laz.spec.ts:736`), `045 AC4` (`877`), `045 AC5` (`936`), `046 AC4` (`1071`), `032 AC1/AC2/AC3` (`539/584/635`), `024 AC2` (`49`), `035 AC1` (`703`) - all read by header text, all green                                                                                                                                                                             | PASS                                                                |
+
+15 tests added: 9 in the new `apps/laz/src/features/plan/logic/cashflow.test.ts`, 4 e2e specs (`1180`, `1254`, `1324`, `1396`), 2 in `fieldCopy.test.ts`
+(the three reason strings and the thirteen labels). `purchase.test.ts`, `flat.test.ts` and the e2e regions of 031, 036, 045 and 046 were rewritten to read the year table;
+no assertion was weakened, no hand value was taken from the module under test.
+
+Counts as the runner printed them (`npm test -w @swfactory/laz` and `npm run test:e2e -w @swfactory/laz`, port 5174 free before the run):
+
+- vitest per workspace: platform 154 passed (154), avd 100 passed (100), laz 7 failed | 49 passed (56), minesweeper 103 passed (103), landing 18 passed (18).
+- Playwright per project: laz 6 failed / 19 passed on `--project=chromium` (8.6 s), and 6 failed / 60 passed in the full run (10.4 s); no `flaky`.
+
+### Defects
+
+1. `apps/laz/src/features/plan/logic/cashflow.ts:341`: `total = Math.round(((baseMicroEur ?? 0) + (interestTaxMicroEur ?? 0)) / 10000)` reads the untaxed gain as
+   the tax, so the last part of the split is the total minus the parts and the parts do not add up. Repro: `npm test -w @swfactory/laz`. The runner prints, at
+   `cashflow.test.ts:133`, `expected 1335 to be 25`; at `:162`, `expected 1312 to be 41`; at `:188`, `expected 1321 to be 24`. Read as the rule AC5 states, the
+   three derived-part tests turn green and 4 remain. Severity: high - every tax figure of the table moves by the base.
+2. `apps/laz/src/features/plan/logic/cashflow.ts:544`: the proceeds cell reads `purchaseParts`, which is shares x the NAV, not shares x the fund table's figure.
+   Repro: `npm test -w @swfactory/laz`. Printed: `cashflow.test.ts:350` `expected 118689 to be 120470`, `:376` `expected 118227 to be 120000`, `:298`
+   `expected 308982 to be 367895`; the e2e prints `1.175,72 €` against the hand `1.193,35 €` at `laz.spec.ts:1291`. Reading the cell as AC6 states moves the
+   identity, not the count: `expected 121780 to be 120470` and `expected 121773 to be 120000`. Severity: high - the AC2 identity no longer holds in the table.
+3. `apps/laz/src/features/plan/logic/cashflow.ts:322` (`taxSplit`) never reads `taxState.kstOn`, so a figure is shown outside the tax case. Printed at
+   `cashflow.test.ts:209`: `expected 443 to be null`. Severity: medium - contradicts AC4 and AC6 for every tax column.
+4. `apps/laz/src/features/plan/logic/cashflow.ts:511-515`: a flat cell that shows no figure prints the funding cell's reason (`no-funding-fund`), because
+   `flatFundFor` needs a piece and a fund with no flat figure has none. Printed in the e2e at `laz.spec.ts:853`
+   (`expected "– Steuer nicht angehakt", received "– kein Fonds für dieses Jahr"`) and at `laz.spec.ts:1429`
+   (`expected "– kein Jahr zahlt Steuer", received "– kein Fonds für dieses Jahr"`), while the funding cell of the same row reads
+   `Fonds 2028 (Auflösung Dezember 2028)`. `flat.test.ts` reads the reasons through `flatReasonFor` and stays green, so the defect shows only in the cells.
+   Severity: medium - AC4's rule is not carried out in the year table.
+
+### Mutation checks
+
+Each run prints the file byte-identical to the backup taken before the run (kept in the scratch directory outside the repository), three runs per rule, the count
+that repeats is recorded (baseline for the laz workspace: 7 failed | 49 passed (56)).
+
+| Rule                                   | Shape of the mutation                               | Count that repeats | Failing spec(s) it moves                                                           |
+| -------------------------------------- | --------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------- |
+| whole-month rule                       | `flat.ts:62` `12 - (parts.month - 1)` -> `12`       | 8 failed           | `flat.test.ts` `AC2: the hand bases...` (`expected 590800 to be close to 295400`)  |
+| the cap                                | `flat.ts:76` the `Math.min(cap, ...)` taken away    | 17 failed          | `flat.test.ts` 2, `cashflow.test.ts` 9, `purchase.test.ts` 3, `phase.test.ts` 3    |
+| the sign guard                         | `flat.ts:76` `Math.max(0, increase)` -> `increase`  | 8 failed           | `flat.test.ts` `AC2: the hand bases...`                                            |
+| monthSum                               | `deposit.ts:31` `/ 24` -> `/ 26`                    | 12 failed          | `deposit.test.ts` 2, `cashflow.test.ts` 7, `phase.test.ts` 1, `purchase.test.ts` 2 |
+| one rounding per figure                | `format.ts:20` `Math.round` -> `Math.trunc`         | 12 failed          | `cashflow.test.ts` 9, `purchase.test.ts` 3                                         |
+| derived part within a fund             | `cashflow.ts:456` the derived part disabled         | 10 failed          | `cashflow.test.ts` 9, `purchase.test.ts` 1                                         |
+| derived last part in the reading order | `cashflow.ts:462` the derivation disabled           | 12 failed          | `cashflow.test.ts` 8, `purchase.test.ts` 4                                         |
+| the rates of 031                       | `tax.ts:13` `KST_MILLIONTHS = 250_000` -> `240_000` | 14 failed          | `tax.test.ts` 2, `deposit.test.ts` 1, `cashflow.test.ts` 9, `purchase.test.ts` 2   |
+| the copy the cells read                | `fieldCopy.ts:313` `TAX_OFF_TEXT` changed           | 9 failed           | `fieldCopy.test.ts` 2, `cashflow.test.ts` 7                                        |
+
+Limit, not a defect: `cashflow.ts:475`'s `max(0, ...)` guard. Mutated by itself it prints 7 failed | 49 passed, the same as the baseline, because
+`flatBaseFactor` is at most `rho - 1` in every state the design can reach, so the negative branch is dead code and its assertion cannot fail. The hand case that
+reads the guard is `cashflow.test.ts`'s zero-gain row, which is falsifiable through the gain, not through the guard.
+
+Gate state, as printed by `node scripts/verify.mjs --mode=full --no-record` (12 steps, 4 failed): `build`, `lint`, `typecheck`, `check:template`,
+`check:dist`, `test:scripts`, `test:pages`, `build:pages` ok; `check:structure` ok after the index row for 047 was brought to `in-test`; `format:check` red on the
+five test files I wrote (`e2e/laz.spec.ts`, `fieldCopy.test.ts`, `cashflow.test.ts`, `flat.test.ts`, `purchase.test.ts`), which prettier will reformat after this
+step; `test` red on the seven assertions above; `test:e2e` red on the six specs above. The one `flaky` in the earlier full run was
+`apps/minesweeper/e2e/minesweeper-3d-effects.spec.ts:571:5`, outside this story's gate (story 034 rule B).
+
+Verdict: FAIL - the four defects stand, the status stays `in-test`.
 
 ## Review
 
