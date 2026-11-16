@@ -97,3 +97,7 @@ Lessons learned across stories. One rule per line, newest last. Keep under 100 l
 - Read the two hand values of one test against each other: a sum line that leaves an addend out contradicts the total the same test asserts, and the roundings of the last year can move the second line by one Cent (story 047, follow-up).
 - A `min-width` smaller than the measured content minimum can never bind, so either state the measured value or drop the rule and say that the columns carry the width; a starting number that no run measured is not a value (story 047, round 3).
 - Prettier also checks markdown: a wrapped prose paragraph must match what prettier produces, so run `prettier --check` on a story file you append to, and only `--write` when the single differing line is your own (story 047, round 3).
+- Never run `git rm --cached` (it stages); delete with `rm` and, if you slipped, `git restore --staged <file>` (story 048).
+- laz unit tests and `--mode e2e` read the FIXTURE fund list (asOf 2026-12-31), the published build the real file: a pin quoted from the real app will not reproduce there, so compare old and new logic on the fixture (story 048).
+- Check a spec's "equal within 1 cent" claim algebraically before building to it: cash paid earlier from idle money costs the growth it would have earned, so such an AC may be unreachable; report it with the formula (story 048).
+- Normalise -0 with `+ 0` / `0 - x` before formatting: `-(0)` prints "-0,00 EUR" (story 048).

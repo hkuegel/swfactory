@@ -7,10 +7,8 @@
  * The row of the fund table is the fund, and the fund finances the phase year `year + 1`; a fund whose
  * liquidation falls outside the phase has no phase year, so it shows no purchase.
  *
- * Story 047: the flat part of the row is no longer read here, because the fund table shows no tax figure
- * (AC1). The flat figures read in the year table, so `flatReasonFor`, `flatPartsSum` and the part that is
- * derived from the depot live in `cashflow.ts`; this module keeps the purchase parts, which are rounded
- * once, and `cashflow.ts` puts them in the reading order the money rule needs.
+ * Story 048: the money columns the fund table shows (Einstand, Erlös, Gewinn) and the statement are built from these
+ * shares in `ledger.ts`; this module keeps the shares themselves.
  *
  * Story 046 AC5: the year amount is the money that must be there at the START of the phase year, which is
  * `P · m` minus the net interest the parked money earns, so `shares` follows it. The same `deposit.ts`
@@ -20,7 +18,6 @@
 
 import { monthKeyOf, monthParts } from './fields.ts';
 import { DEPOSIT_OFF, parkNetMicroEur, type DepositOption } from './deposit.ts';
-import { roundEuroCents } from './format.ts';
 import { FUND_LIST_AS_OF, type Fund } from './fund.ts';
 import { flatBaseFactor, type FlatRate } from './flat.ts';
 import { monthsInYear, phaseYears, type Phase } from './phase.ts';
@@ -108,21 +105,4 @@ export function purchaseRows(
       purchaseMicroEur: shares * fund.navMicroEur,
     };
   });
-}
-
-/**
- * Cents as shown (ADR 0012, story 032 AC2, read by story 047 as the purchase parts only): one rounding per
- * figure, `null` for a part without a figure. The derived part of the depot is no longer chosen here,
- * because the flat figures are read in the other table: `cashflow.ts` reads these parts row by row and
- * derives the last flat part in the reading order from the shown depot. When no row has a flat figure the
- * two paths give the same figures, which is what keeps story 032 AC2's hand values.
- */
-export interface FundParts {
-  readonly purchaseCents: number | null;
-}
-
-export function displayFundParts(rows: readonly PurchaseRow[]): readonly FundParts[] {
-  return rows.map((row) => ({
-    purchaseCents: row.purchaseMicroEur === null ? null : roundEuroCents(row.purchaseMicroEur),
-  }));
 }

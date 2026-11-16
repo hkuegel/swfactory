@@ -115,3 +115,12 @@
     border-color: CanvasText;
   }
 }
+
+/* Story 048 AC5: the check line under the figures, the same muted paragraph as the other notes. */
+.check {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  overflow-wrap: anywhere;
+}

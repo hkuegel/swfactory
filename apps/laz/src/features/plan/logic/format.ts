@@ -48,6 +48,16 @@ export function formatMonth(isoMonth: string): string {
   return MONTH_NAME.format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
+const PERCENT = new Intl.NumberFormat('de-DE', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** A rate as a fraction as `27,82 %` (story 048 AC1): two decimals, rounded once, here. */
+export function formatPercent(fraction: number): string {
+  return `${PERCENT.format(fraction * 100)} %`;
+}
+
 const PLAIN = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 });
 /** Shares are shown with two decimals (story 032): the model's number is not a whole share. */
 const SHARES = new Intl.NumberFormat('de-DE', {

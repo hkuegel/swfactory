@@ -87,3 +87,15 @@ its own reason, because one row can show a figure in one column and a dash with 
 another. With the tax off, the fund table's per-share figure is the same number as the taxed
 payout per share of story 024, because the tax is 0 there. With the tax or the parking option off
 the figures of stories 024, 032, 035, 045 and 046 stay.
+
+Story 048 replaces the year table of story 047 with an account statement (`Kontoauszug`): one row per
+calendar year from the year of the data file to the last phase year, with the start balance, the purchase of the
+funds, the Vorabpauschale tax, the gross liquidation proceeds, Kapitalertragsteuer, Solidaritätszuschlag,
+Kirchensteuer, interest, the tax on the interest, the payouts and the end balance. Outflows are negative, every
+row adds up, and the last end balance is 0,00 € (the rounding residue of a few cents is in the last payout). A
+column without any amount is hidden. The fund table shows the way to the gain (shares, Einstand, gross proceeds,
+gain, Vorabpauschale bases, taxable gain), and the result block splits the depot into the funds' Einstand and
+the cash reserve for the Vorabpauschale, with one check line that adds up to 0,00 €. The plan is built from real
+share counts (`logic/ledger.ts`). Two tax defects are fixed: the Kirchensteuer now lowers the
+Kapitalertragsteuer by § 32d Abs. 1 EStG (27,82 % effective with 8 %, 27,99 % with 9 %), and the Vorabpauschale
+tax is counted for the whole holding, not for one share.

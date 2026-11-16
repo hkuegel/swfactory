@@ -27,7 +27,6 @@ const RATE_ZERO: DepositOption = { on: true, hundredths: 0 };
  * and the e2e test reads the same state on the figure it shows. */
 const OFF_RATE: DepositOption = { on: false, hundredths: 250 };
 const TAX_26375: Tax = { on: true, rateMillionths: 263750 };
-const TAX_28375: Tax = { on: true, rateMillionths: 283750 };
 const TAX_OFF: Tax = { on: false, rateMillionths: 0 };
 /** The fixture copy's asOf, the date the projection reads (ADR 0013). */
 const AS_OF = '2026-12-31';
@@ -68,11 +67,11 @@ describe('deposit (story 046, AC2: the month sum of one phase year)', () => {
   it('AC3: the tax on the interest, the net that reduces the money, and the fund value untouched', () => {
     // Hand, the corrected values of the story: 16,25 € × 26,375 % = 4,2859375 €.
     expect(parkTaxMicroEur(16_250_000, TAX_26375)).toBeCloseTo(4_285_937.5, 6);
-    // Hand, the church case: 25 % + 1,375 % + 2 % = 28,375 % -> 4,6109375 €. The rate is read through
-    // `taxFromState`, the shape the form gives, so the copy of 031 cannot disagree with it.
+    // Hand, the church case by § 32d (story 048 AC1): 25 % / 1,02 = 24,5098 %, Soli 1,3480 %, KiSt 1,9608 %,
+    // together 27,8186 % -> 16,25 € × 27,8186 % = 4,520527 €. The rate is read through `taxFromState`.
     const church = taxFromState({ kstOn: true, kistOn: true, bundesland: 'bayern' });
-    expect(church).toEqual(TAX_28375);
-    expect(parkTaxMicroEur(16_250_000, church)).toBeCloseTo(4_610_937.5, 6);
+    expect(church.rateMillionths).toBeCloseTo(278_186.27, 2);
+    expect(parkTaxMicroEur(16_250_000, church)).toBeCloseTo(4_520_526.96, 1);
     // The one assertion the "tax not deducted" mutation can move: the net is interest minus tax at the
     // Zufluss (hak's Q4), and the net is what reduces the money the plan needs. Hand: 11,9640625 €.
     expect(parkNetMicroEur(P, ON, 12, TAX_26375)).toBeCloseTo(11_964_062.5, 6);
