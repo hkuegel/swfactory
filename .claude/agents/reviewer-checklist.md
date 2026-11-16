@@ -1,6 +1,6 @@
 # Reviewer checklist
 
-Version: 2
+Version: 3
 
 How to use: work through every item in order. Result is `pass`, `fail` or `n.a.`. An `n.a.` needs the
 condition at the end of the item to be true and a one-line reason in the story. A `fail` needs a
@@ -41,7 +41,7 @@ an id, append a line to "Changes" below. Retired ids stay in the file as `~~C7~~
 - **K4** Platform and factory files name and import no app (`check:structure` green); platform code is generic. n.a. when no platform or factory file changed.
 - ~~K5~~ retired in v2 (split into K6 to K9).
 - **K6** Story status and the index row in `docs/backlog/README.md` are correct and equal. n.a. when no story file or index changed.
-- **K7** The Decision log has an entry for every answer or correction from hak and is append only. n.a. when no decision was made in this story.
+- **K7** The Decision log has an entry for every answer or correction from hak and is append only. Append only also means order: an entry inserted before an existing entry breaks the log even when nothing is deleted, so compare the entry lists of the commits that touched the story, not only the current file (story 046, P42, hak's approval of 2026-11-16). n.a. when no decision was made in this story.
 - **K8** README and CHANGELOG are updated where the change is user-visible. n.a. when nothing user-visible changed.
 - **K9** Markdown and all touched files pass prettier (`npm run verify`). n.a. never.
 - **K10** Workspace tooling rule of CLAUDE.md: `prettier --check` inside a workspace uses `--ignore-path ../../.prettierignore`, and an app's `tsconfig.app.json` includes the platform's `vite-env.d.ts`. n.a. when no workspace script or tsconfig changed.
@@ -58,3 +58,4 @@ an id, append a line to "Changes" below. Retired ids stay in the file as `~~C7~~
 
 - 1 (2026-11-04): first version.
 - 2 (2026-11-04): C1 process-story variant; K5 retired and split into K6 to K9; new T5, K10, K11; S5 defines a sufficient hand run.
+- 3 (2026-11-16): K7 gains the order clause, from story 046 (P42, hak's approval of 2026-11-16). Story 046 was reviewed against version 2.

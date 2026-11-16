@@ -51,7 +51,17 @@ to the code.
    hak's approval of 2026-11-15). The Test report quotes only what a runner printed, and only assertions it
    read in the file it names; a figure taken from the story's own table is not a printed value, and when a
    figure depends on the shape of the mutation the count is quoted and the shape is named (story 045, P35,
-   hak's approval of 2026-11-15).
+   hak's approval of 2026-11-15). The runner keeps its backup in a file the mutation cannot write to: a backup
+   written into the path the runner then writes is no backup, and an interrupted run has nothing to restore from
+   (story 046, P38, hak's approval of 2026-11-16). The runner prints the failing assertion's file and line, not
+   only the count of red tests, because a count cannot be tied to the assertion a report names until the runner
+   prints it (story 046, P39, hak's approval of 2026-11-16). A run that prints more failures than the mutation
+   can move is an unstable run and not a second assertion: re-run the rule at least three times, name the
+   failing specs, and record the count that repeats (story 046, P40, hak's approval of 2026-11-16). Before a
+   guard is credited with an assertion, mutate the guard by itself; a branch whose formula already yields the
+   same value is dead code and its assertion cannot fail, so either the assertion is recorded as not a falsifier
+   or it is written in a shape the guard can read, with a control that carries a value (story 046, P41, hak's
+   approval of 2026-11-16).
 4. Run `npm run verify` and `npm run test:e2e` (for one app: `-w apps/<name>`). For visual stories, take the screenshot
    states listed in the UX design **after** the last e2e run (Playwright wipes
    `test-results/`) with a throwaway script into `screenshots/NNN/` (gitignored), and
