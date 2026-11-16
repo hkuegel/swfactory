@@ -1489,6 +1489,116 @@ The dash rule (AC4) reads correct everywhere else: `cashflow.ts:523-559` returns
 My own counts: `npm test -w @swfactory/laz` -> `Test Files 12 passed (12)`, `Tests 56 passed (56)`.
 `npm run test:e2e -w @swfactory/laz` -> `66 passed (6.3 s)`, 0 failed; port 5174 was busy before my run; no flaky line, so story 034 rule B was not needed (the known flakes did not occur in my run).
 
+**Round 2, reviewer 2026-11-16. Verdict: APPROVED. Checklist version: 3**
+
+Round 1's seven findings: 1, 2, 3, 4 and 5 closed; 6 closed as a measurement; 7 closed as
+documentation, its wording still hak's. Three new nits (8, 9, 10) and one DoD item (11). Nothing
+here asks for a code change.
+
+| Item | Result  | Note                                                                          |
+| ---- | ------- | ----------------------------------------------------------------------------- |
+| C1   | pass    | round-1 mapping unchanged; the guard has a hand case at `flat.test.ts:112`    |
+| C2   | n.a.    | no network call or pending state in the diff                                  |
+| C3   | pass    | `YearTable.tsx`: one `useId`, no effect, no stored derived value              |
+| C4   | n.a.    | no render loop or imperative controller                                       |
+| C5   | n.a.    | no reducer; the logic modules read `asOf` as an argument                      |
+| C6   | n.a.    | no error handling or I/O in the diff                                          |
+| S1   | n.a.    | no input or DOM sink touched                                                  |
+| S2   | n.a.    | no config, env or auth code                                                   |
+| S3   | n.a.    | `package.json` dependencies unchanged                                         |
+| S4   | n.a.    | no dev-only code added; the probe spec was deleted, nothing stays in the tree |
+| S5   | n.a.    | no root, template or app script touched                                       |
+| T1   | pass    | my own run, called directly: ok, 12 steps, 85.9 s, all green                  |
+| T2   | pass    | finding 5 closed: one level named per reading, no code path twice             |
+| T3   | pass    | own arithmetic, non-vacuous guard case; findings 8 and 9 are comment figures  |
+| T4   | pass    | cells and lines read by header text, no Tab counts, named after ACs           |
+| T5   | pass    | finding 2 closed: the guard has a falsifiable hand case                       |
+| K1   | pass    | finding 4 closed: the flat row matches the reading order, deviations recorded |
+| K2   | pass    | no `any`, no `!` without a comment, named exports, tests next to code         |
+| K3   | pass    | tokens only; `CanvasText` is the only colour keyword                          |
+| K4   | pass    | my own `check-structure`: ok, 3 apps, 39 stories, 67 md, 144 factory files    |
+| K5   | retired | retired in v2                                                                 |
+| K6   | pass    | story `in-review`, `docs/backlog/README.md:48` `in-review`                    |
+| K7   | pass    | seven commits checked: the first eight in order, four appended, none inserted |
+| K8   | fail    | finding 11: no `#047` in `CHANGELOG.md`, no 047 paragraph in the app README   |
+| K9   | pass    | prettier green in my own full run; the round-1 markdown red is gone           |
+| K10  | n.a.    | no workspace script or tsconfig changed                                       |
+| K11  | n.a.    | no env variable                                                               |
+| A1   | pass    | `scope="col"` headers, `scope="row"` row headers, named focusable scroller    |
+| A2   | pass    | the reason cell is text, not colour; forced colours keep the border           |
+| A3   | n.a.    | no live region, no animation                                                  |
+| A4   | n.a.    | no render loop or canvas                                                      |
+
+Findings:
+
+1. Closed, and my own run of the real modules agrees: the comment at `purchase.test.ts:174`
+   states `115` and names fund 2030's line as the part that moves. My run gives the whole funds
+   as `76,698488` / `109,573624` / `147,208175` Cent with own roundings `77` / `110` / `147`,
+   and fund 2032's pre-phase piece as `115,41174662135893` Cent -> `115`, so there the derived
+   value is its own rounding and cannot move; the part that moves is fund 2030's line, `76`
+   against `77`. In the order the two tables read, the own roundings are `110, 32, 115, 77` and
+   the derived last part is `76`.
+2. Closed as a record, with one limit. The `finally` cannot be read: the runner was a scratch
+   script and nothing of it stays in the tree. From the log I read (`Temp/opencode/mut047/log.txt`,
+   169 lines): ten mutants, `byte-identical=True` after every run against the backup outside the
+   repository, a survivor header that reads `none`, and the guard case failing at `flat.test.ts:74`
+   and `:112`. The counts I can read there match the story: 1, 16, 2, 5, 10, 4, 5, 12, 2, 12, and
+   the crashed shape `Tests 2 failed | 46 passed (48)` is recorded as an incident, not as a count.
+   The log prints four refs per run, so a count's composition is not readable there, and as a
+   reviewer I may not mutate a tracked file: the battery stays the tester's word.
+3. Closed. Story 1332 reads `309.345`, as `purchase.test.ts:170` and the assertion at `:218` state.
+4. Closed as a documentation fix: the flat row (816) and deviation 1 (1035-1041) now agree with the
+   design's own reading order as `110` + `32` + `115` + `76` = `333`, `146` no longer appears, `77`
+   reads `76`, the old pins are named as no longer an oracle, and both derivations name their base
+   (932-941). The counts 2880 / 22000 / 1000 stand as a rule question for hak at gate 2: which base
+   owns the derived part when a fund's last piece is not the last part in the order.
+5. Closed. The table splits AC3 into the unit reading (`flatYearMicroEur`, which the app never
+   shows) and the e2e reading of the sum lines, and AC6 into unit plus the existing e2e controls, so
+   each reading lives at the one level where it can be read.
+6. Closed as a measurement, so the item is no longer open. The rule is gone, so no unmeasured
+   number is in the CSS, and the comment names the values the probe printed (1534 px, and 2119 px or
+   more with a reason cell). I could not reproduce the probe, because the desktop browser is not
+   connected, so those numbers stay the tester's word. No unit test or e2e reads `min-width` or the
+   computed style, so nothing asserts a value the code no longer carries, and `check:dist` compares
+   the built CSS without a value of its own. Dropping the rule rather than retyping a number is
+   defensible: a floor below the content minimum cannot bind. Still open for hak: UX's line "about
+   two money columns" at 320 px, which the tester reads as the year column plus one money column in
+   its three states.
+7. Closed as documentation: the exception is named at 660-677, and ADR 0017 (58-63) states the
+   equality holds on the unrounded values and not on the shown figures, which is what `payoutCheck`
+   cannot promise. Still open for hak: whether the reader line promises the equality, and the two
+   notes `flatNote` and `parkedNote`.
+8. `[nit] flat.test.ts:109` and the same figure in the tester's round 2 at story 1392. My run of the
+   real `flat.ts` with the guard removed gives `-1,318,750` micro-euro, not `-131.875`: the digits
+   `131.875` are the Cent value, so as micro-euro the figure is ten times too small. The conclusion
+   does not change - the value is not zero - and the control's `590.800` micro-euro is exact in my
+   run.
+9. `[nit] purchase.test.ts:173`: the hand base `120,542226` Cent does not reproduce under the real
+   modules, which give `120,557,4` Cent -> `31,7964`, and the comment's own product is `31,793`, not
+   `31,7926`. Its two hand figures also do not add to the total the same comment states: `31,7926` +
+   `115,41174662135893` = `147,2043` against the `147,208175` Cent at line 168. Both readings round
+   to `32`, so no assertion moves; a hand comment must still add to the total it names.
+10. `[nit] flat.test.ts:106`, wording. "The cap cannot bind either" is true for the negative hand
+    value, but the positive control inside the same test is a capped figure: the year's increase is
+    `5,00 €`, above the `2,24 €` base, so this case is also a cap falsifier through its control.
+    That is the only reading that fits the cap count moving from 15 to 16 between the rounds, the
+    added one being the control line at `flat.test.ts:113`; the log shows four refs per run, so the
+    composition stays the tester's word.
+11. `[nit]` The Definition of Done: `CHANGELOG.md` has no `#047` entry and `apps/laz/README.md` has
+    no paragraph for 047, while 044, 045 and 046 each have one, and the Test report carries no CI
+    run id. Both are steps after the review - the docs step and the orchestrator's CI run of the
+    story branch - so K8 is recorded as `fail` here as an open item, not as a defect. Status stays
+    `in-review`, and the reviewer does not edit front matter.
+
+My own counts for round 2: `node scripts/verify.mjs --mode=full --no-record` called directly ->
+`verify: ok, 12 step(s), 85.9 s`, all twelve steps ok, `format:check` among them.
+`node scripts/check-structure.mjs` -> ok, 3 apps (avd, laz, minesweeper), 39 stories, 67 markdown
+files, 144 factory files. `npm test -w @swfactory/laz` -> `Test Files 12 passed (12)`,
+`Tests 57 passed (57)`. `npm run test:e2e -w @swfactory/laz` on port 5174 -> `66 passed (6.2s)`,
+0 failed, no `flaky` line, so story 034 rule B was not needed (the known flakes did not occur).
+Port 5174 showed 132 connection entries before that run, left over from my own full run, and the
+run was green. The tree was clean at `454746b` before this section, and I changed nothing but it.
+
 ## Explanation
 
 _orchestrator: plain-language explanation shown at gate 2, at most 15 lines of at most 120 characters. No code, no
