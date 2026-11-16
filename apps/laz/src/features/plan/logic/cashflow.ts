@@ -24,7 +24,7 @@ import { FUND_LIST_AS_OF, type Fund } from './fund.ts';
 import { roundEuroCents } from './format.ts';
 import { displayYearCents, phaseYears, type ParkReason, type Phase, type Plan } from './phase.ts';
 import type { FundParts, PurchaseReason, PurchaseRow } from './purchase.ts';
-import { RATE_UNIT, rhoFactor } from './projection.ts';
+import { preTaxPerShareMicroEur, RATE_UNIT, rhoFactor } from './projection.ts';
 import {
   KST_MILLIONTHS,
   SOLZ_ON_KST_MILLIONTHS,
@@ -165,6 +165,9 @@ export interface CashflowTable {
 /** The flat figure of one fund, split into the cells it reads in. */
 interface FlatFund {
   readonly fund: Fund;
+  /** the fund is part of the depot, so its money can be shown here (045 AC5): a fund outside the phase is
+   * never bought, so it shows no flat figure anywhere and names its phase-side reason in the fund table */
+  readonly inDepot: boolean;
   /** the fund's own part, unrounded; null when its cell shows a dash */
   readonly microEur: number | null;
   /** the counted years that read in column A, and the phase years that read in column B */
@@ -314,10 +317,15 @@ function sumOf(
 /**
  * The tax split of one row (AC5): 25 % Kapitalsteuer on the base, 5,5 % Solzzuschlag of that Kapitalsteuer,
  * and the church tax as a whole hundredths rate on the Kapitalsteuer, counted only while the Kapitalsteuer
- * is on. The row's tax total is one rounding on the same base plus the one figure of the interest tax
- * (answer 11), and the last part with a figure in the reading order is derived from it, so the parts the
- * table shows add up to the total the section states. The Solzzuschlag is never derived from a base of its
- * own, because its base is the Kapitalsteuer.
+ * is on. The row's tax total is the rates of 031 applied to the same base, rounded once, plus the one
+ * figure of the interest tax (answer 11), and the last part with a figure in the reading order is derived
+ * from it, so the parts the table shows add up to the total the section states. The Solzzuschlag is never
+ * derived from a base of its own, because its base is the Kapitalsteuer. The total is the tax, not the
+ * base itself: the base is untaxed money, so adding it as the tax would make the parts disagree with the
+ * total the section states.
+ *
+ * AC4 and AC6: the Kapitalsteuer checkbox is the tax case, so outside it no part of the split is read
+ * anywhere and no total is stated, and a rate that exists but does not apply is a dash with its reason.
  */
 function taxSplit(
   baseMicroEur: number | null,
@@ -325,20 +333,26 @@ function taxSplit(
   taxState: TaxState,
 ): { parts: Record<'kst' | 'solz' | 'kist', number | null>; total: number | null } {
   const parts: Record<'kst' | 'solz' | 'kist', number | null> = {
-    kst: baseMicroEur === null ? null : roundEuroCents(baseMicroEur * (KST_MILLIONTHS / RATE_UNIT)),
-    solz:
-      baseMicroEur === null
-        ? null
-        : roundEuroCents(baseMicroEur * (SOLZ_ON_KST_MILLIONTHS / RATE_UNIT)),
-    kist:
-      baseMicroEur === null || !taxState.kistOn
-        ? null
-        : roundEuroCents(baseMicroEur * (churchTaxMillionths(taxState) / RATE_UNIT)),
+    kst: null,
+    solz: null,
+    kist: null,
   };
+  if (!taxState.kstOn) return { parts, total: null };
+  parts.kst =
+    baseMicroEur === null ? null : roundEuroCents(baseMicroEur * (KST_MILLIONTHS / RATE_UNIT));
+  parts.solz =
+    baseMicroEur === null
+      ? null
+      : roundEuroCents(baseMicroEur * (SOLZ_ON_KST_MILLIONTHS / RATE_UNIT));
+  parts.kist =
+    baseMicroEur === null || !taxState.kistOn
+      ? null
+      : roundEuroCents(baseMicroEur * (churchTaxMillionths(taxState) / RATE_UNIT));
   const interestTaxCents =
     interestTaxMicroEur === null ? null : roundEuroCents(interestTaxMicroEur);
   if (baseMicroEur === null && interestTaxCents === null) return { parts, total: null };
-  const total = Math.round(((baseMicroEur ?? 0) + (interestTaxMicroEur ?? 0)) / 10000);
+  const rateOnBase = taxFromState(taxState).rateMillionths / RATE_UNIT;
+  const total = roundEuroCents((baseMicroEur ?? 0) * rateOnBase) + (interestTaxCents ?? 0);
   const order: ('kst' | 'solz' | 'kist')[] = ['kst', 'solz', 'kist'];
   const derived = order.filter((part) => parts[part] !== null).pop();
   if (derived !== undefined) {
@@ -386,10 +400,12 @@ export function cashflowRows(
   const flatFunds: FlatFund[] = funds.map((fund, position) => {
     const row = purchases[position];
     if (row === undefined || row.phaseYear === null) {
-      return { fund, microEur: null, pieces: [] };
+      return { fund, inDepot: false, microEur: null, pieces: [] };
     }
     const microEur = flatTaxMicroEur(fund, flat, tax, asOf);
-    if (microEur === 0) return { fund, microEur: null, pieces: [] };
+    // A depot fund whose cell shows a dash has no piece, because `flatPartsSum` sums the figures that are
+    // shown, but its reason still reads in the cell (AC4), so `inDepot` is kept here.
+    if (microEur === 0) return { fund, inDepot: true, microEur: null, pieces: [] };
     const counted = flatYears(asOf, fund.year);
     const pieces: FlatFigure[] = counted
       .filter((year) => years.includes(year))
@@ -414,7 +430,7 @@ export function cashflowRows(
         cents: 0,
       });
     }
-    return { fund, microEur, pieces };
+    return { fund, inDepot: true, microEur, pieces };
   });
 
   // 2. the reading order the money rule uses: the fund table's purchase parts row by row, then the year
@@ -490,14 +506,18 @@ export function cashflowRows(
     /** The fund this column reads for this row: the funding fund for the money columns, the fund sold in
      * this year for column A, and the first fund still held in this year for column B (045 AC2, AC3). A
      * fund never contributes to column B of the row it is read in, so column B reads the funds with a
-     * counted year equal to this row's year. */
+     * counted year equal to this row's year. AC4 says a dash names its reason, so the fund is read even when
+     * the cell shows no figure: a depot fund with no flat figure has no piece, and a fund outside the phase
+     * is never bought, so neither can be found through `pieces`. When this row reads no depot fund at all,
+     * the flat money would come from the funding fund, which is the fund the flat columns read for a row. */
     const flatFundFor = (column: 'flatBeforePhase' | 'flatForYear'): FlatFund | null => {
-      const read = flatFunds.filter((entry) =>
+      const depot = flatFunds.filter((entry) => entry.inDepot);
+      const own = depot.find((entry) =>
         column === 'flatBeforePhase'
           ? entry.fund.year === row.year
-          : entry.pieces.some((piece) => piece.cell === 'flatForYear' && piece.year === row.year),
+          : entry.fund.year > row.year && flatYears(asOf, entry.fund.year).includes(row.year),
       );
-      return read[0] ?? null;
+      return own ?? depot.find((entry) => entry.fund === fund) ?? null;
     };
 
     function cellFor(column: CashflowColumn, cents: number | null): CashflowCell {
@@ -508,8 +528,9 @@ export function cashflowRows(
       if (column === 'parked' && fund === null) return { cents: null, reason: null };
       const entry =
         column === 'flatBeforePhase' || column === 'flatForYear' ? flatFundFor(column) : null;
-      // Deviation, recorded in the Implementation notes: a flat cell that reads no fund at all names the
-      // same thing the funding cell names, because none of the copy's flat reasons can apply without a fund.
+      // A flat cell that reads no depot fund names the same thing the funding cell names, because none of
+      // the copy's flat reasons can apply without a fund. With a fund it reads its own reason (AC4), and
+      // that fund is read even when its figure is 0, so the reason is the flat column's own one.
       if (entry === null && (column === 'flatBeforePhase' || column === 'flatForYear')) {
         return { cents: null, reason: 'no-funding-fund' };
       }
@@ -538,11 +559,15 @@ export function cashflowRows(
     }
 
     const parkedCents = fund === null ? null : (parked[position] ?? null);
+    // AC6 and the row identity: the proceeds cell is `shares · navMicroEur · ρ`, the fund's money for the
+    // year, pre-tax. It is not the fund table's purchase part, which is `shares · NAV`: that stays the fund
+    // table's figure for 032 AC2, while the tax of that fund reads here.
+    const proceedsCents =
+      fund === null || shares === null
+        ? null
+        : roundEuroCents(shares * preTaxPerShareMicroEur(fund, asOf));
     const cells: Record<CashflowColumn, CashflowCell> = {
-      proceeds: cellFor(
-        'proceeds',
-        fund === null ? null : (purchaseParts[indexOf(fund)]?.cents ?? null),
-      ),
+      proceeds: cellFor('proceeds', proceedsCents),
       kst: cellFor('kst', taxParts.kst),
       solz: cellFor('solz', taxParts.solz),
       kist: cellFor('kist', taxParts.kist),
