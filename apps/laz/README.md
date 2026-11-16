@@ -99,3 +99,10 @@ the cash reserve for the Vorabpauschale, with one check line that adds up to 0,0
 share counts (`logic/ledger.ts`). Two tax defects are fixed: the Kirchensteuer now lowers the
 Kapitalertragsteuer by § 32d Abs. 1 EStG (27,82 % effective with 8 %, 27,99 % with 9 %), and the Vorabpauschale
 tax is counted for the whole holding, not for one share.
+
+Story 049 lets the cash reserve for the Vorabpauschale earn interest when the parking option is on: each month
+on the reserve balance at the start of the month, from the month after the purchase, with the January balance
+already lowered by that January's Vorabpauschale payment. The interest is credited and taxed at the end of the
+year, stays in the reserve and earns from the next year on, so the depot needs a smaller reserve. The figures
+appear in the statement's interest columns, also before the phase. Without the parking option or without a
+reserve every figure is the one of story 048.

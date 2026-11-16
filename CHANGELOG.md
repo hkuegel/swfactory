@@ -148,6 +148,8 @@ Euro`: the base of each counted year is the value at the start of that year time
 
 ### Changed
 
+- laz: with the parking option on, the cash reserve for the Vorabpauschale earns interest too, so
+  the depot needs a smaller reserve and the monthly payout rises slightly (#049).
 - laz: an account statement per calendar year replaces the year table; the fund table shows the way
   to the gain and the result block a check line that adds up to 0,00 € (#048).
 - `laz`: the money fields have no invented cap. A value is refused only when it is negative, has more

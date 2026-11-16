@@ -1061,3 +1061,57 @@ test('046 AC1: the parking block as its own group, its switch and its field by t
   await expect(block.getByText(/Zinssatz in Prozent: /)).toHaveCount(1);
   await expect(liveRegion(page)).toHaveText('Kein Ergebnis: Zinssatz in Prozent ist ungültig.');
 });
+
+test('049 AC1: the reserve earns interest in a row before the phase, and nothing is shown with parking off', async ({
+  page,
+}) => {
+  await amountInput(page).fill('300000,00');
+  await kstBox(page).check();
+  await depositSwitch(page).check();
+  const read = await readStatement(page);
+  const row = (year: string) => read.rows.find((entry) => entry.year === year)?.cells;
+  // Hand: the purchase of 2026 happens on 31.12., so the first row earns nothing. 2027 is before the phase:
+  // reserve 4.394,90 EUR (end of 2026) - Vorabpauschale 5,80 EUR paid in January = 4.389,10 EUR x 2,50 % =
+  // 109,73 EUR interest, tax 26,375 % of it = 28,94 EUR (2.894 Cent, 10.973 x 0,26375 = 2.894,1).
+  expect(row('2026')?.['Kontostand am Ende']).toBe(439490);
+  expect(row('2027')?.['Vorabpauschale (Steuer)']).toBe(-580);
+  expect(row('2027')?.['Zinsen Tagesgeld']).toBe(10973);
+  expect(row('2027')?.['Steuer auf Zinsen']).toBe(-2894);
+  expect(row('2026')?.['Zinsen Tagesgeld']).toBe(0);
+
+  await depositSwitch(page).uncheck();
+  const off = await readStatement(page);
+  expect(off.headers).not.toContain('Zinsen Tagesgeld');
+  expect(off.headers).not.toContain('Steuer auf Zinsen');
+});
+
+test('049 AC2: with the reserve earning interest the payout is a little higher and the statement ends at 0,00', async ({
+  page,
+}) => {
+  await amountInput(page).fill('300000,00');
+  await kstBox(page).check();
+  await depositSwitch(page).check();
+  // Hand pins: 4.394,41 EUR is the payout of the same inputs under story 048 (reserve earning nothing,
+  // measured with the 048 code of commit 35be095), 4.397,36 EUR the payout with the interest of 049.
+  const payout = figure(page, 'Maximale monatliche Auszahlung');
+  await expect(payout).toHaveText(euro('4.397,36'));
+  const gain = 439736 - 439441;
+  expect(gain).toBeGreaterThan(0);
+  expect(gain).toBeLessThan(439441 * 0.005);
+  const read = await readStatement(page);
+  const last = read.rows[read.rows.length - 1];
+  expect(last?.year).toBe('2034');
+  expect(Math.abs(last?.cells['Kontostand am Ende'] ?? Number.NaN)).toBeLessThanOrEqual(5);
+});
+
+test('049 AC3: with parking off the figures are those of story 048', async ({ page }) => {
+  await amountInput(page).fill('300000,00');
+  await kstBox(page).check();
+  // 4.351,65 EUR is the 048 payout of these inputs (flat 2,24 %, parking off, measured on commit 35be095).
+  await expect(figure(page, 'Maximale monatliche Auszahlung')).toHaveText(euro('4.351,65'));
+  await kstBox(page).uncheck();
+  // 048 AC6 pins, tax boxes and parking off: 4.481,10 EUR a month, 267.791,58 EUR for 4.000,00 EUR.
+  await expect(figure(page, 'Maximale monatliche Auszahlung')).toHaveText(euro('4.481,10'));
+  await givenPayout(page, '4000,00');
+  await expect(figure(page, 'Benötigtes Depot für die Phase')).toHaveText(euro('267.791,58'));
+});

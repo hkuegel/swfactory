@@ -43,6 +43,79 @@ export interface Plan {
 /** A monthly target of 1 EUR: the unit the depot direction divides by (the model is linear in `P`). */
 const UNIT_MONTHLY_CENTS = 100;
 
+/** The cash reserve of the plan and the interest it earns per calendar year (story 049), unrounded. */
+interface Reserve {
+  readonly startMicro: number;
+  /** Gross interest and the tax on it per year from the first row; empty without parking or reserve. */
+  readonly interestMicro: readonly number[];
+  readonly interestTaxMicro: readonly number[];
+}
+
+/**
+ * The reserve: the Vorabpauschale of the whole holding (story 048). With parking on it earns interest
+ * (story 049 AC1): per year `rate x balance / 12` for each month from the month after the purchase month,
+ * January already lowered by the payment of that January; credited at year end, taxed by `taxParts`, the
+ * net stays. The recursion is linear in the starting reserve `R`, `end(R) = a + b R`, so the smallest
+ * reserve that ends at 0 (and so pays every payment) is `-a / b` from two forward runs (AC2).
+ */
+function reserveOf(
+  funds: readonly Fund[],
+  rows: readonly PurchaseRow[],
+  phase: Phase,
+  taxState: TaxState,
+  flat: FlatRate,
+  deposit: DepositOption,
+  asOf: string,
+): Reserve {
+  const tax = taxFromState(taxState);
+  let plain = 0;
+  funds.forEach((fund, index) => {
+    const row = rows[index];
+    if (row?.shares == null) return;
+    plain += row.shares * flatTaxMicroEur(fund, flat, tax, asOf);
+  });
+  const none: Reserve = { startMicro: plain, interestMicro: [], interestTaxMicro: [] };
+  const firstYear = Number(asOf.slice(0, 4));
+  const years = phaseYears(phase);
+  const lastYear = years[years.length - 1] ?? firstYear - 1;
+  if (!deposit.on || deposit.hundredths === 0 || plain <= 0 || lastYear < firstYear) return none;
+  const count = lastYear - firstYear + 1;
+  const payments: number[] = Array.from({ length: count }, () => 0);
+  funds.forEach((fund, index) => {
+    const row = rows[index];
+    if (row?.shares == null) return;
+    for (const year of flatYears(asOf, fund.year)) {
+      const at = year + 1 - firstYear;
+      if (at < count)
+        payments[at] =
+          (payments[at] ?? 0) + row.shares * flatYearMicroEur(fund, year, flat, tax, asOf);
+    }
+  });
+  const rate = deposit.hundredths / 10000;
+  const firstMonths = 12 - Number(asOf.slice(5, 7));
+  const run = (start: number, paid = true): Reserve & { end: number } => {
+    let balance = start;
+    const gross: number[] = [];
+    const taxes: number[] = [];
+    payments.forEach((payment, at) => {
+      balance -= paid ? payment : 0;
+      const interest = (balance * rate * (at === 0 ? firstMonths : 12)) / 12;
+      const parts = taxParts(interest, taxState);
+      const owed = parts.kapESt + parts.soli + parts.kist;
+      gross.push(interest);
+      taxes.push(owed);
+      balance += interest - owed;
+    });
+    return { startMicro: start, interestMicro: gross, interestTaxMicro: taxes, end: balance };
+  };
+  const zero = run(0);
+  // The slope is the growth of 1 EUR without payments: a difference of the two runs would lose digits.
+  const slope = run(1, false).end;
+  const start = -zero.end / slope;
+  if (!(slope > 0) || !Number.isFinite(start) || start <= 0) return none;
+  return run(start);
+}
+
 function depotCentsAt(
   monthlyCents: number,
   funds: readonly Fund[],
@@ -52,15 +125,22 @@ function depotCentsAt(
   deposit: DepositOption,
   asOf: string,
 ): number {
-  const tax = taxFromState(taxState);
-  const rows = purchaseRows(funds, phase, monthlyCents, tax, flat, deposit, asOf);
+  const rows = purchaseRows(
+    funds,
+    phase,
+    monthlyCents,
+    taxFromState(taxState),
+    flat,
+    deposit,
+    asOf,
+  );
   let micro = 0;
-  rows.forEach((row, index) => {
-    const fund = funds[index];
-    if (fund === undefined || row.shares === null || row.purchaseMicroEur === null) return;
-    // The purchase plus the cash reserve for the Vorabpauschale of the whole holding (story 048 AC2).
-    micro += row.purchaseMicroEur + row.shares * flatTaxMicroEur(fund, flat, tax, asOf);
+  rows.forEach((row) => {
+    if (row.shares === null || row.purchaseMicroEur === null) return;
+    micro += row.purchaseMicroEur;
   });
+  // Plus the cash reserve for the Vorabpauschale of the whole holding (story 048 AC2, story 049).
+  micro += reserveOf(funds, rows, phase, taxState, flat, deposit, asOf).startMicro;
   return micro / 10000;
 }
 
@@ -286,6 +366,15 @@ export function buildStatement(
     row.interestTax -= parkTaxMicroEur(interest, tax) / 10000;
     row.payout -= plan.monthlyCents * months;
   }
+
+  // The reserve's interest (story 049 AC1), also in the years before the phase.
+  const reserve = reserveOf(funds, purchases, phase, taxState, flat, deposit, asOf);
+  reserve.interestMicro.forEach((interest, at) => {
+    const row = raw[at];
+    if (row === undefined) return;
+    row.interest += interest / 10000;
+    row.interestTax -= (reserve.interestTaxMicro[at] ?? 0) / 10000;
+  });
 
   // One rounding per cell; the purchase is the sum of the rounded Einstand figures of the fund table.
   const shown: Record<FlowColumn, number>[] = raw.map((flows) => {

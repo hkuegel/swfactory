@@ -218,3 +218,64 @@ describe('ledger (story 048, AC3: the closing at 0 is not forced by the last pay
     }
   });
 });
+
+describe('ledger (story 049: the reserve earns interest)', () => {
+  // One fund 2031 (NAV 40 EUR, YTM 100 %), bought in November 2028, flat rate 2,24 %, KapESt only, parking
+  // 2,40 %, phase 2032. The Vorabpauschale of 2028 (two months), 2029 and 2030 is paid in January 2029, 2030
+  // and 2031. The hand recursion below takes the shown reserve and payments as input and applies the story's
+  // rule: interest = rate x balance after the January payment, credited at year end, net stays.
+  const LONG: Fund[] = [
+    {
+      year: 2031,
+      isin: 'DE000HAND2',
+      name: 'reserve case',
+      navMicroEur: 40_000_000,
+      ytmBp: 10000,
+      avgMaturityHundredths: 0,
+      sharesOutstanding: 0,
+    },
+  ];
+  const LONG_PHASE: Phase = { startMonth: '2032-01', endMonth: '2032-12' };
+  const PARK_240: DepositOption = { on: true, hundredths: 240 };
+  const AS_OF = '2028-11-30';
+
+  function longStatement() {
+    const plan = buildPlan(LONG, LONG_PHASE, KST, FLAT_224, PARK_240, 100_000, 'payout', AS_OF);
+    return closes(buildStatement(LONG, LONG_PHASE, KST, FLAT_224, PARK_240, plan, AS_OF));
+  }
+
+  it('AC1: December only in the purchase year, then the balance after the January payment, net kept', () => {
+    const statement = longStatement();
+    const row = (year: number) => statement.rows.find((entry) => entry.year === year);
+    let balance = statement.reserveCents;
+    expect(balance).toBeGreaterThan(0);
+    // Purchase in November: only December counts, 1 / 12 of a year (hand oracle 1.000 EUR -> 2,00 EUR).
+    expect(Math.abs((row(2028)?.flows.interest ?? 0) - (balance * 0.024) / 12)).toBeLessThanOrEqual(
+      1,
+    );
+    balance += (row(2028)?.flows.interest ?? 0) + (row(2028)?.flows.interestTax ?? 0);
+    for (const year of [2029, 2030, 2031]) {
+      balance += row(year)?.flows.flat ?? 0; // negative: paid on the first working day of January
+      const interest = balance * 0.024;
+      expect(
+        Math.abs((row(year)?.flows.interest ?? 0) - interest),
+        String(year),
+      ).toBeLessThanOrEqual(3);
+      // 2031: the last payment empties the reserve, so nothing is left to earn.
+      if (year < 2031) expect(row(year)?.flows.interestTax ?? 0).toBeLessThan(0);
+      balance += (row(year)?.flows.interest ?? 0) + (row(year)?.flows.interestTax ?? 0);
+    }
+    // The reserve is used up by the last payment, so it holds nothing at the end of 2031.
+    expect(Math.abs(balance)).toBeLessThanOrEqual(5);
+  });
+
+  it('AC2: the payout is higher than with a reserve that earns nothing, by less than 0,5 %', () => {
+    const plan = buildPlan(FUND_LIST, PHASE, KIST, FLAT_224, PARK_250, 400_000, 'payout');
+    const statement = closes(buildStatement(FUND_LIST, PHASE, KIST, FLAT_224, PARK_250, plan));
+    // A reserve that earns nothing would be the whole Vorabpauschale paid; the gain of the payout for the
+    // same depot is (that reserve - the reserve held) / the depot held.
+    const gain = (-statement.sums.flat - statement.reserveCents) / statement.depotCents;
+    expect(gain).toBeGreaterThan(0);
+    expect(gain).toBeLessThan(0.005);
+  });
+});
