@@ -197,6 +197,14 @@ Append only._
   off, only `Steuer nicht angehakt` for the tax case and `COPY.missingYear` for the funding reason. The
   ux-designer's new string is the copy of record; the design line is not rewritten here, because the design
   section is the architect's work.
+- 2026-11-15 — orchestrator's naming resolutions, applied to the UX section before it was copied: the field id is
+  `depositRate` as the design names it (the UX had `parkRate`), so `FIELD_IDS`, `fieldSpec`, `FIELD_COPY` and the
+  `<label for>` read one name, and `depositRate` stays last in `FIELD_IDS`, which keeps the first-invalid-field
+  wording of 033 and 045 unchanged. `DEPOSIT_COPY` is the block's copy object, the shape `TAX_COPY` has (legend,
+  control label, hint); the two headers, the sum line and the facts stay in the app's single `COPY` object, as
+  story 045's strings do, because the tests read `COPY.flatColumn` there. The control is a checkbox, so the
+  design's word "switch label" reads as the block's control label; the accessible name is the label string, not
+  the legend.
 - 2026-11-16 — tester's run, recorded in the Test report: `no-funding-fund` is reachable through the UI on the
   committed fixture (phase 01.2026–12.2026, the only year the list does not fund), so AC4's dash is asserted in
   `e2e/laz.spec.ts` as well as at logic level; the earlier plan that asserted it at logic level only is
@@ -228,14 +236,10 @@ Append only._
 - 2026-11-16 — tester's run: three test files were not Prettier-clean when first written. The Prettier output
   was read and the differences applied inside those test files with the edit tool (no `--write` run by this
   role, and no file outside the test files was touched); `format:check` prints clean now.
-- 2026-11-15 — orchestrator's naming resolutions, applied to the UX section before it was copied: the field id is
-  `depositRate` as the design names it (the UX had `parkRate`), so `FIELD_IDS`, `fieldSpec`, `FIELD_COPY` and the
-  `<label for>` read one name, and `depositRate` stays last in `FIELD_IDS`, which keeps the first-invalid-field
-  wording of 033 and 045 unchanged. `DEPOSIT_COPY` is the block's copy object, the shape `TAX_COPY` has (legend,
-  control label, hint); the two headers, the sum line and the facts stay in the app's single `COPY` object, as
-  story 045's strings do, because the tests read `COPY.flatColumn` there. The control is a checkbox, so the
-  design's word "switch label" reads as the block's control label; the accessible name is the label string, not
-  the legend.
+- 2026-11-16 — review finding 3 (K7), resolved as a move and not a deletion: the naming-resolution entry of
+  2026-11-15 had been duplicated when the tester's entries were appended after it, and one copy sat out of order
+  at the end of the log. The duplicate copy is removed; the entry itself is unchanged, and the log now reads in
+  append order: hak's answers, the design and UX entries of 2026-11-15, the tester's run, then the re-run.
 - 2026-11-16 — the tester's run ended with an error before its reply (`Compaction produced no summary`), so the
   counts it printed are not accepted as a result of the run. The orchestrator re-ran the ten P32 mutation checks
   with its own runner (outside the repository, backup taken before the run, restore inside the runner,
@@ -1153,7 +1157,10 @@ values are the control, not an accident of a zero rate.
 
 - The round trip is asserted as a closure, which cannot see the sign of `K` (risk 6); the sign is asserted by
   the hand depot `1.804,98 €` and by the negative branch instead.
-- `m = 0` is asserted only at logic level, never as a UI oracle (risk 3).
+- `m = 0` is asserted only at logic level, never as a UI oracle (risk 3). It is also not a falsifier: the formula
+  already gives 0 for `m = 0`, so no mutation of `monthSum` can turn that assertion red — the reviewer's run
+  printed `Tests 45 passed (45)` with the `months === 0` branch removed, and the orchestrator's runner printed the
+  same. Recorded as a limit; the assertion stays as the pair AC2 names.
 - The identity is asserted on the unrounded values only; no test asserts it in rounded cents (ADR 0012).
 - `effectiveRateMillionths` was not mutated (shared with 031), so the tax coupling is recorded as a coupling.
 - The rules that move more than one assertion are limits, not defects; see the counts above.
@@ -1176,13 +1183,141 @@ values are the control, not an accident of a zero rate.
 
 _reviewer: findings against the checklist; the rounds are recorded here._
 
-To be written after gate 2 is granted.
+**Round 1, reviewer 2026-11-16. Verdict: APPROVED. Checklist version: 2**
+
+Runs of this round are my own, on this worktree; nothing below is taken from the Test report.
+`node scripts/verify.mjs --mode=full --no-record`: green, 12 steps, 75,4 s wall.
+`npm test -w @swfactory/laz`: 11 files / 45 tests, and the per-file counts the report lists
+(deposit 2, parseInputs 1, fieldCopy 8, phase 9, purchase 8, flat 2, fund 1, fundSource 5,
+projection 2, tax 3, tokens 4) are the counts my run printed. `npm run test:e2e -w @swfactory/laz`:
+62 passed, no failure and no timeout, port 5174 free before the run and 5173 never touched; the
+split the report names (chromium 21, platform 41) is what the spec files count. `test:pages` 24,
+`check:structure`, `check:dist`, `typecheck`, `lint`, `format:check`: green in the same run. The
+ten P32 rules were run again by my own runner in a scratch copy of the tree outside the repository
+(`node_modules` junctioned to this worktree, one backup per rule taken outside the repository, the
+restore inside the runner, byte-identity printed for every rule, baseline printed on the clean file
+for every rule: 11 files / 45 tests and 62 specs). Every count of the table in the Test report is
+reproduced, including the assertion lines it names (`deposit.test.ts:60`,
+`parseInputs.test.ts:151`, `phase.test.ts:219`, `:236`, `:250`) and the failing spec names. One run
+of the shown-cents rule printed 2 failed where three further runs printed 1 failed (the story's own
+AC4 spec, `e2e/laz.spec.ts:1016`, the sum line at `:1064`); that extra failure is not reproducible
+and is not an assertion of this story, so the tester's 60-passed-plus-timeout reading stays an
+incident and the table's count stands.
+
+The hand values were recomputed by an independent oracle of my own, written in another
+representation (micro-euro sums read from the fixture file, with the flat-year convention ADR
+0012/0015 give: the base at 1.1. and the increase from 1.1. to 1.1.), and they reproduce the story:
+16,25 / 1,25 / 0,2083333, tax 4,2859375 and the church case 4,6109375, net 11,9640625, needed
+1188,0359375, the rows 1625 and 429 Cent, the sum line 32,50 and 8,58 (8,57 if rounded once), the
+closure F 89,089035488581 / K 1,206414022241, the phase restriction 1.804,98 against 1.709,11, the
+negative branch, and the control figures 149,37 off against 151,37 on. One bound checked here that
+the story does not state: inside the field's range the denominator cannot cross zero, because `K/F`
+is `rate · (m+1)/24`, at most 13/24 for `m ≤ 12` and a rate under 100 %, so the round trip cannot
+flip sign through the division.
+
+| Item | Result | Note                                                                                                                                                                                                                                                                                                                             |
+| ---- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1   | pass   | AC1 `fields.ts:34`, `parseInputs.ts`, `deposit.ts:46` with `parseInputs.test.ts`, `fieldCopy.test.ts` and e2e `046 AC1`; AC2 `deposit.ts:30,47`; AC3 `deposit.ts:52,65` read through `purchase.ts:145`; AC4 `phase.ts:215-224` and `YearTable.tsx:57-102` with e2e `046 AC4`; AC5 `phase.ts:122,177,193` with `purchase.test.ts` |
+| C2   | n.a.   | no network call and no pending state in the diff                                                                                                                                                                                                                                                                                 |
+| C3   | pass   | `PlanCalculator.tsx:93-96`: `deposit` is derived inside the memo, `parkOn` is in the dependency array (`:166`), nothing derived is stored                                                                                                                                                                                        |
+| C4   | n.a.   | no render loop or imperative controller changed                                                                                                                                                                                                                                                                                  |
+| C5   | n.a.   | no reducer; `asOf` is the fixture constant or an argument, never a clock                                                                                                                                                                                                                                                         |
+| C6   | pass   | the new field's four errors end in the visible error state (e2e AC1 reads them after the first edit); no catch and no I/O added                                                                                                                                                                                                  |
+| S1   | n.a.   | no input reaches a DOM, URL or query sink; the cells print text (`YearTable.tsx:78-83`)                                                                                                                                                                                                                                          |
+| S2   | n.a.   | no config, env or auth code changed                                                                                                                                                                                                                                                                                              |
+| S3   | n.a.   | `package.json` dependencies unchanged                                                                                                                                                                                                                                                                                            |
+| S4   | n.a.   | no dev-only code added                                                                                                                                                                                                                                                                                                           |
+| S5   | n.a.   | no script in `scripts/`, `templates/` or an app `scripts/` touched                                                                                                                                                                                                                                                               |
+| T1   | pass   | my own full run is green                                                                                                                                                                                                                                                                                                         |
+| T2   | pass   | one test per AC at the cheapest level; AC5 stays at logic level (recorded, not duplicated in the browser); AC4's `no-funding-fund` is read at logic level and in the browser, which are the reason function and the rendered cell, not one path twice                                                                            |
+| T3   | pass   | every expected value is a hand figure; `deposit.test.ts:48` asserts intent (not a whole cent), which is what AC2's point is; one assertion cannot fail: finding 1                                                                                                                                                                |
+| T4   | pass   | no counted Tab sequence through the new block (`laz.spec.ts:429-431` stops before it), cells read by header text, tests named after ACs                                                                                                                                                                                          |
+| T5   | pass   | the new branch logic (the fifth field, the reason map, the sign branch) has a test; only the `m = 0` guard has no falsifier (finding 1)                                                                                                                                                                                          |
+| K1   | fail   | finding 1, the `months === 0` branch is dead code; otherwise the code matches the design and the deviations are recorded (no AC5 e2e, the reason asserted at two levels)                                                                                                                                                         |
+| K2   | pass   | no `any`, no `!`, optional props as `T \| null`, named exports, `deposit.test.ts` next to `deposit.ts`                                                                                                                                                                                                                           |
+| K3   | pass   | the new CSS is `.reason` only (`YearTable.module.css`): `var(--color-text-muted)`, no colour literal, no `font-family`, no transition                                                                                                                                                                                            |
+| K4   | n.a.   | no platform or factory file changed; `check:structure` green on this run                                                                                                                                                                                                                                                         |
+| K6   | pass   | status `in-test` and the index row (`docs/backlog/README.md:47`) are equal; the step that moves both to `in-review` is the orchestrator's, not this run's                                                                                                                                                                        |
+| K7   | fail   | finding 3                                                                                                                                                                                                                                                                                                                        |
+| K8   | n.a.   | README and CHANGELOG are written by the docs step after this review; checked before gate 2, so not recorded as a pass here                                                                                                                                                                                                       |
+| K9   | pass   | `format:check` green in the full run                                                                                                                                                                                                                                                                                             |
+| K10  | n.a.   | no workspace script or `tsconfig` changed                                                                                                                                                                                                                                                                                        |
+| K11  | n.a.   | no env variable added                                                                                                                                                                                                                                                                                                            |
+| A1   | pass   | `PhaseForm.tsx:158-177`: its own fieldset with a legend, the native checkbox with its control label and hint, the field with its label and `inputId`, never disabled, reachable by keyboard; nothing here moves focus                                                                                                            |
+| A2   | pass   | the state cue is text (the dash and the reason), so it survives forced colours; the pair it paints is the muted token `tokens.test.ts` already reads                                                                                                                                                                             |
+| A3   | n.a.   | no live region and no animation added; the switch announces through the control itself                                                                                                                                                                                                                                           |
+| A4   | n.a.   | no canvas or render loop                                                                                                                                                                                                                                                                                                         |
+
+Findings:
+
+1. `[nit] apps/laz/src/features/plan/logic/deposit.ts:31` — the `months === 0` branch is dead code,
+   because `0 · (0 + 1) / 24` is already 0. With the branch removed my run printed 45 passed, so the
+   `m = 0` case at `deposit.test.ts:51-52` cannot fail: AC2's "no interest for a phase year without
+   phase months" is met by the formula, not by the guard. Suggested fix: drop the guard, or state in
+   the story that this assertion is not a falsifier.
+2. `[nit] apps/laz/src/features/plan/logic/phase.ts:238` and
+   `apps/laz/src/features/plan/logic/purchase.ts:145-146` — the arithmetic of one year is written
+   twice, once in cents and once in micro-euro, so the story's claim that the year table and the fund
+   table cannot show two numbers for one year rests on both being written the same way rather than on
+   one call. They agree today and the identity is asserted (`purchase.test.ts:238`). Suggested fix:
+   let one module read the other's figure, so the claim holds by construction.
+3. `[minor] K7` — the Decision log lost nothing but is no longer in the order it was written: the
+   eleven entries of the tester's round (story lines 200-230) were inserted before the existing entry
+   of 2026-11-15, the orchestrator's naming resolutions (line 231), so a 2026-11-15 entry now sits
+   among the entries of 2026-11-16. Nothing was deleted or rewritten: the entry lists of the four
+   commits that touched the file (51d3411, 14f385c, a9013df, c31f64e) are identical up to the lines
+   each one added. Suggested fix: move the block of 2026-11-16 after the naming-resolution entry.
+4. `[nit] apps/laz/src/features/plan/logic/deposit.ts:75` — `parkTerm` reads `tax.rateMillionths`
+   without checking `tax.on`, while `parkTaxMicroEur` at `:53` checks it, so the same `Tax` shape is
+   read two ways. It holds only because `taxFromState` (`tax.ts:63`) gives rate 0 when the checkbox is
+   off; the comment at `deposit.ts:71` states that `τ` is 0 outside the tax case as a fact of this
+   module. Suggested fix: use the same guard in both, or name the caller's invariant in the comment.
+
+### Resolution of the findings (orchestrator, 2026-11-16, before gate 2)
+
+The verdict stands as the reviewer wrote it; the code on the branch is not changed by these four findings, so
+the counts of the Test report still describe the committed files. The resolutions are recorded here for gate 2.
+
+- **Finding 3, fixed in the file.** The tester's eleven entries are moved after the naming-resolution entry and
+  the duplicate copy of that entry is removed; its text is unchanged, and the log now reads in append order.
+  Recorded in the Decision log.
+- **Findings 1, 2 and 4, accepted as limits, not fixed.** Each names a rule that no mutation can turn red with
+  the shapes the tests read, so P32 records them as limits:
+  - finding 1: `0 · (0 + 1) / 24` is 0 by the formula, so AC2's `m = 0` half is not a falsifier. The reviewer's
+    run printed `Tests 45 passed (45)` with the branch removed, and the orchestrator's runner printed the same
+    with the guard removed (run outside the repository, restore inside the runner, byte-identity `true`). AC2
+    still names `m = 0` and the test keeps its assertion as the pair of the falsifiable ones. The branch is dead
+    code; whether to drop it is hak's call at gate 2.
+  - finding 2: the same year arithmetic in two units. Accepted as a limit, because the design intends the two
+    paths to agree through the asserted identity (`purchase.test.ts:238`) and not through one shared call; a
+    shared function in `deposit.ts` would add a function the design's file list does not name, which is the
+    architect's call and not the reviewer's or the orchestrator's.
+  - finding 4: the same `Tax` shape read two ways. The reviewer's reason was checked here against the code:
+    `taxFromState` (`tax.ts:68-69`) returns `effectiveRateMillionths` (`tax.ts:62-65`), which is 0 when the
+    checkbox is off, so the app cannot reach the shape that would make the two readings differ. The tests read
+    `TAX_OFF` with the rate 0, so a guard in `parkTerm` could not be turned red either — the same shape problem
+    as `DEPOSIT_OFF`, which is why AC1's off half is asserted with `OFF_RATE`.
+
+If hak wants any of these three fixed, the fix is a follow-up commit on this branch, and the mutation count for
+that rule is re-run with a control that carries a value the guard can read.
 
 ## Explanation
 
 _The section hak reads at gate 2, at most 15 lines of at most 120 characters._
 
-To be written after gate 2 is granted.
+The app can park the monthly money on a deposit account for the months of one phase year, at a rate that is a parameter.
+The rate is one number for the whole term, prefilled with 2,50 %, and the option is its own block in the form.
+A year's interest is the monthly target times the rate times the average balance that waits: 6,5 year units for 12 months.
+In the tax case that interest is taxed at the Zufluss, and the net is what the plan keeps and what reduces the money it needs.
+The year table shows the interest and its tax as two columns, the sum line states them once, and each dash names its reason.
+The fund table's money for a year is the payout minus the net interest, and the shares follow that money.
+Hand example, 100,00 € monthly at 2,50 % for a full year: 16,25 € interest, 4,29 € tax, 11,96 € net, 1.188,04 € needed.
+With the option off the figures of stories 024, 032 and 045 are unchanged, and the test set asserts that.
+The term enters the phase factor as K, and K/F cannot exceed 13/24, so the round trip cannot change its sign.
+The reviewer approved in round 1; three nits are recorded as limits and the fourth, the log order, is fixed in the file.
+The tester's run ended with an error, so its counts are not reported as a result of that run.
+The ten mutation counts here are what the orchestrator's own runner printed, on the test files the tester left.
+Nothing is pushed or merged: the branch is committed, status `in-test`, gate 2 needs hak's go.
 
 ## Retrospective
 
@@ -1190,4 +1325,85 @@ _orchestrator: what went wrong (review rounds, defects, corrections at the gates
 agents/CLAUDE.md/templates, and which ones hak approved. Include a `### Cost` table (see the retro step of
 `/feature`)._
 
-To be written at the end.
+The runs were one at a time, in the order product-owner, ux-designer, architect, developer, tester, reviewer; the
+model of every role run is `inherit (strata/iq2_xs)`. Gate 1 (the story as written, the five open questions and
+hak's answers) is recorded above and committed as `51d3411`. Gate 2 is not granted: nothing is pushed, the branch
+is committed, the status is `in-test`. Hak's approval of the three limits below is what gate 2 has to answer.
+
+### What went wrong
+
+1. Two Decision-log entries of story 045 named `park.ts`, `parkedInterestFactor` and `depotParts`, names that do
+   not exist in the repository, and hand values that no test asserts. They are this story's, and the tester run
+   they recorded is withdrawn as a record: story 045 has no code for it. Corrected in the Decision log; no test
+   was changed, because nothing there was measured.
+2. The architect's ratio argument (`9/2 = 4,5`) was withdrawn for four values that belong to story 045's flat
+   cash and not to the parking term; recomputing them with story 045's rules reproduces all four exactly.
+3. The hand example in the model section was wrong by one digit: the tax of the full phase year is
+   `4,2859375 €`, not `4,2909375 €`. Found by the architect when it recomputed the values with a script. The three
+   shown figures do not move, so no acceptance criterion changed; the story is the source of truth for the
+   tester's oracles, so the paragraph is corrected (`14f385c`).
+4. The ux-designer wrote its section in the session's checkout (`swfactory`), not in the story worktree, because
+   that role has no shell and its permission denies writing outside its own working directory. The orchestrator
+   copied the section here and reverted the copy it left there; the text is the ux-designer's, unchanged.
+5. The tester's run ended with an error before its reply (`Compaction produced no summary`), so nothing it printed
+   after the test files is a result. Its test files are the ones the runners ran (45 tests, 62 specs, green); its
+   mutation counts were measured again by the orchestrator's own runner. The failed run is recorded as an
+   incident, its pass is not reported.
+6. The first mutation run crashed with `UnicodeEncodeError` on vitest's marker while `deposit.ts` was mutated, and
+   its backup had already been overwritten with the mutated content, so the restore could not recover the file.
+   `monthSum` was put back by hand. The runner was changed to write with UTF-8, to keep the backup in a file the
+   mutation cannot write to, and to restore in a `finally`. Recorded as an incident, not as a pass.
+7. One run printed more failures than the mutation could move, and the tester credited counts to assertions it
+   could not name. The counts in the Test report are the ones the orchestrator's runner printed with the shape
+   named; the extra failure is not reproducible and stays an incident.
+8. The reviewer found three rules that no mutation can turn red (the dead `months === 0` branch, the same year
+   arithmetic written twice in two units, and `parkTerm` reading `tax.rateMillionths` without `tax.on`) and one
+   order fault in the Decision log. The order fault is fixed in the file; the other three are recorded as limits,
+   because a rule that cannot be isolated is a limit and not a defect, and the code on the branch is not changed
+   by them so that the printed counts still describe the committed files.
+
+### Proposed rules, pending hak's approval
+
+P32 to P36 are approved as of story 045; P37 was rejected and its number is not given to another rule. The next
+free number is P38. These are proposals from the defects of this story, and none of them is approved yet.
+
+- **P38 (for `.claude/agents/tester.md`):** a mutation runner keeps its backup in a file the mutation cannot write
+  to. A backup written into the path the runner then writes is not a backup: an interrupted run has nothing to
+  restore from, and its pass cannot be reported.
+- **P39 (for `.claude/agents/tester.md`):** the runner prints the failing assertion's file and line, not only the
+  count of red tests. A count cannot be tied to the assertion a report names until the runner prints it.
+- **P40 (for `.claude/agents/tester.md`):** a run that prints more failures than the mutation can move is an
+  unstable run, not a second assertion. Re-run the rule at least three times, name the failing specs, and record
+  the count that repeats.
+- **P41 (for `.claude/agents/tester.md`):** before a guard is credited with an assertion, mutate the guard by
+  itself. A branch whose formula already yields the same value is dead code and its assertion cannot fail; either
+  the assertion is recorded as not a falsifier, or it is written in a shape the guard can read, with a control that
+  carries a value (story 046's `OFF_RATE`).
+- **P42 (for `.claude/agents/reviewer-checklist.md`, item K7):** append only also means order. An entry inserted
+  before an existing entry breaks the Decision log even when nothing is deleted; compare the entry lists of the
+  commits that touched the story, not only the current file.
+
+### Cost
+
+_The OpenCode harness prints no per-run tokens, tool uses or duration for a role run, and no running list was
+kept for this story, so every figure cell says `not measured` with its reason; the rows are the runs that
+happened, in chronological order._
+
+| Role                                    | Round | Model                   | Tokens                                                | Tool uses                                             | Duration                                              |
+| --------------------------------------- | ----- | ----------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| product-owner                           | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)                    | not measured (harness prints none)                    | not measured (harness prints none)                    |
+| ux-designer                             | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)                    | not measured (harness prints none)                    | not measured (harness prints none)                    |
+| architect                               | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)                    | not measured (harness prints none)                    | not measured (harness prints none)                    |
+| developer                               | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)                    | not measured (harness prints none)                    | not measured (harness prints none)                    |
+| tester, run ended with an error         | 1     | inherit (strata/iq2_xs) | not measured (a failed run reports nothing)           | not measured (a failed run reports nothing)           | not measured (a failed run reports nothing)           |
+| tester's work, done in the main session | 2     | inherit (strata/iq2_xs) | not measured (the figures belong to the main session) | not measured (the figures belong to the main session) | not measured (the figures belong to the main session) |
+| reviewer                                | 1     | inherit (strata/iq2_xs) | not measured (harness prints none)                    | not measured (harness prints none)                    | not measured (harness prints none)                    |
+| total (measured)                        |       |                         | n/a                                                   | n/a                                                   | n/a                                                   |
+| orchestrator (main session)             |       | strata/iq2_xs           | not measured                                          | not measured (no running list)                        | not measured (no running list)                        |
+
+The tester wrote the test files and the first reading of the Test report; its run then ended with an error, so the
+mutation counts of this story were measured in the orchestrator's own session with its own runner. What was
+measured, and is not a cost figure, is the wall clock of the checks: the orchestrator's full gate printed 12 of 12
+steps in 76,1 s, the reviewer's own full gate printed 12 steps in 75,4 s, and each of the ten mutation rules
+printed a vitest run and an e2e run (e2e between 5,7 s and 8,1 s) with the baseline on the clean file. No role
+stood out in cost, because nothing here was measured.
