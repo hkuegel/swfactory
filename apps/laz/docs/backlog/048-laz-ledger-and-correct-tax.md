@@ -219,7 +219,7 @@ published build was not re-pinned (`test:pages` not run, the orchestrator's 4.63
 
 **Defects.** None found.
 
-Gate 2 full run (orchestrator, 2026-11-16, `verify --mode=full`, local): 11 of 12 steps ok, e2e 124,9 s; `format:check` failed only on the uncommitted local `.claude/launch.json` (not part of the story), formatted, re-check green. Real data in the dev server: tax off 4.631,43 €/month for 300.000 € (unchanged), KapESt + KiSt Bayern 4.450,30 €/month, reserve 5.233,18 € = sum of the Vorabpauschale column. CI run of the branch: pending push.
+Gate 2 full run (orchestrator, 2026-11-16, `verify --mode=full`, local): 11 of 12 steps ok, e2e 124,9 s; `format:check` failed only on the uncommitted local `.claude/launch.json` (not part of the story), formatted, re-check green. Real data in the dev server: tax off 4.631,43 €/month for 300.000 € (unchanged), KapESt + KiSt Bayern 4.450,30 €/month, reserve 5.233,18 € = sum of the Vorabpauschale column. CI run of the branch: 43919930908 (workflow_dispatch, verify success, deploy skipped off main).
 
 ## Review
 
