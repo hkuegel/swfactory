@@ -92,6 +92,10 @@ money needed at the start of that year `1188,0359375 €`. A partial phase year 
   years once. The copy says once that the payout falls on the last day of each month, and once that the rate
   is an assumption that is constant over the term. A phase year without phase months, or the option off, shows
   the dash with its reason.
+  (changed by [047](047-laz-cashflows-in-the-year-table.md): the year table shows the other
+  cashflows of the phase year and each money column has its own sum line, so the pinned header list
+  gains them; the two interest columns and their dash stay, and the parked cell keeps its plain dash
+  with the reason in the missing-year line.)
 - **AC5 (the parts still add up):** With the option on the shares per fund and the money invested in the fund
   follow the money that must be there at the start of the phase year, so `shares = (P·m_y − netInterest_y) /
 payout per share` (story 032 AC1 holds while the option is off), and the shown parts add up to the shown

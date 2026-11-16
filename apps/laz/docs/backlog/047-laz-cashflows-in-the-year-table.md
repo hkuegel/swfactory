@@ -1,7 +1,7 @@
 ---
 id: 047
 title: The cashflows of a phase year, one figure each, in the year table
-status: in-review # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size:
@@ -21,7 +21,7 @@ superseded-by: # set on the OLD story when a newer one replaces it
 
 id: 047
 title: The cashflows of a phase year, one figure each, in the year table
-status: in-test # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
+status: done # draft | ready | designed | in-progress | in-test | in-review | done | blocked | superseded
 type: feature # feature | bug | chore
 app: laz # platform | <app name>: the backlog the story lives in (docs/backlog or apps/<app name>/docs/backlog)
 size:
@@ -249,6 +249,31 @@ Append only._
   table wider than the viewport live as paragraphs outside the scrolling wrapper, and a table with more than
   about ten columns needs one line below it that names the columns the reader adds. P43 to P44 are open, so
   no other rule takes these numbers.
+- 2026-11-16 — gate 2, hak's answers in one message ("all ok, please push and merge"):
+  the two copy statements (`flatNote`, `parkedNote`) are confirmed as written; the derived part
+  stays in `cashflow.ts`, and its base is the shown total of the whole order, not the per-part base
+  of one table; `payoutCheck` names the addends and does not promise the equality; the parked cell
+  keeps its plain dash with its reason in the existing missing-year line; the ux-designer's "about
+  two money columns" at 320 px stands as written, which the tester reads as the year column plus one
+  money column. P43 to P48 approved and written into CLAUDE.md, with P45 on the hand-oracle rule,
+  P46 inside the test rule (the second half of P38, which hak may fold), P47 on the module that owns
+  the derived part, P48 on prose lines within 100 characters as a writing habit, and nit 10 kept as
+  the tester's lesson, not as a numbered rule.
+- 2026-11-16 — hak's answer to the arithmetic question, asked after gate 2:
+  the flat figure is the tax on the money of the whole depot, not the tax of one share at the data
+  file's NAV. Read that way the flat rate lowers the payout instead of raising it, which is what hak
+  expects. Own arithmetic, not a runner print: depot 100.000,00 €, phase 1.1.2028–31.3.2034, tax
+  26,375 %, flat 2,24 %, deposit off, committed data (asOf 2026-11-14), `P` 1.486,53 € with the flat
+  against 1.489,90 € at flat 0. This is not a fix of 047: it moves 045 AC5's pinned `cash`
+  (`523,976566 Cent`) and the closed form, so it is a story of its own, and 047 is merged as it was
+  built, with the flat as the tax of one share.
+- 2026-11-16 — hak's shape decisions for that follow-up story, recorded here because
+  they change AC2 of this story as merged: the funding column is dropped, the three tax columns of
+  the sale become one column, and `Erlös aus der Fondsauflösung` alone is the money-in figure. The
+  years before the phase need a row, because the flat for a counted year is paid on 1.1 of the year
+  after it, so a depot of 100.000,00 € has a payment in 2027 that no row shows today. Whether the
+  asOf year counts a full year or only its whole months is open for that story, and so is which row
+  carries the flat payment.
 
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
@@ -1496,6 +1521,23 @@ Verdict for the three nits: PASS. Nits 8 and 9 are comment figures corrected by 
 and no assertion moved; nit 10 is the wording, and the composition of its count stays a limit.
 Status stays `in-review`.
 
+### The CI run of the branch (Definition of Done)
+
+Run `43893666427`, `workflow_dispatch` on `feature/047-laz-cashflows-in-the-year-table`, started
+2026-11-16T15:11:15Z after the branch was pushed at hak's decision, completed success. The plan step
+printed: `verify: mode publish, 8 of 12 steps, chain 2 levels`, `changed: nothing`, `apps: none`,
+`skipped: lint, test, test:e2e, typecheck`, level 0: `build ok 23.8 s`, `build:pages ok 8.0 s`,
+`check:structure ok 0.7 s`, `check:template ok 9.3 s`, `format:check ok 24.4 s`,
+`test:scripts ok 2.6 s`, all whole tree; level 1: `check:dist ok 0.2 s`, `test:pages ok 23.1 s`.
+The `deploy` job was skipped (not `main`). The run reads as green for the checks it ran, but the
+mapping had nothing to map: the run's `BASE` was the branch tip itself, so the app checks did not
+run in it, and the run does not cover the story's code. The run that maps the story's change is the
+pull-request run, which compares against `main`; the run that covers this record is named below as
+soon as the runner prints it, and the merged state is covered by the run of `main` after the merge.
+The gate 2 full run in the worktree, which covers the whole tree, printed 12 of 12 steps green
+and `verify: ok, 12 step(s), 80.2 s wall clock`; the laz unit run in it covers `apps/laz` and the
+e2e run covers the story's specs on port 5174.
+
 ## Review
 
 _reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
@@ -1678,9 +1720,7 @@ The row identity: the pre-tax proceeds minus the tax parts equal the shares time
 With the tax or the parking option off, the control figures of stories 024, 032, 035, 045 and 046 do not move.
 The width floor is gone: the measured content minimum is 1534 px, so a floor below it never binds at a phone width.
 Review round 2 approved; the three nits about hand figures were settled by the tester's own arithmetic, nothing moved.
-Open for hak at gate 2: the copy statements, the derived part across two tables, the reader line, the parked dash.
-The Definition of Done still needs the CI run of the branch, and the branch is not pushed without hak's decision.
-Gate 2 is not granted yet.
+Gate 2 granted by hak on 2026-11-16 ("all ok"), P43 to P48 approved; flat tax on the depot money.
 
 ## Retrospective
 
@@ -1691,8 +1731,8 @@ changes to agents/CLAUDE.md/templates, and which ones hak approved. Include a `#
 The runs were one at a time, in the order product-owner, ux-designer, architect, developer,
 tester, reviewer, tech writer. The model of every role run is `inherit (strata/iq2_xs)`. Gate 1
 (the story as written and hak's answers at the gate) is recorded above and committed as `e638bca`.
-Review round 1 is CHANGES_REQUESTED, round 2 APPROVED. Gate 2 is not granted yet, so nothing is
-pushed or merged.
+Review round 1 is CHANGES_REQUESTED, round 2 APPROVED. Gate 2 was granted on 2026-11-16 by hak
+with "all ok", so the branch is pushed and the story is done.
 
 ### What went wrong
 
@@ -1751,9 +1791,10 @@ pushed or merged.
     table's proceeds are the same number, which is wrong, because the year table's cell is that figure
     times the shares; it is corrected in `81e296a`.
 
-12. Review item K8 is open for the Definition of Done: `CHANGELOG.md` and the app README now have
-    their 047 entries (`81e296a`), and the CI run of the story branch with its run id is still
-    missing, because the branch is not pushed without hak's decision.
+12. Review item K8 is closed at gate 2: `CHANGELOG.md` and the app README have their 047 entries
+    (`81e296a`), and the branch's CI run `43893666427` is recorded in the Test report. Its mapping
+    had nothing to map, so the app checks did not run in it; the run that covers the merged state is
+    the run of `main` after the merge, which is what the Definition of Done needs.
 
 ### Proposed rules, pending hak's approval
 
@@ -1777,6 +1818,14 @@ decides.
 - Developer: a reading order that crosses two tables needs one module that owns the derived part.
 - Question, not a rule: whether the 100-character habit for prose becomes a rule, given that
   prettier does not reflow it.
+
+Gate 2, 2026-11-16: hak answered "all ok" and all of these are approved, so the numbers are given.
+P43 and P44 as recorded above, P45 the tester's hand value for a sum line (with the unit and the
+total its own comment names, which are nits 8 and 9 of this story), P46 the mutation runner that
+restores inside a `finally` (hak's note: it may be folded into P38, which covers the backup), P47
+the one module that owns the derived part when the reading order crosses two tables, P48 the
+100-character prose habit, now a rule for the writer since prettier does not reflow prose. Nit 10
+stays the tester's lesson, not a numbered rule. All six are written into `CLAUDE.md`.
 
 ### Cost
 

@@ -48,6 +48,9 @@ the plan shows the purchase side and not only the payout side.
   the sum equals the shown depot (direction 1) or the shown required depot (direction 2) within one
   cent, measured on the unrounded internal values, with the last part derived from the total instead
   of rounded separately (the money rule).
+  (changed by [047](047-laz-cashflows-in-the-year-table.md): the flat parts read in the year table
+  now, so the parts that add to the depot are read across two tables; the last part is derived from
+  the shown total.)
 - **AC3:** Given a phase year with no funding fund, or a fund whose liquidation falls after the
   phase end, when the row is shown, then it shows no purchase: a dash in both new cells, no number
   invented, and the cell says why (for example `kein Fonds für dieses Jahr` and `Auflösung nach

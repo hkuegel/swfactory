@@ -46,6 +46,8 @@ way the tests read it change together, so this story owns that change.
   data file stores them, with no formatting invented, and the columns are in one order for the whole table:
   Jahr, Fondsname, ISIN, then the existing columns. Measured as the table header naming these columns and the
   cells of one hand row equal to the values in the fixture copy.
+  (changed by [047](047-laz-cashflows-in-the-year-table.md): the order loses the flat column
+  of 045 AC4; the other columns and their order stay as pinned here.)
 - **AC2:** Given a row, when it is read by an assistive technology, then the row header stays the fund's year
   (story 024 AC5, unchanged), the name and the ISIN are read as cells of that row, and the projection label
   still describes the figures, so a row can be told apart by more than its year. Measured as the row header of
