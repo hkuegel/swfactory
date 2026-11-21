@@ -125,6 +125,8 @@ rebuilt without the chat. Append only._
 
 - 2026-11-21 — Gate 2: P51 and P52 approved, commit approved (hak: "Beide, committen").
 
+- 2026-11-21 — AC8 (fps on hak's Mac) waived for the merge; hak: "Mergen ohne Messung" (hak).
+
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
 ## UX design
@@ -432,6 +434,8 @@ there, as allowed. AC8 on the GPU stays manual.
 Gate 2 full run (orchestrator, 2026-11-21): `node scripts/verify.mjs --mode=full --no-record` → `verify: ok, 12 step(s), 263.6 s wall clock`.
 
 CI on GitHub (orchestrator, 2026-11-21): run 44946743984 of the branch at 3a6d309, `success`.
+
+AC8: waived by hak at the merge (2026-11-21); not measured on a real GPU.
 
 ## Review
 
