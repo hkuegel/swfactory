@@ -39,6 +39,18 @@ export const SCENE_COLOUR_TOKENS: Readonly<Record<SceneColour, string>> = {
   confetti4: '--scene-confetti-4',
   confetti5: '--scene-confetti-5',
   confetti6: '--scene-confetti-6',
+  // Story 050, round 3: the cinematic diorama
+  dioGrass: '--scene-dio-grass',
+  dioGrassTip: '--scene-dio-grass-tip',
+  dioSoil: '--scene-dio-soil',
+  dioSoilDeep: '--scene-dio-soil-deep',
+  dioClay: '--scene-dio-clay',
+  dioRust: '--scene-dio-rust',
+  dioSkyLow: '--scene-dio-sky-low',
+  dioSkyHigh: '--scene-dio-sky-high',
+  dioSun: '--scene-dio-sun',
+  dioAmbient: '--scene-dio-ambient',
+  dioLantern: '--scene-dio-lantern',
 };
 
 /** Unitless look numbers: parity and range checks only, never colour or contrast checks. */

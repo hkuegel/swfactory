@@ -42,14 +42,14 @@ describe('view3dReducer', () => {
   });
 
   it('AC6: ready of the current attempt shows 3D', () => {
-    const state = run(idle, choose3d, { type: 'ready', attempt: 1 });
+    const state = run(idle, choose3d, { type: 'ready', attempt: 1, view: '3d' });
     expect(state).toMatchObject({ requested: '3d', shown: '3d', status: 'idle' });
   });
 
   it('AC6: choosing 2D during loading cancels it; a late ready does not switch', () => {
     const state = run(idle, choose3d, { type: 'choose', view: '2d', loaded: false });
     expect(state).toMatchObject({ requested: '2d', shown: '2d', status: 'idle' });
-    expect(run(state, { type: 'ready', attempt: 1 })).toBe(state);
+    expect(run(state, { type: 'ready', attempt: 1, view: '3d' })).toBe(state);
   });
 
   it('AC6: a failed or timed-out load returns to 2D with a notice; a late ready is ignored', () => {
@@ -60,7 +60,7 @@ describe('view3dReducer', () => {
       status: 'idle',
       notice: 'loadFailed',
     });
-    expect(run(failed, { type: 'ready', attempt: 1 })).toBe(failed);
+    expect(run(failed, { type: 'ready', attempt: 1, view: '3d' })).toBe(failed);
     // A stale failure of an older attempt does not cancel a newer load.
     const retry = run(failed, choose3d);
     expect(run(retry, { type: 'loadFailed', attempt: 1 })).toBe(retry);
@@ -78,13 +78,13 @@ describe('view3dReducer', () => {
   });
 
   it('AC6: a lost context returns to 2D with a notice; choosing 3D again loads anew', () => {
-    const shown = run(idle, choose3d, { type: 'ready', attempt: 1 });
-    const lost = run(shown, { type: 'lost' });
+    const shown = run(idle, choose3d, { type: 'ready', attempt: 1, view: '3d' });
+    const lost = run(shown, { type: 'lost', view: '3d' });
     expect(lost).toMatchObject({ requested: '2d', shown: '2d', notice: 'lost' });
     expect(run(lost, choose3d)).toMatchObject({ status: 'loading', notice: null, attempt: 2 });
     // Lost while 2D is shown: nothing to tell.
     const in2d = run(shown, { type: 'choose', view: '2d', loaded: true });
-    expect(run(in2d, { type: 'lost' })).toBe(in2d);
+    expect(run(in2d, { type: 'lost', view: '3d' })).toBe(in2d);
   });
 });
 

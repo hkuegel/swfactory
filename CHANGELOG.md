@@ -7,6 +7,9 @@ All notable changes to this project are documented here, following
 
 ### Added
 
+- `minesweeper`: a third view, **Cinematic**, shows the board as a realistic diorama of a
+  minefield with a camera fly-in, digging animations, an earth-throwing explosion and fireworks;
+  the camera stands still during play, and reduced motion keeps everything static (#050).
 - `npm run test:scripts` runs the tests of `scripts/`, which is not an npm workspace, with its
   own Vitest config (#026).
 - New app `laz`, the Lebensarbeitszeitkonto calculator. It shows the maximum monthly payout a

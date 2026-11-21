@@ -109,7 +109,7 @@ limit. When the game ends, screen readers also announce the final time.
 
 ### 3D view
 
-The **View** control sits above the game status, with the options **2D** and **3D**. It is
+The **View** control sits above the game status, with the options **2D**, **3D** and **Cinematic**. It is
 there before the first **Start**, during a game and after a win or loss. Choose **3D** at
 any time, also in the middle of a game. Nothing is lost: the board, the flags, **Mines left**
 and the timer stay as they are. Mouse, touch, keyboard and screen reader work the same as in
@@ -137,6 +137,20 @@ you pick a preset. Switching to 3D after a game has ended shows the final board 
 effect. With forced colours, no effect plays either. With reduced motion, the final board
 appears at once as a still picture: after a loss, the mines and the exploded mine; after a
 win, a flag on every mine. There is no sound.
+
+### Cinematic view
+
+**Cinematic** is the third option of **View**. It shows the board as a diorama of a minefield:
+hidden cells are blocks of turf, revealed cells are dug-out earth, mines are rusty iron and
+flags are small cloth flags in the ground. A low evening sun casts long shadows; in dark mode it
+is dusk with moon, stars and a lantern. It loads, falls back and keeps the game like **3D**.
+
+After **Start** the camera flies in to the board. During play it stands still. Revealing digs
+the ground out in a wave with puffs of dust, and flags are stuck in and pulled out. A loss
+throws up earth and leaves a crater, and the other mines go off one after another; a win sets
+off fireworks and fireflies while the camera swings round the field. Every effect ends within
+4 seconds, flashes at most 3 times a second and stops at **Start**. With reduced motion,
+nothing moves. It is made for a desktop computer; phones are not tuned yet.
 
 If your browser cannot show 3D, **3D** is shown as unavailable with a short note. If 3D
 cannot load, takes longer than 10 seconds to load, or stops during a game, the view changes

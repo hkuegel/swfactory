@@ -22,9 +22,13 @@ const EFFECT_AFTER_MS = 1000;
 /** Story 010: the probe must show an effect or cell animation this long after the click. */
 const ALIVE_CHECK_MS = 150;
 const INPUT_TIMEOUT_MS = 5000;
+const RELOAD_RETRIES = 3;
 const FLOORS = { a: 50, b: 30, latency: 100 };
 // `--headless` only checks that the script works (software WebGL; the renderer row then fails).
 const HEADLESS = process.argv.includes('--headless');
+// Story 050/AC8: `--view=cinematic` measures the cinematic view with the same floors and scenarios.
+const CINEMATIC = process.argv.includes('--view=cinematic');
+const VIEW_LABEL = CINEMATIC ? 'Cinematic' : '3D';
 
 /** 0-based [row, col] pairs. */
 const A_ISOLATED = [8, 27]; // the safe cell the cascade cannot open (story 010: the win click)
@@ -130,10 +134,28 @@ async function startBoard(page, rows, cols, mines) {
  * (story 010) whether anything animated ALIVE_CHECK_MS after the click.
  */
 async function measureClick(page, index, total) {
-  const { samples, alive, longest } = await page.evaluate(
-    async ({ index, total, every, aliveMs }) => {
+  const {
+    samples,
+    alive: seenBusy,
+    longest,
+  } = await page.evaluate(
+    async ({ index, total, every, aliveMs, cinematic }) => {
       const probe = window.__board3dProbe;
       const cellEl = document.querySelector(`[data-index="${index}"]`);
+      // Anything moves: an effect, a cell animation or (cinematic) a camera move, fireworks or
+      // the shockwave. The cinematic view renders on demand and has no idle motion (story 050,
+      // round 3), so its frame rate is only defined while this is true.
+      const busyNow = () => {
+        const fx = probe.fxState;
+        const rig = probe.rigState;
+        return (
+          fx.running ||
+          fx.animating > 0 ||
+          (cinematic &&
+            rig !== null &&
+            (rig.cameraMove !== 'none' || rig.fireworks.running || rig.shockwave))
+        );
+      };
       const result = [];
       let alive = null;
       let longest = 0;
@@ -149,36 +171,49 @@ async function measureClick(page, index, total) {
       const start = performance.now();
       while (performance.now() - start < total) {
         const t = performance.now() - start;
-        result.push([t, probe.frames]);
-        if (alive === null && t >= aliveMs) {
-          const fx = probe.fxState;
-          alive = fx.running || fx.animating > 0;
-        }
+        const busy = busyNow();
+        result.push([t, probe.frames, busy]);
+        // Alive: busy at any sample up to the first one at or after aliveMs (a software-GL frame
+        // can block the page for a second, so the sample "at 150 ms" may come much later).
+        if (alive === null && busy) alive = true;
+        if (alive === null && t >= aliveMs) alive = false;
         await new Promise((resolve) => setTimeout(resolve, every));
       }
-      result.push([performance.now() - start, probe.frames]);
+      result.push([performance.now() - start, probe.frames, busyNow()]);
       measuring = false;
       return { samples: result, alive, longest };
     },
-    { index, total, every: SAMPLE_MS, aliveMs: ALIVE_CHECK_MS },
+    { index, total, every: SAMPLE_MS, aliveMs: ALIVE_CHECK_MS, cinematic: CINEMATIC },
   );
   // fps per window from the first and last sample inside it (slow frames can leave a window
-  // with fewer samples; one with less than two is skipped).
+  // with fewer samples; one with less than two is skipped). The cinematic view renders on demand
+  // and has no idle motion (story 050, round 3): it draws frames only while something moves,
+  // so its samples end at the first one that shows the final frame count (the idle tail would
+  // read as 0 fps), and a run shorter than one window counts as one window.
+  const finalFrames = samples[samples.length - 1][1];
+  const activeEnd = CINEMATIC ? samples.findIndex(([, frames]) => frames === finalFrames) : -1;
+  const used = CINEMATIC ? samples.slice(0, activeEnd + 1) : samples;
+  const framesDrawn = finalFrames - samples[0][1];
   const windows = [];
-  for (let from = 0; from + WINDOW_MS <= total; from += WINDOW_MS) {
-    const inside = samples.filter(([t]) => t >= from && t <= from + WINDOW_MS);
+  const fpsOf = (inside) => {
     const first = inside[0];
     const last = inside[inside.length - 1];
     if (inside.length >= 2 && last[0] > first[0]) {
       windows.push(((last[1] - first[1]) * 1000) / (last[0] - first[0]));
     }
+  };
+  for (let from = 0; from + WINDOW_MS <= total; from += WINDOW_MS) {
+    fpsOf(used.filter(([t]) => t >= from && t <= from + WINDOW_MS));
   }
+  if (CINEMATIC && windows.length === 0) fpsOf(used);
+  // Cinematic: the scene must have drawn frames after the click, not only reported "busy".
+  const alive = CINEMATIC ? framesDrawn >= 2 : seenBusy === true;
   const level = await page.evaluate(() => window.__board3dProbe.level);
   if (windows.length === 0) return { median: NaN, min: NaN, alive, longest, level };
   return {
     median: median(windows),
     min: Math.min(...windows),
-    alive: alive === true,
+    alive,
     longest,
     level,
   };
@@ -260,61 +295,92 @@ try {
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 2,
   });
-  await page.goto(URL);
-  await page.getByRole('button', { name: 'Sign in as guest' }).click();
-
-  const checkA = checkLayout('A', 16, 30, layoutA(), 300);
-  const checkB = checkLayout('B', 30, 30, layoutB(), 600);
-
-  // Scenario A: 16 × 30 with a large cascade.
-  await startBoard(page, 16, 30, layoutA());
-  await page.getByRole('radio', { name: '3D' }).check();
+  const signIn = async () => {
+    await page.goto(URL);
+    await page.getByRole('button', { name: 'Sign in as guest' }).click();
+  };
+  // Warm-up: the first lazy import of a scene chunk on a cold dev-server cache can make Vite
+  // re-optimise its dependencies and reload the page (story 050, round 4). Load the chosen view
+  // once, then start from a fresh page; the measurement below also retries after a reload.
+  await signIn();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('radio', { name: VIEW_LABEL }).check();
   await page.waitForFunction(
     () => window.__board3dProbe !== undefined && !document.querySelector('[aria-busy="true"]'),
     null,
-    {
-      timeout: READY_TIMEOUT_MS,
-    },
+    { timeout: READY_TIMEOUT_MS * 4 },
   );
-  await page.waitForTimeout(1000); // let the sway loop settle
-  const a = await measureCascade(page);
-  const levelA = await page.evaluate(() => window.__board3dProbe.level);
-  // Story 010: the explosion and the confetti on 16 × 30.
-  await page.waitForTimeout(500);
-  const aLoss = await measureClick(page, A_MINE[0] * 30 + A_MINE[1], LOSS_MS + EFFECT_AFTER_MS);
-  await restartWithCascade(page, 16, 30, layoutA());
-  const aWin = await measureClick(
-    page,
-    A_ISOLATED[0] * 30 + A_ISOLATED[1],
-    WIN_MS + EFFECT_AFTER_MS,
-  );
-
-  // Scenario B: 30 × 30 with a cascade, then 20 inputs.
-  await startBoard(page, 30, 30, layoutB());
   await page.waitForTimeout(1000);
-  const b = await measureCascade(page);
-  const inputs = [];
-  for (let k = 0; k < 10; k++) {
-    inputs.push({ row: 20 + k, col: 25, button: 'right' }); // flag a hidden mine
-    inputs.push({ row: k, col: 29, button: 'left' }); // reveal a hidden safe cell
+
+  const runScenarios = async () => {
+    await signIn();
+    const checkA = checkLayout('A', 16, 30, layoutA(), 300);
+    const checkB = checkLayout('B', 30, 30, layoutB(), 600);
+
+    // Scenario A: 16 × 30 with a large cascade.
+    await startBoard(page, 16, 30, layoutA());
+    await page.getByRole('radio', { name: VIEW_LABEL }).check();
+    await page.waitForFunction(
+      () => window.__board3dProbe !== undefined && !document.querySelector('[aria-busy="true"]'),
+      null,
+      {
+        timeout: READY_TIMEOUT_MS,
+      },
+    );
+    await page.waitForTimeout(1000); // let the sway loop settle
+    const a = await measureCascade(page);
+    const levelA = await page.evaluate(() => window.__board3dProbe.level);
+    // Story 010: the explosion and the confetti on 16 × 30.
+    await page.waitForTimeout(500);
+    const aLoss = await measureClick(page, A_MINE[0] * 30 + A_MINE[1], LOSS_MS + EFFECT_AFTER_MS);
+    await restartWithCascade(page, 16, 30, layoutA());
+    const aWin = await measureClick(
+      page,
+      A_ISOLATED[0] * 30 + A_ISOLATED[1],
+      WIN_MS + EFFECT_AFTER_MS,
+    );
+
+    // Scenario B: 30 × 30 with a cascade, then 20 inputs.
+    await startBoard(page, 30, 30, layoutB());
+    await page.waitForTimeout(1000);
+    const b = await measureCascade(page);
+    const inputs = [];
+    for (let k = 0; k < 10; k++) {
+      inputs.push({ row: 20 + k, col: 25, button: 'right' }); // flag a hidden mine
+      inputs.push({ row: k, col: 29, button: 'left' }); // reveal a hidden safe cell
+    }
+    const latency = await measureLatency(page, inputs);
+    // Story 010: the explosion and the confetti on 30 × 30 (the win from the last safe cell).
+    const bLoss = await measureClick(page, B_MINE[0] * 30 + B_MINE[1], LOSS_MS + EFFECT_AFTER_MS);
+    await restartWithCascade(page, 30, 30, layoutB());
+    for (let row = 0; row < 11; row++) await clickCell(page, row * 30 + B_SAFE_COLUMN);
+    await page.waitForTimeout(1500);
+    const bWin = await measureClick(page, 11 * 30 + B_SAFE_COLUMN, WIN_MS + EFFECT_AFTER_MS);
+    const result = await page.evaluate(() => document.body.innerText.includes('You won!'));
+    if (!result) throw new Error('B win scenario did not win the game');
+    const info = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      return {
+        renderer: window.__board3dProbe.renderer,
+        level: window.__board3dProbe.level,
+        dpr: canvas ? canvas.width / canvas.getBoundingClientRect().width : NaN,
+      };
+    });
+    return { checkA, checkB, a, b, levelA, aLoss, aWin, bLoss, bWin, latency, info };
+  };
+
+  let measured;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      measured = await runScenarios();
+      break;
+    } catch (error) {
+      const reloaded = /context was destroyed|navigation/i.test(String(error));
+      if (!reloaded || attempt >= RELOAD_RETRIES) throw error;
+      console.error(`page reloaded during the measurement (attempt ${attempt}); starting again`);
+    }
   }
-  const latency = await measureLatency(page, inputs);
-  // Story 010: the explosion and the confetti on 30 × 30 (the win from the last safe cell).
-  const bLoss = await measureClick(page, B_MINE[0] * 30 + B_MINE[1], LOSS_MS + EFFECT_AFTER_MS);
-  await restartWithCascade(page, 30, 30, layoutB());
-  for (let row = 0; row < 11; row++) await clickCell(page, row * 30 + B_SAFE_COLUMN);
-  await page.waitForTimeout(1500);
-  const bWin = await measureClick(page, 11 * 30 + B_SAFE_COLUMN, WIN_MS + EFFECT_AFTER_MS);
-  const result = await page.evaluate(() => document.body.innerText.includes('You won!'));
-  if (!result) throw new Error('B win scenario did not win the game');
-  const info = await page.evaluate(() => {
-    const canvas = document.querySelector('canvas');
-    return {
-      renderer: window.__board3dProbe.renderer,
-      level: window.__board3dProbe.level,
-      dpr: canvas ? canvas.width / canvas.getBoundingClientRect().width : NaN,
-    };
-  });
+  const { checkA, checkB, a, b, levelA, aLoss, aWin, bLoss, bWin, latency, info } = measured;
   await browser.close();
 
   const softwareGl = /swiftshader|llvmpipe|software/i.test(info.renderer);
