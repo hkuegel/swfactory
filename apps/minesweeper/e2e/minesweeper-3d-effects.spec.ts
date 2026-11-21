@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 // e2e/ is typed by tsconfig.node.json (no DOM lib), but page.evaluate callbacks run in the browser.
 import { expect, test, type Page } from '@playwright/test';
+import { flashTimes, maxPerSecond, type Sample } from './minesweeper.helpers.ts';
 
 // Story 010 – Minesweeper 3D end effects: the explosion on a loss (AC1), the confetti on a win
 // (AC2), no replay when 3D is shown after the end (AC3) and reduced motion (AC4). AC5 (frame
@@ -282,67 +283,6 @@ const paint = (
 const FIRE = ['--scene-fx-fire-core', '--scene-fx-fire-mid', '--scene-fx-flash'] as const;
 const DANGER = ['--color-danger-solid'] as const;
 const CONFETTI = [1, 2, 3, 4, 5, 6].map((n) => `--scene-confetti-${n}`);
-
-// --- flash counting (WCAG 2.3.1 style) ------------------------------------------------------
-//
-// Definition used here (stricter than WCAG's 0.1 absolute): an opposing change is a swing of the
-// luminance between two turning points of at least 10 % of the brighter of the two values; a
-// flash is a pair of consecutive opposing changes (rise then fall, or fall then rise); the rate
-// is the largest number of flashes completed in any window of 1 s. Turning points are found with
-// a 5 % hysteresis so that sampling noise does not split one swing into small ones.
-
-type Sample = { t: number; v: number };
-const SWING = 0.1;
-const HYSTERESIS = 0.05;
-
-function turningPoints(series: readonly Sample[]): Sample[] {
-  const first = series[0];
-  if (!first) return [];
-  const points: Sample[] = [first];
-  let extreme = first;
-  let dir = 0; // 1 rising, -1 falling
-  for (const s of series.slice(1)) {
-    const scale = Math.max(extreme.v, s.v, 1e-9);
-    if (dir >= 0 && s.v >= extreme.v) {
-      extreme = s;
-      if (dir === 0 && s.v > first.v) dir = 1;
-    } else if (dir <= 0 && s.v <= extreme.v) {
-      extreme = s;
-      if (dir === 0 && s.v < first.v) dir = -1;
-    } else if (Math.abs(s.v - extreme.v) >= HYSTERESIS * scale) {
-      points.push(extreme);
-      dir = dir >= 0 ? -1 : 1;
-      extreme = s;
-    }
-  }
-  points.push(extreme);
-  return points;
-}
-
-/** Times at which a flash (two opposing changes of >= 10 % of the brighter value) completed. */
-function flashTimes(series: readonly Sample[], swing = SWING): number[] {
-  const points = turningPoints(series);
-  const changes: { end: number; dir: number }[] = [];
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1] as Sample;
-    const b = points[i] as Sample;
-    if (Math.abs(b.v - a.v) >= swing * Math.max(a.v, b.v))
-      changes.push({ end: b.t, dir: Math.sign(b.v - a.v) });
-  }
-  const flashes: number[] = [];
-  for (let i = 1; i < changes.length; i++) {
-    const prev = changes[i - 1] as { end: number; dir: number };
-    const now = changes[i] as { end: number; dir: number };
-    if (prev.dir !== now.dir) flashes.push(now.end);
-  }
-  return flashes;
-}
-
-function maxPerSecond(times: readonly number[]): number {
-  let best = 0;
-  for (const t of times) best = Math.max(best, times.filter((u) => u >= t && u < t + 1000).length);
-  return best;
-}
 
 /** The self-test of the counter: it must see flashes where there are some. */
 test('the flash counter counts flashes (self-test of the rule used by the AC1/AC2 tests)', () => {

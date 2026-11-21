@@ -52,6 +52,19 @@
   --scene-fx-flash-alpha: 0.85;
   --scene-fx-smoke-alpha: 0.4;
   --scene-fx-light-intensity: 0;
+  /* Cinematic view diorama (story 050, round 3): grass, earth, rust, sky and light of the
+     minefield. Decoration only; digits keep their halo pairs above. */
+  --scene-dio-grass: #4a8a2a;
+  --scene-dio-grass-tip: #c2d04e;
+  --scene-dio-soil: #5d412a;
+  --scene-dio-soil-deep: #2f2014;
+  --scene-dio-clay: #a06b3d;
+  --scene-dio-rust: #b5561f;
+  --scene-dio-sky-low: #ffcf92;
+  --scene-dio-sky-high: #6e9fda;
+  --scene-dio-sun: #ffb36a;
+  --scene-dio-ambient: #a8c8ff;
+  --scene-dio-lantern: #ffb050;
 
   /* Digits 1 to 8 on a revealed cell */
   --n1: #0b57d0;
@@ -138,6 +151,17 @@
     --scene-fx-flash-alpha: 0.7;
     --scene-fx-smoke-alpha: 0.35;
     --scene-fx-light-intensity: 1.5;
+    --scene-dio-grass: #356f40;
+    --scene-dio-grass-tip: #8fbf7a;
+    --scene-dio-soil: #5e3f2c;
+    --scene-dio-soil-deep: #2b1c14;
+    --scene-dio-clay: #5d4230;
+    --scene-dio-rust: #a2481e;
+    --scene-dio-sky-low: #35417a;
+    --scene-dio-sky-high: #0c1230;
+    --scene-dio-sun: #c4cdea;
+    --scene-dio-ambient: #5a6699;
+    --scene-dio-lantern: #ffb050;
 
     --n1: #8ab4f8;
     --n2: #81c995;

@@ -14,10 +14,11 @@ export interface ViewToggleProps {
 const OPTIONS: readonly { readonly value: BoardView; readonly label: string }[] = [
   { value: '2d', label: '2D' },
   { value: '3d', label: '3D' },
+  { value: 'cinematic', label: 'Cinematic' },
 ];
 
 /**
- * The "View" choice (stories 008, 009): two native radios styled as a segmented control. Always
+ * The "View" choice (stories 008, 009, 050): three native radios styled as a segmented control. Always
  * mounted, never disabled by game state. The change is announced by the focused radio itself;
  * loading and failures are announced by the game's live region (Minesweeper).
  */
@@ -28,10 +29,16 @@ export function ViewToggle({ requested, status3d, onChange }: ViewToggleProps) {
   const inputs = useRef<Partial<Record<BoardView, HTMLInputElement | null>>>({});
   const available3d = status3d !== 'unavailable';
 
-  // UX §9: a focused "3D" that becomes disabled would drop focus to the body; move it to "2D".
+  // UX §9: a focused "3D" or "Cinematic" that becomes disabled would drop focus to the body;
+  // move it to "2D".
   // Layout effect: before the browser's focus fixup for the now disabled radio.
   useLayoutEffect(() => {
-    if (status3d === 'unavailable' && document.activeElement === inputs.current['3d']) {
+    const focused = document.activeElement;
+    if (
+      status3d === 'unavailable' &&
+      focused !== null &&
+      (focused === inputs.current['3d'] || focused === inputs.current['cinematic'])
+    ) {
       inputs.current['2d']?.focus();
     }
   }, [status3d]);
@@ -49,7 +56,7 @@ export function ViewToggle({ requested, status3d, onChange }: ViewToggleProps) {
         </span>
         <div className={styles.segments}>
           {OPTIONS.map(({ value, label }) => {
-            const unavailable = value === '3d' && !available3d;
+            const unavailable = value !== '2d' && !available3d;
             return (
               <label key={value} className={styles.segment}>
                 <input

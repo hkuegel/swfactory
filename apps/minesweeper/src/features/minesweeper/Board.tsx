@@ -9,7 +9,7 @@ import { useBoardInput } from './useBoardInput.ts';
 
 export interface BoardProps {
   readonly game: GameState;
-  /** Non-null iff the 3D board is shown (story 009). The markup is the same in both views. */
+  /** Non-null iff a 3D board ("3D" or "Cinematic") is shown (stories 009, 050). The markup is the same in every view. */
   readonly scene: BoardSceneHandle | null;
   readonly onReveal: (index: number) => void;
   readonly onToggleFlag: (index: number) => void;
@@ -64,7 +64,7 @@ export function Board({ game, scene, onReveal, onToggleFlag }: BoardProps) {
   }, [scene, pressedIndex]);
 
   return (
-    <div className={styles.scroller} data-view={scene ? '3d' : '2d'}>
+    <div className={styles.scroller} data-view={scene ? scene.kind : '2d'}>
       {/* Present in both views, so a switch never remounts the grid (008/AC2). */}
       <div className={styles.stage}>
         {scene && <div ref={hostRef} className={styles.canvasHost} aria-hidden="true" />}

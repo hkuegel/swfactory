@@ -109,6 +109,9 @@ The backlog must be enough to rebuild the app without any chat history:
 - **Progress in the chat:** the orchestrator writes the progress in the chat while the pipeline
   runs — one short line per step (what ran, what it answered, what it decided), not a wall of
   text, so hak can follow without opening the story (story 026, R7).
+- **A look is chosen, not described (P51, hak 2026-11-21):** for a story whose goal is a look
+  ("spektakulär", "schön"), the orchestrator shows hak two or three concrete style directions at
+  gate 1, and the developer delivers screenshots for hak before the tester runs (story 050).
 - **Small stories:** stories stay small, one checkable behaviour each, so progress is trackable. `size: S`
   (at most three ACs, only the Explanation record) is the default; `M` needs a reason and `L` is for
   several behaviours that must move together (story 026, R8). A smaller story also gives a shorter Test
@@ -209,6 +212,8 @@ workspace's `src/` follows the same layout rules (feature-sliced, `components/`,
   A pixel-diff tolerance is backed by the measured maximum noise (stated in a comment),
   measured on every platform the tests run on, not only the CI runner; a bound that is
   loosened must show a non-vacuity measurement in the Test report.
+  A flash or rate limit in an AC is tested on the luminance of rendered frames, never on a probe
+  counter of effects started (P52, hak 2026-11-21, story 050).
   Tests never write into DOM the app renders (e.g. live regions); they reset state through
   the UI or the clock. When existing cases are rerun for a new option, or a rule is
   mutation-checked, at least one case must actually move the result (a strict difference);

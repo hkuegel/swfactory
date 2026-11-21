@@ -7,7 +7,7 @@ export type View3dNotice = 'loadFailed' | 'lost' | null;
 export interface View3dState {
   /** The radio's checked value (what the player asked for). */
   readonly requested: BoardView;
-  /** What the board shows. '3d' only after the scene was created. */
+  /** What the board shows. '3d' and 'cinematic' only after their scene was created. */
   readonly shown: BoardView;
   readonly status: View3dStatus;
   readonly notice: View3dNotice;
@@ -17,10 +17,10 @@ export interface View3dState {
 
 export type View3dAction =
   | { readonly type: 'choose'; readonly view: BoardView; readonly loaded: boolean }
-  | { readonly type: 'ready'; readonly attempt: number }
+  | { readonly type: 'ready'; readonly attempt: number; readonly view: BoardView }
   | { readonly type: 'loadFailed'; readonly attempt: number } // import error or timeout
   | { readonly type: 'unavailable' } // no WebGL2 context
-  | { readonly type: 'lost' };
+  | { readonly type: 'lost'; readonly view: BoardView };
 
 /** Copy of UX §10: each string is both the visible text and the announcement. */
 export const VIEW3D_TEXT = {
@@ -55,12 +55,21 @@ export function view3dReducer(state: View3dState, action: View3dAction): View3dS
       }
       if (state.status === 'unavailable') return state;
       if (action.loaded) {
-        return { ...state, requested: '3d', shown: '3d', status: 'idle', notice: null };
+        return {
+          ...state,
+          requested: action.view,
+          shown: action.view,
+          status: 'idle',
+          notice: null,
+        };
       }
-      if (state.status === 'loading') return { ...state, requested: '3d', notice: null };
+      // The same view again while it loads changes nothing; another one starts its own attempt.
+      if (state.status === 'loading' && state.requested === action.view) {
+        return { ...state, notice: null };
+      }
       return {
         ...state,
-        requested: '3d',
+        requested: action.view,
         status: 'loading',
         notice: null,
         attempt: state.attempt + 1,
@@ -70,11 +79,11 @@ export function view3dReducer(state: View3dState, action: View3dAction): View3dS
       if (
         action.attempt !== state.attempt ||
         state.status !== 'loading' ||
-        state.requested !== '3d'
+        state.requested !== action.view
       ) {
         return state;
       }
-      return { ...state, shown: '3d', status: 'idle' };
+      return { ...state, shown: action.view, status: 'idle' };
     case 'loadFailed':
       if (action.attempt !== state.attempt || state.status !== 'loading') return state;
       return { ...state, requested: '2d', shown: '2d', status: 'idle', notice: 'loadFailed' };
@@ -87,8 +96,8 @@ export function view3dReducer(state: View3dState, action: View3dAction): View3dS
         notice: 'loadFailed',
       };
     case 'lost':
-      // A context lost while 2D is shown (controller kept for a quick switch back) is silent.
-      if (state.shown !== '3d') return state;
+      // A context lost while another view is shown (controller kept for a quick switch back) is silent.
+      if (state.shown !== action.view) return state;
       return { ...state, requested: '2d', shown: '2d', notice: 'lost' };
   }
 }

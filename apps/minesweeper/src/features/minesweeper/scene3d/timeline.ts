@@ -101,7 +101,23 @@ export interface PlanOptions {
   readonly level: QualityLevel;
   /** Story 010: flags in the visible part hop on a win; null = every cell is visible. */
   readonly isVisible?: ((index: number) => boolean) | null | undefined;
+  /** Story 050: a view with a shorter reveal wave (the cinematic view: 600 ms). */
+  readonly waveTotalMs?: number | undefined;
+  /**
+   * Story 050 (O1): a win plays the flag hop wave of story 010. false in the cinematic view: the hop
+   * starts 1 s after the click and runs 1.3 s, past AC4's 600 ms for a cell animation, and the
+   * fireworks are that view's celebration.
+   */
+  readonly winHops?: boolean | undefined;
+  /**
+   * Story 050, round 3: the ground is dug out instead of the tile flipping (the cinematic diorama):
+   * no flip, a small heave first. The same timing as the flip, so every bound of AC4 holds.
+   */
+  readonly dig?: boolean | undefined;
 }
+
+/** Peak heave of a tile before it is dug out (the diorama), cell units. */
+export const DIG_HEAVE = 0.07;
 
 /**
  * Animations for prev → next; [] under reduced motion, for a new game and for `prev` null (first
@@ -121,8 +137,18 @@ export function planTransitions(
   const ends = isEnded(next.phase) && !isEnded(prev.phase);
   if (ends && next.phase === 'lost') return planLoss(prev, next, cols, nowMs, options);
 
-  const anims = planChanges(prev, next, origin, cols, nowMs, options.level);
-  if (ends && next.phase === 'won') anims.push(...planHops(next, origin, cols, nowMs, options));
+  const anims = planChanges(
+    prev,
+    next,
+    origin,
+    cols,
+    nowMs,
+    options.level,
+    options.waveTotalMs ?? WAVE_TOTAL_MS,
+    options.dig === true,
+  );
+  if (ends && next.phase === 'won' && options.winHops !== false)
+    anims.push(...planHops(next, origin, cols, nowMs, options));
   return anims;
 }
 
@@ -140,6 +166,8 @@ function planChanges(
   cols: number,
   nowMs: number,
   level: QualityLevel,
+  waveTotalMs: number,
+  dig: boolean,
 ): CellAnim[] {
   const anims: CellAnim[] = [];
   const revealed: number[] = [];
@@ -168,7 +196,7 @@ function planChanges(
   };
   const maxDistance = Math.max(...revealed.map(distance));
   const step =
-    maxDistance > 0 ? Math.min(WAVE_STEP_MAX_MS, (WAVE_TOTAL_MS - FLIP_MS) / maxDistance) : 0;
+    maxDistance > 0 ? Math.min(WAVE_STEP_MAX_MS, (waveTotalMs - FLIP_MS) / maxDistance) : 0;
   const simple = level === 2;
 
   for (const index of revealed) {
@@ -188,8 +216,8 @@ function planChanges(
       index,
       start: nowMs + delay,
       duration: FLIP_MS,
-      flip: !simple,
-      lift: simple ? 0 : FLIP_LIFT * decay * hit,
+      flip: !simple && !dig,
+      lift: simple ? 0 : (dig ? DIG_HEAVE : FLIP_LIFT) * decay * hit,
     });
   }
   return anims;
@@ -218,8 +246,8 @@ function planLoss(
       index: step.index,
       start: nowMs + chain.startMs + step.delayMs,
       duration: CHAIN_FLIP_MS,
-      flip: !simple,
-      lift: simple ? 0 : FLIP_LIFT,
+      flip: !simple && options.dig !== true,
+      lift: simple ? 0 : options.dig === true ? DIG_HEAVE : FLIP_LIFT,
     });
   }
   anims.push({

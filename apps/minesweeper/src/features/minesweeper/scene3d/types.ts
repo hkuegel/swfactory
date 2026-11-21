@@ -1,10 +1,12 @@
 // Types of the 3D scene (story 009, ADR 0005). Main-chunk code imports them with `import type`;
 // the only value export is SCENE3D_UNAVAILABLE. three-free.
 import type { GameState } from '../logic/types.ts';
-import type { QualityLevel } from './timeline.ts';
+import type { CellAnim, QualityLevel } from './timeline.ts';
 
 /** What Board needs. Non-null only while the 3D scene is ready and shown. */
 export interface BoardSceneHandle {
+  /** Which scene this is: the board's `data-view` (story 050). */
+  readonly kind: '3d' | 'cinematic';
   /** Moves the canvas into `host` and starts driving `grid`'s inline transform and margins. */
   attach(host: HTMLElement, grid: HTMLElement): void;
   /** Removes the canvas, clears the inline transform/margins, stops the loop. */
@@ -95,7 +97,19 @@ export type SceneColour =
   | 'confetti3'
   | 'confetti4'
   | 'confetti5'
-  | 'confetti6';
+  | 'confetti6'
+  // Story 050, round 3: the cinematic diorama (--scene-dio-*)
+  | 'dioGrass'
+  | 'dioGrassTip'
+  | 'dioSoil'
+  | 'dioSoilDeep'
+  | 'dioClay'
+  | 'dioRust'
+  | 'dioSkyLow'
+  | 'dioSkyHigh'
+  | 'dioSun'
+  | 'dioAmbient'
+  | 'dioLantern';
 
 /** Per-frame context the effect host gives every effect (story 010). */
 export interface EffectFrame {
@@ -155,6 +169,8 @@ export interface SceneTransition {
   /** Governor level at the click. */
   readonly level: QualityLevel;
   readonly board: BoardGeometry;
+  /** The cell animations planned for this update (story 050: the dig dust follows them). */
+  readonly anims: readonly CellAnim[];
 }
 
 export type TransitionHook = (transition: SceneTransition, effects: EffectHost) => void;
@@ -203,4 +219,36 @@ export interface Board3dProbe {
   readonly fxState: FxState;
   /** Renders a frame and returns the mean relative luminance 0..1 of the canvas or a viewport-px rect. */
   luminance(rect?: { x: number; y: number; width: number; height: number }): number;
+  /** The cinematic view's camera, animation and effect state (story 050); null in the "3D" scene. */
+  readonly rigState: RigState | null;
+}
+
+/** Dev-only probe view of the cinematic scene (story 050). */
+export interface RigState {
+  /** Running camera move, or 'none'. */
+  readonly cameraMove: 'none' | 'flyIn' | 'dive' | 'orbit';
+  /** Milliseconds since the running camera move started. */
+  readonly cameraMoveMs: number;
+  /** The absolute camera pose of the last frame. */
+  readonly pose: {
+    readonly yaw: number;
+    readonly tilt: number;
+    readonly dolly: number;
+    readonly panX: number;
+    readonly panY: number;
+  };
+  /** Shockwave of a loss rippling over the board. */
+  readonly shockwave: boolean;
+  /** Fireworks: bursts launched so far and instances drawn at the last frame. */
+  readonly fireworks: {
+    readonly running: boolean;
+    readonly bursts: number;
+    readonly sparks: number;
+  };
+  /** Debris pieces drawn at the last frame. */
+  readonly debris: number;
+  /** Bloom pass active at the last frame. */
+  readonly bloom: boolean;
+  /** Bursts and the explosion flash started within the last second (AC5: at most 3). */
+  readonly flashesLastSecond: number;
 }

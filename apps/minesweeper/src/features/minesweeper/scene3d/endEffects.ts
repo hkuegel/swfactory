@@ -92,7 +92,7 @@ const easeOut = (t: number) => 1 - (1 - t) ** 2;
 const isEnded = (game: GameState) => game.phase === 'won' || game.phase === 'lost';
 
 /** A white radial mask (alpha only); the material and instance colours tint it. */
-function glowTexture(): CanvasTexture {
+export function glowTexture(): CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = GLOW_PX;
   canvas.height = GLOW_PX;
@@ -146,7 +146,7 @@ function setRing(geometry: BufferGeometry, inner: number, outer: number): void {
 }
 
 /** Per-instance alpha for the glow meshes (three's InstancedMesh has colour only). */
-function withInstanceAlpha(material: MeshBasicMaterial, key: string): MeshBasicMaterial {
+export function withInstanceAlpha(material: MeshBasicMaterial, key: string): MeshBasicMaterial {
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -169,7 +169,7 @@ function withInstanceAlpha(material: MeshBasicMaterial, key: string): MeshBasicM
 }
 
 /** An instanced mesh with per-instance colour (and alpha) that the effects fill per frame. */
-class Batch {
+export class Batch {
   readonly mesh: InstancedMesh;
   readonly alpha: InstancedBufferAttribute | null;
   count = 0;
@@ -225,7 +225,20 @@ class Batch {
   }
 }
 
-export function createEndEffects(host: EffectRunner, renderer: WebGLRenderer): EndEffects {
+export interface EndEffectsOptions {
+  /** false: no confetti on a win (the cinematic view plays fireworks instead, story 050). */
+  readonly celebrate?: boolean;
+  /** false: no tile shards on a loss (the cinematic view throws clods of earth instead). */
+  readonly shards?: boolean;
+}
+
+export function createEndEffects(
+  host: EffectRunner,
+  renderer: WebGLRenderer,
+  options: EndEffectsOptions = {},
+): EndEffects {
+  const celebrate = options.celebrate ?? true;
+  const withShards = options.shards ?? true;
   const glow = glowTexture();
   const unlit = (options: ConstructorParameters<typeof MeshBasicMaterial>[0] = {}) =>
     new MeshBasicMaterial({ toneMapped: false, ...options });
@@ -470,7 +483,7 @@ export function createEndEffects(host: EffectRunner, renderer: WebGLRenderer): E
         // Shards
         const D = FX_LOSS.shards;
         shards.begin();
-        const shardCount = visible(particles.shards, share);
+        const shardCount = withShards ? visible(particles.shards, share) : 0;
         for (let i = 0; i < shardCount; i++) {
           const p = particles.shards[i];
           if (!p || !particleAt(p, elapsed, state)) continue;
@@ -556,7 +569,7 @@ export function createEndEffects(host: EffectRunner, renderer: WebGLRenderer): E
     if (t.prev.id !== t.next.id || isEnded(t.prev) || !isEnded(t.next)) return;
     if (t.next.phase === 'lost' && t.next.explodedIndex !== null) {
       effects.add(explosion(t, t.next.explodedIndex));
-    } else if (t.next.phase === 'won') {
+    } else if (t.next.phase === 'won' && celebrate) {
       effects.add(celebration(t));
     }
   };

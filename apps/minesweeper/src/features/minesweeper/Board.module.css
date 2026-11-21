@@ -174,11 +174,11 @@
   display: contents;
 }
 
-.scroller:where([data-view='3d']) {
+.scroller:where([data-view='3d'], [data-view='cinematic']) {
   background-color: var(--scene-table);
 }
 
-:where(.scroller[data-view='3d']) .stage {
+:where(.scroller[data-view='3d'], .scroller[data-view='cinematic']) .stage {
   position: relative;
   display: flow-root;
   width: max-content;
@@ -191,7 +191,7 @@
   pointer-events: none;
 }
 
-:where(.scroller[data-view='3d']) .grid {
+:where(.scroller[data-view='3d'], .scroller[data-view='cinematic']) .grid {
   /* Painted after the absolutely positioned canvas host. */
   position: relative;
   /* Tint corners follow the rounded tiles: TILE_RADIUS in scene3d/sceneLayout.ts (UX §3.3;
@@ -199,8 +199,13 @@
   --radius-tile-3d: calc(var(--cell) * 0.09);
 }
 
+/* Story 050: the cinematic view's well is the dark of the room around the tray, in both schemes. */
+.scroller:where([data-view='cinematic']) {
+  background-color: var(--scene-slab);
+}
+
 @media (max-width: 599.98px) {
-  :where(.scroller[data-view='3d']) .grid {
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic']) .grid {
     /* As in 2D, with a higher floor (the far row stays at least 24 px wide on screen), the rim
        and the inline margins of the projected board (--board3d-fit, on the whole grid width
        incl. gaps) counted in. */
@@ -224,7 +229,7 @@
  * where the canvas is hidden and the cells keep their 2D look.
  */
 @media not (forced-colors: active) {
-  :where(.scroller[data-view='3d']) .cell {
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic']) .cell {
     border-color: transparent;
     background-color: transparent;
     box-shadow: var(--overlay-halo, none);
@@ -232,17 +237,19 @@
     transition-duration: 0s;
   }
 
-  :where(.scroller[data-view='3d']) .glyph {
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic']) .glyph {
     opacity: 0;
   }
 
   /* The pixels under the ring change with light and shadow: a halo on both sides keeps 3:1. */
-  :where(.scroller[data-view='3d']) .cell:focus-visible {
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic']) .cell:focus-visible {
     --overlay-halo: 0 0 0 1px var(--scene-focus-halo), inset 0 0 0 3px var(--scene-focus-halo);
   }
 
-  :where(.scroller[data-view='3d']) .grid:not([aria-readonly='true']) :is(.hidden, .flagged):active,
-  :where(.scroller[data-view='3d'])
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic'])
+    .grid:not([aria-readonly='true'])
+    :is(.hidden, .flagged):active,
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic'])
     .grid:not([aria-readonly='true'])
     :is(.hidden, .flagged).pressed {
     border-radius: var(--radius-tile-3d);
@@ -252,13 +259,15 @@
 }
 
 @media (not (forced-colors: active)) and (hover: hover) {
-  :where(.scroller[data-view='3d']) .grid:not([aria-readonly='true']) :is(.hidden, .flagged):hover {
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic'])
+    .grid:not([aria-readonly='true'])
+    :is(.hidden, .flagged):hover {
     border-radius: var(--radius-tile-3d);
     background-color: var(--scene-hover-tint);
     transition: background-color var(--duration) var(--ease);
   }
 
-  :where(.scroller[data-view='3d'])
+  :where(.scroller[data-view='3d'], .scroller[data-view='cinematic'])
     .grid:not([aria-readonly='true'])
     :is(.hidden, .flagged):is(:hover:active, :hover.pressed) {
     background-color: var(--scene-pressed-tint);

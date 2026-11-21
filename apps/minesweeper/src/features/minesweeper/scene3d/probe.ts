@@ -1,4 +1,4 @@
-import type { Board3dProbe, FxState } from './types.ts';
+import type { Board3dProbe, FxState, RigState } from './types.ts';
 
 /** What the dev-only e2e probe needs from the scene controller (story 009). No side effects. */
 export interface ProbeInternals {
@@ -12,6 +12,7 @@ export interface ProbeInternals {
   renderer(): string;
   fxState(): FxState;
   luminance(rect?: { x: number; y: number; width: number; height: number }): number;
+  rigState?: (() => RigState) | undefined;
 }
 
 /** Builds the probe object; installed only under the literal e2e guard in createBoardScene.ts. */
@@ -35,5 +36,8 @@ export function createProbe(internals: ProbeInternals): Board3dProbe {
       return internals.fxState();
     },
     luminance: (rect) => internals.luminance(rect),
+    get rigState() {
+      return internals.rigState ? internals.rigState() : null;
+    },
   };
 }

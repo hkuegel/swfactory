@@ -1,10 +1,15 @@
 {
-  "forbidden": ["__minesweeperMines", "__board3dProbe", "fxState"],
+  "forbidden": ["__minesweeperMines", "__board3dProbe", "fxState", "rigState"],
   "lazyChunks": [
     {
       "marker": "THREE.WebGLRenderer",
       "entry": "src/features/minesweeper/scene3d/createBoardScene.ts",
       "gzipMaxKb": 180
+    },
+    {
+      "marker": "cinematic-spark",
+      "entry": "src/features/minesweeper/scene3d/cinematic/createCinematicScene.ts",
+      "gzipMaxKb": 30
     }
   ]
 }

@@ -1,4 +1,5 @@
-export type BoardView = '2d' | '3d';
+/** The board's views: flat, the tilted 3D board (stories 008-010), the cinematic one (050). */
+export type BoardView = '2d' | '3d' | 'cinematic';
 
 /**
  * Cheap capability check at mount (story 008/AC7, 009/AC6): a CSS transform with perspective()

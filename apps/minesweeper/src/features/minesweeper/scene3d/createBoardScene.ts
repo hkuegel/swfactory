@@ -34,6 +34,7 @@ import {
 import { createSceneMeshes, SLASH_ROTATION } from './meshes.ts';
 import { createProbe } from './probe.ts';
 import { createQualityGovernor } from './quality.ts';
+import type { SceneRig, SceneRigFactory } from './rig.ts';
 import {
   DECAL_LIFT,
   FLAG_BASE_OFFSET,
@@ -112,6 +113,7 @@ const isEnded = (game: GameState | null) => game?.phase === 'won' || game?.phase
 export function createBoardScene(
   options: CreateBoardSceneOptions,
   hooks: readonly TransitionHook[] = [],
+  rigFactory?: SceneRigFactory,
 ): BoardSceneController {
   let renderer: WebGLRenderer;
   try {
@@ -120,7 +122,7 @@ export function createBoardScene(
     throw new Scene3dUnavailableError(error instanceof Error ? error.message : String(error));
   }
   try {
-    return buildController(renderer, options, hooks);
+    return buildController(renderer, options, hooks, rigFactory);
   } catch (error) {
     // Mesh build, environment or shader compile failed: free the context before reporting.
     renderer.dispose();
@@ -134,6 +136,7 @@ function buildController(
   renderer: WebGLRenderer,
   options: CreateBoardSceneOptions,
   hooks: readonly TransitionHook[],
+  rigFactory: SceneRigFactory | undefined,
 ): BoardSceneController {
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = NoToneMapping;
@@ -148,8 +151,11 @@ function buildController(
   const effects = createEffectHost();
   meshes.root.add(effects.root); // effects work in cell units too
   // Story 010: built before the compile below, so the first game end compiles nothing.
-  const endEffects = createEndEffects(effects, renderer);
-  const allHooks: readonly TransitionHook[] = [endEffects.hook, ...hooks];
+  // Story 050: the cinematic view's win effect is its own (fireworks), not the confetti.
+  const endEffects = createEndEffects(effects, renderer, {
+    celebrate: rigFactory === undefined,
+    shards: rigFactory === undefined,
+  });
 
   const scene = new Scene();
   scene.add(meshes.root);
@@ -166,6 +172,21 @@ function buildController(
   const sizeOf = new Vector2();
   const camera = new Camera();
   camera.matrixAutoUpdate = false;
+  // Story 050: the cinematic view's seams; undefined for "3D", which then runs as before.
+  const rig: SceneRig | undefined = rigFactory?.({
+    renderer,
+    scene,
+    camera,
+    meshes,
+    effects,
+    key,
+    fill,
+  });
+  const allHooks: readonly TransitionHook[] = [
+    endEffects.hook,
+    ...(rig ? [rig.hook] : []),
+    ...hooks,
+  ];
 
   // State
   let palette: ScenePalette = options.palette;
@@ -201,12 +222,15 @@ function buildController(
   let swayHeld = false;
 
   const sceneNow = () => (paused ? manualNow : performance.now());
-  const swayOn = () => !reducedMotion && active && !swayHeld;
+  // The cinematic view never sways: its camera stands still during play (story 050, round 3).
+  const swayOn = () => rig === undefined && !reducedMotion && active && !swayHeld;
   const currentSway = (now: number) => (swayOn() ? swayAt(now - swayEpoch) : 0);
   /** Cells move: instances and the shadow map need rewriting. */
-  const boardMoving = (now: number) => anims.some((anim) => !hasEnded(anim, now));
+  const boardMoving = (now: number) =>
+    anims.some((anim) => !hasEnded(anim, now)) || (rig?.boardMoving(now) ?? false);
   /** Anything moves: the loop must run (effects-only frames skip instances and shadows). */
-  const animating = (now: number) => boardMoving(now) || effects.running;
+  const animating = (now: number) =>
+    boardMoving(now) || effects.running || (rig?.moving(now) ?? false);
 
   function applyPalette(next: ScenePalette) {
     palette = next;
@@ -225,6 +249,7 @@ function buildController(
     fill.intensity = look.fillIntensity * Math.PI;
     renderer.setClearColor(new Color(colours.table));
     endEffects.applyPalette(next);
+    rig?.applyPalette(next);
     dirty = true;
     renderer.shadowMap.needsUpdate = true;
   }
@@ -241,7 +266,7 @@ function buildController(
     const rim = parseFloat(getComputedStyle(stage).paddingLeft) || 0;
     if (!(width > 0 && height > 0)) return;
     const cell = (width - (cols - 1) * gap) / cols;
-    const next = stageLayout(width, height, rim);
+    const next = rig ? rig.stageLayout(width, height, rim, cell) : stageLayout(width, height, rim);
     const { top, bottom, inline } = next.margins;
     const margin = `${top}px ${inline}px ${bottom}px`;
     if (grid.style.margin !== margin) grid.style.margin = margin;
@@ -256,7 +281,9 @@ function buildController(
     if (renderer.getPixelRatio() !== dpr || size.x !== next.width || size.y !== next.height) {
       renderer.setPixelRatio(dpr);
       renderer.setSize(next.width, next.height);
+      rig?.setSize(next.width, next.height, dpr);
     }
+    rig?.setQuality(quality.level, rows * cols);
     const f = cameraFrustum(next, width);
     camera.projectionMatrix.makePerspective(f.left, f.right, f.top, f.bottom, f.near, f.far);
     camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
@@ -274,7 +301,7 @@ function buildController(
     const reach = Math.hypot(width, height) / 2 + 2 * cell;
     const distance = 3 * reach;
     key.position
-      .set(...KEY_DIRECTION)
+      .set(...(rig?.keyDirection ?? KEY_DIRECTION))
       .normalize()
       .multiplyScalar(distance);
     key.target.position.set(0, 0, 0);
@@ -309,7 +336,9 @@ function buildController(
   function writeOverlay(now: number): number {
     const sway = currentSway(now);
     if (grid && layout) {
-      const transform = overlayTransform(layout.gridHeight, sway);
+      const transform = rig
+        ? rig.overlayTransform(sway, now)
+        : overlayTransform(layout.gridHeight, sway);
       if (grid.style.transform !== transform) grid.style.transform = transform;
     }
     return sway;
@@ -320,9 +349,12 @@ function buildController(
   function updateCamera(
     sway: number,
     shake: { readonly x: number; readonly y: number } = NO_SHAKE,
+    now: number = sceneNow(),
   ) {
     if (!layout) return;
-    camera.matrix.fromArray(cameraWorldMatrix(layout.gridHeight, sway));
+    camera.matrix.fromArray(
+      rig ? rig.cameraMatrix(sway, now) : cameraWorldMatrix(layout.gridHeight, sway),
+    );
     if (shake.x !== 0 || shake.y !== 0) {
       camera.matrix.multiply(
         shakeMatrix.makeTranslation(shake.x * layout.cell, shake.y * layout.cell, 0),
@@ -417,7 +449,7 @@ function buildController(
         const shudder = decoration?.kind === 'shudder' ? shudderLift(decoration, now) : 0;
 
         if (view.kind === 'hidden' || view.kind === 'flagged') {
-          const lift = shudder - sink;
+          const lift = shudder - sink + (rig ? rig.liftAt(x, y, now) : 0);
           put(meshes.hiddenTiles, compose(x, y, HIDDEN_CENTRE + lift, identity, 1));
           if (view.kind === 'flagged') {
             const pose = anim?.kind === 'plant' ? flagPose(anim, now) : FLAG_AT_REST;
@@ -549,7 +581,8 @@ function buildController(
     wasMoving = moving;
     if (anims.length > 0 && !moving) anims = [];
     else if (anims.length > 0) anims = anims.filter((anim) => !hasEnded(anim, now));
-    renderer.render(scene, camera);
+    if (rig) rig.render();
+    else renderer.render(scene, camera);
     frames++;
   }
 
@@ -570,6 +603,7 @@ function buildController(
   /** Ends every end effect and cell animation at once: the static final board (UX §7). */
   function finishEffects() {
     effects.clear();
+    rig?.finish();
     anims = [];
     dirty = true;
     renderer.shadowMap.needsUpdate = true;
@@ -621,6 +655,7 @@ function buildController(
   // Compile every program now, so the first board frame does not hitch.
   renderer.compile(scene, camera);
   endEffects.rest();
+  rig?.warm();
   // After everything that can throw: a failed build must not leave a document listener behind.
   document.addEventListener('visibilitychange', onVisibility);
 
@@ -701,9 +736,11 @@ function buildController(
   const probeInternals = {
     pause() {
       stopLoop();
+      // Already paused (a restart keeps the scene): keep the advanced clock, else the time would run
+      // backwards and a move started meanwhile would have a negative elapsed time (story 050, O4).
+      if (!paused) manualNow = performance.now();
       paused = true;
-      manualNow = performance.now();
-      swayEpoch = manualNow;
+      swayEpoch = performance.now();
       requestRender();
     },
     holdSway(hold: boolean) {
@@ -719,7 +756,7 @@ function buildController(
       if (!game || !layout) return { x: NaN, y: NaN };
       const { rows, cols } = game.config;
       const step = 1 + layout.gap / layout.cell;
-      updateCamera(currentSway(sceneNow()));
+      updateCamera(currentSway(sceneNow()), NO_SHAKE, sceneNow());
       const point = new Vector3(
         (index % cols) * step - ((cols - 1) * step) / 2 + dx,
         ((rows - 1) * step) / 2 - Math.floor(index / cols) * step + dy,
@@ -787,16 +824,28 @@ function buildController(
       }
       return sum / (width * height);
     },
+    rigState: rig ? () => rig.state(sceneNow()) : undefined,
   };
   let probe: Board3dProbe | null = null;
   if (import.meta.env.DEV && import.meta.env.MODE === 'e2e') {
     probe = createProbe(probeInternals);
-    window.__board3dProbe = probe;
+    // The cinematic scene installs its probe while it is attached (see attach and detach), so
+    // the "3D" scene's probe survives it.
+    if (!rig) window.__board3dProbe = probe;
   }
+  let previousProbe: Board3dProbe | undefined;
 
   const controller: BoardSceneController = {
+    kind: rig ? 'cinematic' : '3d',
+
     attach(nextHost, nextGrid) {
       if (disposed) return;
+      if (import.meta.env.DEV && import.meta.env.MODE === 'e2e') {
+        if (rig && probe && window.__board3dProbe !== probe) {
+          previousProbe = window.__board3dProbe;
+          window.__board3dProbe = probe;
+        }
+      }
       host = nextHost;
       grid = nextGrid;
       stage = nextHost.parentElement ?? nextHost;
@@ -814,6 +863,13 @@ function buildController(
     },
 
     detach() {
+      if (import.meta.env.DEV && import.meta.env.MODE === 'e2e') {
+        if (rig && probe && window.__board3dProbe === probe) {
+          if (previousProbe) window.__board3dProbe = previousProbe;
+          else delete window.__board3dProbe;
+          previousProbe = undefined;
+        }
+      }
       stopLoop();
       observer?.disconnect();
       observer = null;
@@ -844,13 +900,15 @@ function buildController(
       };
       const now = sceneNow();
       const newGame = prevGame === null || prevGame.id !== nextGame.id;
-      if (newGame) finishEffects();
       const board = boardGeometry(nextGame);
       const ends = !newGame && !isEnded(prevGame) && isEnded(nextGame);
       const planned = planTransitions(snapshot, next, origin, nextGame.config.cols, now, {
         reducedMotion: reducedMotion || !active,
         level: quality.level,
         isVisible: ends && nextGame.phase === 'won' ? board.isVisible : null,
+        waveTotalMs: rig?.waveTotalMs,
+        winHops: rig === undefined,
+        dig: rig !== undefined,
       });
       anims = retarget(anims, planned, changedCells(snapshot, next), now);
       for (const hook of allHooks) {
@@ -865,6 +923,7 @@ function buildController(
               now,
               level: quality.level,
               board,
+              anims: planned,
             },
             effects,
           );
@@ -895,6 +954,7 @@ function buildController(
 
     setMotion(motion) {
       reducedMotion = motion.reducedMotion;
+      rig?.setMotion(motion.reducedMotion, motion.active);
       if (reducedMotion || !motion.active) finishEffects();
       active = motion.active;
       if (!active) stopLoop();
@@ -911,6 +971,7 @@ function buildController(
       disposed = true;
       effects.clear();
       endEffects.dispose();
+      rig?.dispose();
       meshes.dispose();
       environment?.dispose();
       renderer.dispose();

@@ -25,6 +25,8 @@ const INPUT_TIMEOUT_MS = 5000;
 const FLOORS = { a: 50, b: 30, latency: 100 };
 // `--headless` only checks that the script works (software WebGL; the renderer row then fails).
 const HEADLESS = process.argv.includes('--headless');
+// Story 050/AC8: `--view=cinematic` measures the cinematic view with the same floors and scenarios.
+const VIEW_LABEL = process.argv.includes('--view=cinematic') ? 'Cinematic' : '3D';
 
 /** 0-based [row, col] pairs. */
 const A_ISOLATED = [8, 27]; // the safe cell the cascade cannot open (story 010: the win click)
@@ -268,7 +270,7 @@ try {
 
   // Scenario A: 16 × 30 with a large cascade.
   await startBoard(page, 16, 30, layoutA());
-  await page.getByRole('radio', { name: '3D' }).check();
+  await page.getByRole('radio', { name: VIEW_LABEL }).check();
   await page.waitForFunction(
     () => window.__board3dProbe !== undefined && !document.querySelector('[aria-busy="true"]'),
     null,
