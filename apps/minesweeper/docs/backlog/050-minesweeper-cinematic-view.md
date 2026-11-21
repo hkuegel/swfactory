@@ -338,6 +338,20 @@ were).
   stages (a small board shows the glow and the hills); flowers and rocks are the same on every
   board.
 
+- **Round 4 (after gate 2, developer, 2026-11-21).** `scripts/measure-fps.mjs --view=cinematic`
+  fixed (script only, no app code). (1) Crash "Execution context was destroyed": a page reload
+  during the run; with a cold `node_modules/.vite` cache (app and root) it did not recur in
+  headless here and Vite logged no re-optimisation, `optimizeDeps.include` already lists every
+  three import of the cinematic chunk, so the cause is not reproduced. The script now warms the
+  chosen view once, restarts on a fresh page, and repeats the whole measurement (up to 3 times)
+  when a navigation destroys the context. (2) "nothing animated" / 0.0 fps: the cinematic view
+  renders on demand and has no idle motion since round 3, so the idle tail of each 3.2 s to 5 s
+  window read as 0 fps, and in software GL one frame blocks the page for up to 1.8 s, so the
+  "busy 150 ms after the click" sample missed the effect. Cinematic now ends the samples at the
+  first one with the final frame count (a run shorter than a window counts as one window),
+  "alive" means at least two frames drawn after the click, and the busy check also takes
+  earlier samples and the rig state. The "3D" measurement is unchanged in behaviour.
+
 ## Test report
 
 Round 3 re-verification (tester, 2026-11-21, lean process). Rounds 1 and 2 found D1 (dark fireworks flash
@@ -410,7 +424,14 @@ Start and a preset as in 006/AC2; a game ended in 2D shows the static final boar
 Not checked: touch long-press (covered by 008 in `chromium-3d`), phones (out of scope), AC8 (manual).
 Screenshots of the developer: `screenshots/050/R3-diorama-*.png`.
 
+Round 4 check (developer, 2026-11-21): `node scripts/measure-fps.mjs --headless --view=cinematic`
+(also with a cleared Vite cache) and `--headless` (3D) run through; cinematic rows measure 0.5 to
+1.9 fps in software GL with no "nothing animated"; only the renderer row and the fps floors fail
+there, as allowed. AC8 on the GPU stays manual.
+
 Gate 2 full run (orchestrator, 2026-11-21): `node scripts/verify.mjs --mode=full --no-record` → `verify: ok, 12 step(s), 263.6 s wall clock`.
+
+CI on GitHub (orchestrator, 2026-11-21): run 44946743984 of the branch at 3a6d309, `success`.
 
 ## Review
 
