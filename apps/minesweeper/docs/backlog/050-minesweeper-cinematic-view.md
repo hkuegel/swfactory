@@ -523,7 +523,8 @@ Outcome at gate 2 (hak, 2026-11-21: "Beide, committen"): P51 and P52 approved an
 | tester                      | 2     | sonnet  | n/a          | n/a       | n/a      |
 | developer                   | 3     | sonnet  | 431470       | 134       | 56:26    |
 | tester                      | 3     | sonnet  | 103358       | 24        | 17:49    |
-| total (measured)            |       |         | 1203673      | 412       | 3:01:10  |
+| developer                   | 4     | sonnet  | 66250        | 32        | 21:19    |
+| total (measured)            |       |         | 1269923      | 444       | 3:22:29  |
 | orchestrator (main session) |       | opus    | not measured | n/a       | n/a      |
 
 Product-owner round 1 ended with the session (no completion data); tester round 2 was stopped by
