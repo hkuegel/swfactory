@@ -38,6 +38,9 @@ export type Probe = {
   readonly fxState: Fx;
   readonly rigState: RigState | null;
   luminance(rect?: Rect): number;
+  pixels(points: readonly { x: number; y: number }[]): [number, number, number][];
+  /** Scene frames drawn since creation. */
+  readonly frames: number;
 };
 export type TestWindow = Window & { __minesweeperMines?: Pair[]; __board3dProbe?: Probe };
 

@@ -834,6 +834,112 @@ for (const colorScheme of ['light', 'dark'] as const)
     });
   }
 
+// --- Story 051: the probe draws one frame per scene time ----------------------------------------
+
+test.describe('probe frames (051)', () => {
+  test.beforeEach(async ({ page }) => {
+    await installClock(page);
+    await openGame(page);
+    await chooseCinematicEarly(page);
+    await freezeClock(page);
+    await startCinematic(page, LOSS);
+    await settle(page);
+    await cell(page, ...LOSS_CLICK).click({ force: true });
+    await expect(page.getByText(LOST)).toBeVisible();
+    expect((await fxState(page)).running, 'the end effect is running').toBe(true);
+  });
+
+  test('AC1 (051): advancing the scene clock and reading luminance (whole, part) and pixels in one step draws exactly one frame per sample', async ({
+    page,
+  }) => {
+    const samples = await page.evaluate(() => {
+      const probe = (window as TestWindow).__board3dProbe;
+      if (!probe) throw new Error('no probe');
+      const centre = probe.project(4 * 9 + 1, [0, 0, 0]);
+      const around = { x: centre.x - 75, y: centre.y - 75, width: 150, height: 150 };
+      return [33, 33, 100, 100, 100].map((dt) => {
+        const before = probe.frames;
+        probe.advance(dt);
+        const whole = probe.luminance();
+        const local = probe.luminance(around);
+        probe.pixels([centre]);
+        return { drawn: probe.frames - before, running: probe.fxState.running, whole, local };
+      });
+    });
+    // Non-vacuity: the effect runs at every sample and the picture really changes.
+    expect(samples.map((s) => s.running)).toEqual([true, true, true, true, true]);
+    expect(new Set(samples.map((s) => s.whole)).size, 'the whole picture changes').toBeGreaterThan(
+      1,
+    );
+    expect(new Set(samples.map((s) => s.local)).size, 'the part changes').toBeGreaterThan(1);
+    // Hand value: one drawn frame (the advance) per sample, the three reads reuse it.
+    expect(samples.map((s) => s.drawn)).toEqual([1, 1, 1, 1, 1]);
+  });
+
+  test('AC2 (051): a read right after advancing equals a read in a later step, which draws anew; a sway hold or a pause draws anew too', async ({
+    page,
+  }) => {
+    const steps = await page.evaluate(() => {
+      const probe = (window as TestWindow).__board3dProbe;
+      if (!probe) throw new Error('no probe');
+      const first = (() => {
+        probe.advance(100);
+        return probe.luminance();
+      })();
+      const second = (() => {
+        probe.advance(100);
+        return probe.luminance();
+      })();
+      // Read at the end of this step; the reads in the next evaluates use the same scene time.
+      probe.advance(100);
+      (window as unknown as { __lum051?: number }).__lum051 = probe.luminance();
+      return { first, second };
+    });
+    expect(steps.first, 'the picture changes between scene times').not.toBe(steps.second);
+
+    const later = await page.evaluate(() => {
+      const probe = (window as TestWindow).__board3dProbe;
+      if (!probe) throw new Error('no probe');
+      const before = probe.frames;
+      const value = probe.luminance();
+      const afterRead = probe.frames;
+      const again = probe.luminance(); // same step: reused
+      return {
+        value,
+        again,
+        redrawn: afterRead - before,
+        reused: probe.frames - afterRead,
+        sameStep: (window as unknown as { __lum051?: number }).__lum051,
+      };
+    });
+    expect(later.redrawn, 'a later step draws anew').toBe(1);
+    expect(later.reused, 'a second read in that step reuses it').toBe(0);
+    expect(later.value, 'same scene time, same value').toBe(later.sameStep);
+    expect(later.again).toBe(later.value);
+
+    const changed = await page.evaluate(() => {
+      const probe = (window as TestWindow).__board3dProbe;
+      if (!probe) throw new Error('no probe');
+      const delta = (change: () => void) => {
+        probe.luminance();
+        change();
+        const before = probe.frames;
+        probe.luminance();
+        return probe.frames - before;
+      };
+      const hold = delta(() => probe.holdSway(true));
+      const release = delta(() => probe.holdSway(false));
+      const paused = delta(() => probe.pause());
+      return { hold, release, paused };
+    });
+    expect(changed, 'a read after a changed hold or a pause draws anew').toEqual({
+      hold: 1,
+      release: 1,
+      paused: 1,
+    });
+  });
+});
+
 test.describe('ended in another view', () => {
   test('AC5: a game that ended in 2D shows the static final board in Cinematic without the effect', async ({
     page,

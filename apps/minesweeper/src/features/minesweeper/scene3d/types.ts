@@ -207,7 +207,7 @@ export interface Board3dProbe {
     index: number,
     offset?: readonly [dx: number, dy: number, dz: number],
   ): { x: number; y: number };
-  /** Renders a frame at the current time and reads RGB at viewport CSS px points (DPR-corrected, y-flipped). */
+  /** Draws a frame unless this scene time was drawn in this step (story 051), then reads RGB at viewport CSS px points (DPR-corrected, y-flipped). */
   pixels(points: readonly { x: number; y: number }[]): [r: number, g: number, b: number][];
   /** Scene frames rendered since creation (fps script). */
   readonly frames: number;
@@ -217,7 +217,7 @@ export interface Board3dProbe {
   readonly renderer: string;
   /** End effects at the last frame (story 010). */
   readonly fxState: FxState;
-  /** Renders a frame and returns the mean relative luminance 0..1 of the canvas or a viewport-px rect. */
+  /** Draws a frame unless this scene time was drawn in this step (story 051); returns the mean relative luminance 0..1 of the canvas or a viewport-px rect. */
   luminance(rect?: { x: number; y: number; width: number; height: number }): number;
   /** The cinematic view's camera, animation and effect state (story 050); null in the "3D" scene. */
   readonly rigState: RigState | null;

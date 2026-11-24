@@ -255,6 +255,9 @@ Euro`: the base of each counted year is the value at the start of that year time
 
 ### Fixed
 
+- `minesweeper`: the end-effect tests of the Cinematic view finish on the CI runner again. The
+  dev-only test probe draws a scene time once per step instead of once per read, so a sample
+  costs one software-WebGL frame instead of three or four; what the tests assert is unchanged (#051).
 - laz: the Kirchensteuer lowers the Kapitalertragsteuer by § 32d EStG (27,82 % effective with 8 %
   instead of 28,375 %), and the Vorabpauschale tax is reserved for the whole holding instead of one
   share, which had raised the monthly payout (#048).
