@@ -1,7 +1,7 @@
 ---
 id: 051
 title: The cinematic AC5 tests finish on CI (the test probe draws one frame per sample)
-status: in-progress
+status: done
 type: bug
 app: minesweeper
 size: S
@@ -83,6 +83,9 @@ rebuilt without the chat. Append only._
 - 2026-11-24 — Orchestrator: the story is committed as the first commit of the fix branch, not
   on `main`, because `main` is checked out in another worktree; it reaches `main` with the merge.
 
+- 2026-11-24 — Gate 2: Q: which retro proposals (P53, P54, P55) are approved? — A: "Keinen freigeben"
+  (hak). Nothing applied.
+
 <!-- Sections below are filled in by later roles. Don't delete headings. -->
 
 ## UX design
@@ -122,7 +125,7 @@ gained `pixels` and `frames`). Run: `-g "051|AC5" --retries=0 --workers=1`, 13 p
 | --- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | AC1 | `AC1 (051): advancing the scene clock and reading luminance … draws exactly one frame per sample` (8.6 s)   | PASS (frames per sample `[1,1,1,1,1]`, was 4 each) |
 | AC2 | `AC2 (051): a read right after advancing equals a read in a later step …; a sway hold or a pause …` (9.5 s) | PASS                                               |
-| AC3 | the six AC5 tests of 050 on the Ubuntu runner, no retry, green run                                          | pending: CI run of the branch (pull request)       |
+| AC3 | the six AC5 tests of 050 on the Ubuntu runner, no retry, green run                                          | PASS: CI run 45399431700 (see below)               |
 
 AC5 tests of 050 locally, workers=1, whole test (before: loss test light 36-40 s, orchestrator baseline):
 loss light 20.9 s, loss dark 17.1 s, loss picture light 8.3 s / dark 8.6 s, win light 15.8 s / dark 17.1 s,
@@ -152,6 +155,13 @@ every read draws; the production build contains no probe (check:dist ok).
 
 Defects: none.
 
+CI on GitHub (orchestrator, 2026-11-24): run 45399431700 of PR 11 at the fix commit, `success`, affected
+mode, 8 of 12 steps with `test:e2e` (avd, laz, minesweeper; the backlog index is a root file). `test:e2e`
+1397.3 s, against 3397 s of the failing `main` run 45376327586. "No retry" is inferred, not read: verify
+prints the Playwright summary only on failure. The minesweeper part is about 20.5 min (total minus about
+2.5 min for avd and laz); the 124 other tests took about 16.8 min in the failing run, which leaves about
+3.7 min for the eight AC5 and 051 tests, about 28 s each; a timeout and retry would add 2 min per test.
+
 ## Review
 
 Orchestrator (lean process), round 1, checklist version 3. Verdict: **APPROVED**.
@@ -170,7 +180,7 @@ Orchestrator (lean process), round 1, checklist version 3. Verdict: **APPROVED**
   (the effect runs, luminance changes), four mutants all killed. T4 pass: named after the ACs, clicks with
   the clock paused. T5 pass: the branches (reuse, redraw after task, hold, pause) are covered by AC2.
 - K1 pass: as designed, no deviation. K2 pass: no `any`, no `!`. K3, K4, K10, K11 n.a.: no CSS, platform,
-  workspace tooling or env change. K6 pass: `in-progress` in story and index until gate 2.
+  workspace tooling or env change. K6 pass: `done` in story and index after gate 2.
 - K7 pass: three entries, append only. K8 pass: CHANGELOG "Fixed" entry; no README change (not
   user-visible). K9 pass: prettier clean.
 - A1, A2, A3 n.a.: no UI. A4 pass: the probe allocates nothing new per frame; it draws fewer frames.
@@ -216,6 +226,10 @@ Proposed changes:
 - **P54** (CLAUDE.md, Runner environment; tester): an e2e test that takes more than a third of its timeout
   locally is a finding, because the runner is several times slower for software WebGL; the Test report
   lists the local duration of every test that draws WebGL frames.
+- **P55** (devops, verify runner): `scripts/verify.mjs` prints the Playwright summary line (passed, flaky,
+  retries) on success too, so a Test report can quote retries of a CI run instead of inferring them.
+
+Outcome at gate 2 (hak, 2026-11-24): P53, P54 and P55 not approved, nothing applied.
 
 ### Cost
 
