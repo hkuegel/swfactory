@@ -106,23 +106,125 @@ AC2 (same value reused and redrawn; non-vacuity: the value changes over the effe
 
 _developer: what was built, deviations from the design and why._
 
+Only `probeInternals` in `scene3d/createBoardScene.ts` changed: a mark `probeDrawnAt` (scene time of the
+frame the probe drew in this task) with `probeDraw` (renderFrame, set mark, clear by `queueMicrotask`) and
+`probeDrawUnlessDrawn`. `advance` (paused) uses `probeDraw`; `luminance` and `pixels` use
+`probeDrawUnlessDrawn`; `pause` and `holdSway` clear the mark. `frames` still counts real renderFrame
+calls. Doc comments in `scene3d/types.ts` updated. No deviation. `build` and `check:dist` pass.
+
 ## Test report
 
-_tester: AC → test mapping, results, defects found._
+Step "Verify" after the fix. 2 tests added (describe "probe frames (051)" in
+`apps/minesweeper/e2e/minesweeper-cinematic.spec.ts`; the `Probe` type in `e2e/minesweeper.helpers.ts`
+gained `pixels` and `frames`). Run: `-g "051|AC5" --retries=0 --workers=1`, 13 passed (2.9m), no flaky.
 
-| AC  | Test(s) | Result |
-| --- | ------- | ------ |
+| AC  | Test                                                                                                        | Result                                             |
+| --- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| AC1 | `AC1 (051): advancing the scene clock and reading luminance … draws exactly one frame per sample` (8.6 s)   | PASS (frames per sample `[1,1,1,1,1]`, was 4 each) |
+| AC2 | `AC2 (051): a read right after advancing equals a read in a later step …; a sway hold or a pause …` (9.5 s) | PASS                                               |
+| AC3 | the six AC5 tests of 050 on the Ubuntu runner, no retry, green run                                          | pending: CI run of the branch (pull request)       |
+
+AC5 tests of 050 locally, workers=1, whole test (before: loss test light 36-40 s, orchestrator baseline):
+loss light 20.9 s, loss dark 17.1 s, loss picture light 8.3 s / dark 8.6 s, win light 15.8 s / dark 17.1 s,
+flash light 14.9 s / 15.0 s (bottom-row mines), dark 14.6 s / 14.7 s, AC5 ended-in-2D 6.9 s. The 4-read
+flash tests now run about 15 s; their assertions are unchanged.
+
+Mutation checks (runner `mut051.py` in the scratchpad, backup outside the repo, restore in `finally`,
+byte identity asserted: "byte-identical restore OK"; baseline on the clean file: 2 passed). Failing
+assertion lines are in `minesweeper-cinematic.spec.ts`:
+
+- (a) luminance/pixels always redraw: AC1 fails at line 876 (frames per sample), and AC2 fails at line 916
+  (a second read in the same step must reuse). 2 failed.
+- (b) no `queueMicrotask` clear: AC2 fails at line 915 (a later step must draw anew). 1 failed, AC1 passes.
+- (c) `holdSway` does not clear the mark: AC2 fails at line 935. 1 failed.
+- (d) `pause` does not clear the mark: AC2 fails at line 935. 1 failed.
+  Limit: (c) and (d) land on the same `toEqual({hold, release, paused})`, so the assertion shows the
+  mutant, but the line does not say which of the two was removed (the object diff does).
+
+Regression risk (grep of `luminance(` and `pixels(` in `apps/minesweeper/e2e`): every other site reads in
+its own `page.evaluate` (a new task, so the mark is cleared) or after `advance`, which is the intended
+reuse. `minesweeper-3d-effects.spec.ts` and `minesweeper-3d-scene.spec.ts`: 35 passed (57.6 s), no flaky.
+`npm run verify -w apps/minesweeper`: vitest 120 passed (17 files), build and check:dist ok.
+`npm run check:structure`: ok.
+
+Checked, OK (no new test): the real-loop sites (`effects.spec` line 726) read in separate tasks, so
+every read draws; the production build contains no probe (check:dist ok).
+
+Defects: none.
 
 ## Review
 
-_reviewer: verdict (APPROVED / CHANGES_REQUESTED), findings by severity, review round._
+Orchestrator (lean process), round 1, checklist version 3. Verdict: **APPROVED**.
+
+- C1 pass: AC1 and AC2 by `probeDraw` / `probeDrawUnlessDrawn` in the probe internals, tests "AC1 (051)" and
+  "AC2 (051)"; AC3 by the CI run (Test report).
+- C2 n.a.: no network call or pending state. C3 n.a.: no hook or component logic. C5 n.a.: no reducer.
+  C6 n.a.: no error handling or I/O.
+- C4 pass: the mark is cleared by a microtask, `pause` and `holdSway`, so no read after a new task or a
+  changed sway reuses an old frame; the render loop itself is unchanged.
+- S1, S2, S3, S5 n.a.: no input, config, dependency or script changed.
+- S4 pass: the new code is referenced only by the probe internals; `createBoardScene` and
+  `createCinematicScene` chunks in `dist/` contain no `queueMicrotask` (grep), check:dist ok.
+- T1 pass: `npm run verify -w apps/minesweeper` exit 0 (orchestrator run); full run on CI pending (AC3).
+- T2 pass: one e2e test per AC, no unit test. T3 pass: hand values (1 frame per sample), non-vacuity
+  (the effect runs, luminance changes), four mutants all killed. T4 pass: named after the ACs, clicks with
+  the clock paused. T5 pass: the branches (reuse, redraw after task, hold, pause) are covered by AC2.
+- K1 pass: as designed, no deviation. K2 pass: no `any`, no `!`. K3, K4, K10, K11 n.a.: no CSS, platform,
+  workspace tooling or env change. K6 pass: `in-progress` in story and index until gate 2.
+- K7 pass: three entries, append only. K8 pass: CHANGELOG "Fixed" entry; no README change (not
+  user-visible). K9 pass: prettier clean.
+- A1, A2, A3 n.a.: no UI. A4 pass: the probe allocates nothing new per frame; it draws fewer frames.
+
+Nit (not fixed): mutants (c) and (d) fail the same `toEqual`; the object diff names which one.
 
 ## Explanation
 
-_orchestrator: plain-language explanation shown at gate 2, at most 15 lines of at most 120 characters. No code, no file names._
+The minesweeper tests of the Cinematic end effects ran into their time limit on the CI computer.
+They take 60 snapshots of an explosion or of fireworks and measure the brightness of each picture.
+For every snapshot the test helper drew the same picture three or four times instead of once.
+On the slow CI computer, without a graphics card, that took longer than the two minutes a test may take.
+Main stayed red, so the site with the new fund data was not published.
+Now the helper remembers that it has just drawn this moment and reuses that picture for every reading.
+Locally the loss test now takes 21 s instead of 36 to 40 s; what the tests check is unchanged.
+Two new tests check that one picture is drawn per snapshot and that the reused picture equals a new one.
+Only the test helper changed; it is not part of the published app.
+Risk: a reading that should see a changed scene could get an old picture; three cases are tested.
+Not verified yet: the run on the CI computer itself; it needs a pull request.
 
 ## Retrospective
 
-_orchestrator: what went wrong (review rounds, defects, corrections at the gates),
-proposed changes to agents/CLAUDE.md/templates, and which ones hak approved. Include a
-`### Cost` table (see the retro step of `/feature`)._
+Lean process (hak, 2026-11-24): the orchestrator wrote story, design, review, docs, explanation and retro;
+two tester runs and one developer run on Sonnet. No review round was needed, no defect was found.
+
+Why the bug got through:
+
+- **The branch CI of 050 ran no e2e step.** A `workflow_dispatch` run has no change to compare with (its base
+  is its own commit), so the plan skips the workspace steps lint, test, test:e2e and typecheck (run
+  44946743984: 8 of 12 steps). The Definition of Done ("a green CI run of the story branch") was met on paper
+  only. The six tests ran on CI for the first time on `main` (2026-11-21, green at the margin), then failed.
+- **Nobody looked at the duration.** Locally the loss test took 36 to 40 s of its 120 s timeout. The
+  4-vCPU runner draws software WebGL several times slower (bug 019), so a third of the timeout locally was
+  already too much. 050's Test report lists results, not durations.
+- **The probe hid its cost.** "Renders a frame" was documented, but a sample of advance plus several reads
+  drew the same picture 3 or 4 times; the redundant draws doubled the sampling time.
+
+Proposed changes:
+
+- **P53** (devops, CI): a `workflow_dispatch` run of a branch compares against `origin/main` (or runs in
+  full mode), so the branch CI that the Definition of Done asks for runs the e2e tests of the change; the
+  Test report names the plan's step count of that run.
+- **P54** (CLAUDE.md, Runner environment; tester): an e2e test that takes more than a third of its timeout
+  locally is a finding, because the runner is several times slower for software WebGL; the Test report
+  lists the local duration of every test that draws WebGL frames.
+
+### Cost
+
+| Role                        | Round | Model  | Tokens       | Tool uses | Duration |
+| --------------------------- | ----- | ------ | ------------ | --------- | -------- |
+| tester (reproduce)          | 1     | sonnet | 57392        | 9         | 1:11     |
+| developer                   | 1     | sonnet | 42190        | 6         | 3:19     |
+| tester (verify)             | 2     | sonnet | 54547        | 8         | 7:15     |
+| total (measured)            |       |        | 154129       | 23        | 11:45    |
+| orchestrator (main session) |       | opus   | not measured | n/a       | n/a      |
+
+The orchestrator also did the roles of product-owner, architect, reviewer and tech-writer in this story.

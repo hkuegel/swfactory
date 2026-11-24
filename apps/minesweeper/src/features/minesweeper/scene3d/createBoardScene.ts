@@ -733,8 +733,24 @@ function buildController(
     return String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
   }
 
+  // Scene time of the frame the probe drew in the current synchronous task (story 051); a microtask
+  // clears it, since the next page.evaluate is a new task and the drawing buffer may be presented.
+  let probeDrawnAt: number | null = null;
+  function probeDraw(now: number) {
+    renderFrame(now);
+    probeDrawnAt = now;
+    queueMicrotask(() => {
+      probeDrawnAt = null;
+    });
+  }
+  function probeDrawUnlessDrawn() {
+    const now = sceneNow();
+    if (probeDrawnAt !== now) probeDraw(now);
+  }
+
   const probeInternals = {
     pause() {
+      probeDrawnAt = null;
       stopLoop();
       // Already paused (a restart keeps the scene): keep the advanced clock, else the time would run
       // backwards and a move started meanwhile would have a negative elapsed time (story 050, O4).
@@ -744,13 +760,14 @@ function buildController(
       requestRender();
     },
     holdSway(hold: boolean) {
+      probeDrawnAt = null;
       if (swayHeld && !hold) swayEpoch = sceneNow(); // released: the sway restarts at phase 0
       swayHeld = hold;
       requestRender();
     },
     advance(ms: number) {
       manualNow += ms;
-      if (paused) renderFrame(manualNow);
+      if (paused) probeDraw(manualNow);
     },
     project(index: number, [dx, dy, dz]: readonly [number, number, number]) {
       if (!game || !layout) return { x: NaN, y: NaN };
@@ -771,7 +788,7 @@ function buildController(
       };
     },
     pixels(points: readonly { x: number; y: number }[]): [number, number, number][] {
-      renderFrame(sceneNow());
+      probeDrawUnlessDrawn();
       const gl = renderer.getContext();
       const rect = canvas.getBoundingClientRect();
       const buffer = new Uint8Array(4);
@@ -794,7 +811,7 @@ function buildController(
       };
     },
     luminance(rect?: { x: number; y: number; width: number; height: number }): number {
-      renderFrame(sceneNow());
+      probeDrawUnlessDrawn();
       const gl = renderer.getContext();
       const box = canvas.getBoundingClientRect();
       const sx = canvas.width / box.width;
