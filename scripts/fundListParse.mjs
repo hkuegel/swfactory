@@ -6,10 +6,17 @@
 // prints, not with an HTML parser. Values are converted by string arithmetic, so no float parsing
 // happens anywhere (ADR 0012 keeps the single rounding at display).
 
-/** The four values the app needs, with the label the response carries for each. */
+/** The four values the app needs, with the label (a regex fragment) the response carries for each. */
 export const FIELDS = [
   { key: 'asOfLabel', label: 'NAV as of', field: 'navMicroEur', decimals: 6 },
-  { key: 'label', label: 'Weighted Average YTM', field: 'ytmBp', decimals: 2 },
+  // The fund pages renamed the YTM label to "Average Yield to Maturity" around 2026-11-20; the value
+  // behind it is the same. Both labels are accepted (fix of 2026-11-23).
+  {
+    key: 'label',
+    label: '(?:Weighted Average YTM|Average Yield to Maturity)',
+    field: 'ytmBp',
+    decimals: 2,
+  },
   { key: 'label', label: 'Weighted Avg Maturity', field: 'avgMaturityHundredths', decimals: 2 },
   { key: 'label', label: 'Shares Outstanding', field: 'sharesOutstanding', decimals: 0 },
 ];

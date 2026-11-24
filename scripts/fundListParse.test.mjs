@@ -184,4 +184,30 @@ describe('fund list writer (fixture mode)', () => {
       'fund 2035 (IE000O1FWAW6): no stored response in fixture mode',
     ]);
   });
+
+  it('fix of 2026-11-23: a page that prints the YTM as "Average Yield to Maturity" is read like the old label', () => {
+    // The shape of the live page of 2026-11-23 (fund 2027), cut down by hand to the four data points;
+    // the hand value 3.38 % is 338 basis points.
+    const q = (text) => text.replace(/"/g, '&quot;');
+    const page = q(
+      [
+        '{"asOfLabel":"NAV as of","prefix":null,"value":5.667065}',
+        '{"label":"Average Yield to Maturity","asOfLabel":"Average Yield to Maturity as of",' +
+          '"infoBubble":"Yield to Maturity is the discount rate.","prefix":null,"value":3.38}',
+        '{"label":"Weighted Avg Maturity","prefix":null,"value":0.59}',
+        '{"label":"Shares Outstanding","prefix":null,"value":164124821}',
+      ].join(','),
+    );
+    const result = parseFundResponse(page, fund);
+    expect(result).toEqual({
+      ok: true,
+      record: {
+        ...fund,
+        navMicroEur: 5667065,
+        ytmBp: 338,
+        avgMaturityHundredths: 59,
+        sharesOutstanding: 164124821,
+      },
+    });
+  });
 });
